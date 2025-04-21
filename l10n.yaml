@@ -1,4 +1,0 @@
-arb-dir: assets/i18n
-output-localization-file: app_localizations.dart
-output-class: AppLocalizations
-output-dir: lib/l10n
