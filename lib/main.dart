@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:spiceease/app/app_theme.dart';
 
 // Import application-specific components
 import 'package:spiceease/app/splash_screen.dart';
@@ -15,6 +16,7 @@ void main() async {
   // Load environment variables from .env file before initializing the app
   await dotenv.load(fileName: ".env");
 
+print("running app");
   // Wrap the root widget with ProviderScope to enable Riverpod state management
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -29,8 +31,10 @@ class MyApp extends ConsumerWidget {
     final currentLocale = ref.watch(localeProvider);
 
     return MaterialApp(
-      // Disable debug banner in release mode
-      debugShowCheckedModeBanner: false,
+      title: 'SpiceEase',
+      theme: appTheme, // Apply custom theme defined in app_theme.dart
+      themeMode: ThemeMode.system, // Use system theme mode (light/dark)
+      debugShowCheckedModeBanner: false, // Disable debug banner in release mode
 
       // Configure localization delegates for multilingual support
       localizationsDelegates: const [

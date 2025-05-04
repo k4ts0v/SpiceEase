@@ -1,4 +1,4 @@
-package com.example.spiceease
+package com.lvg.spiceease
 
 import io.flutter.embedding.android.FlutterActivity
 

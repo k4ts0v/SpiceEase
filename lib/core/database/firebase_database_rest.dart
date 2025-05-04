@@ -1,102 +1,135 @@
 // Importing required packages. The `dio` package provides a powerful and easy-to-use HTTP client.
 // The `auth_service.dart` handles user authentication.
 // The `database_service.dart` defines an abstract interface for database operations.
+import 'dart:math';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
+import 'package:uuid/uuid.dart';
 import 'database_service.dart';
 
-/// A Firestore REST implementation of [DatabaseService].
-/// This class translates abstract filters and orders into Firestore's StructuredQuery JSON format.
 class FirestoreDatabaseRestService implements DatabaseService {
-  final Dio _dio; // Handles HTTP requests.
-  final AuthService _auth; // Manages authentication tokens.
-  final String projectId; // Specifies the Firestore project ID.
+  final Dio _dio;
+  final AuthService _auth;
+  final String projectId;
+  final Uuid _uuid;
 
-  // Constructor for initializing the Firestore REST service.
-  // `authService` provides authentication, and an optional `dio` instance can be supplied.
   FirestoreDatabaseRestService({
     required this.projectId,
     required AuthService authService,
     Dio? dio,
+    Uuid? uuid,
   })  : _auth = authService,
+        _uuid = uuid ?? Uuid(),
         _dio = dio ??
-            Dio(BaseOptions(baseUrl: 'https://firestore.googleapis.com/v1/'));
+            Dio(BaseOptions(
+              baseUrl: 'https://firestore.googleapis.com/v1/',
+              connectTimeout: const Duration(seconds: 5),
+              receiveTimeout: const Duration(seconds: 10),
+            ));
 
-  // A placeholder for future initialization logic.
   @override
   Future<void> initialize() async {}
 
-  // Private method to make HTTP requests to the Firestore REST API.
-  // It supports multiple HTTP methods (GET, POST, PATCH, DELETE) and handles authentication.
-  Future<Map<String, dynamic>> _call(
-    String method,
-    String url, {
-    Map<String, dynamic>? data,
-  }) async {
-    final token = await _auth
-        .getCurrentIdToken(); // Retrieves the current user's ID token.
-    final resp = await _dio.request(
-      url,
-      data: data,
-      options: Options(
-        method: method,
-        headers: {
-          if (token != null) 'Authorization': 'Bearer $token'
-        }, // Adds the token to the request headers.
-      ),
-    );
-    return resp.data
-        as Map<String, dynamic>; // Returns the parsed JSON response.
+  Future<dynamic> _call(String method, String url,
+      {Map<String, dynamic>? data}) async {
+    final token = await _auth.getCurrentIdToken();
+    try {
+      final resp = await _dio.request<dynamic>(
+        url,
+        data: data,
+        options: Options(
+          method: method,
+          headers: {if (token != null) 'Authorization': 'Bearer $token'},
+        ),
+      );
+      return resp.data;
+    } on DioException catch (e) {
+      print('Firestore error response data: ${e.response?.data}');
+      rethrow;
+    }
   }
 
-  // Retrieves a document from Firestore.
   @override
   Future<Map<String, dynamic>?> getDocument(String path) async {
     final raw = await _call(
       'GET',
       'projects/$projectId/databases/(default)/documents/$path',
-    );
-    if (raw['fields'] == null)
-      return null; // Returns null if the document has no fields.
-    return _decode(raw); // Decodes the document data into a usable format.
+    ) as Map<String, dynamic>?;
+
+    if (raw == null || raw['fields'] == null) return null;
+    return _decode(raw);
   }
 
-  // Creates a new document in the specified Firestore collection.
   @override
   Future<Map<String, dynamic>> createDocument(
     String collectionPath,
     Map<String, dynamic> data,
   ) async {
+    final id = data['id'] ?? generateId();
+    final path = '$collectionPath/$id';
+
+    final dataWithoutId = Map<String, dynamic>.from(data)..remove('id');
+
     final raw = await _call(
-      'POST',
-      'projects/$projectId/databases/(default)/documents/$collectionPath',
+      'PATCH',
+      'projects/$projectId/databases/(default)/documents/$path?currentDocument.exists=false',
       data: {
-        'fields': _encode(data)
-      }, // Encodes the data before sending it to Firestore.
-    );
-    return _decode(raw); // Decodes the response from Firestore.
+        'fields': _encode(dataWithoutId),
+      },
+    ) as Map<String, dynamic>;
+
+    return _decode(raw);
   }
 
-  // Updates an existing Firestore document.
+  // @override
+  // Future<Map<String, dynamic>> updateDocument(
+  //   String path,
+  //   Map<String, dynamic> data,
+  // ) async {
+  //   final raw = await _call(
+  //     'PATCH',
+  //     'projects/$projectId/databases/(default)/documents/$path',
+  //     data: {
+  //       'fields': _encode(data),
+  //       'mask': {'fieldPaths': data.keys.toList()},
+  //     },
+  //   ) as Map<String, dynamic>;
+
+  //   return _decode(raw);
+  // }
+
   @override
   Future<Map<String, dynamic>> updateDocument(
     String path,
     Map<String, dynamic> data,
   ) async {
+    // Remove 'created_at' from data right before sending the request
+    final filteredData = Map<String, dynamic>.from(data);
+    // ..remove('created_at') // Make sure we remove it
+    // ..remove('id') // Make sure we remove it
+    // ..remove('user_id'); // Make sure we remove it
+
+    // Encode the data excluding 'created_at'
+    final requestBody = {
+      'fields': _encode(filteredData),
+    };
+
+    print(
+        'Firestore REST PATCH request to: projects/$projectId/databases/(default)/documents/$path');
+    print('Request body: ${requestBody.toString()}');
+
+    // Make the actual call to Firestore
     final raw = await _call(
       'PATCH',
       'projects/$projectId/databases/(default)/documents/$path',
-      data: {
-        'fields': _encode(data), // Encodes the data.
-        'mask': {
-          'fieldPaths': data.keys.toList()
-        }, // Specifies which fields to update.
-      },
-    );
-    return _decode(raw); // Decodes the updated document.
+      data: requestBody,
+    ) as Map<String, dynamic>;
+
+    return _decode(raw);
   }
 
-  // Deletes a Firestore document.
   @override
   Future<void> deleteDocument(String path) async {
     await _call(
@@ -105,7 +138,6 @@ class FirestoreDatabaseRestService implements DatabaseService {
     );
   }
 
-  // Queries a Firestore collection with various filters, orders, and limits.
   @override
   Future<List<Map<String, dynamic>>> query({
     required String collection,
@@ -119,12 +151,9 @@ class FirestoreDatabaseRestService implements DatabaseService {
       'from': [
         {'collectionId': collection}
       ],
-      if (filters != null && filters.isNotEmpty)
-        'where': _buildFilter(filters), // Builds query filters.
-      if (orderBy != null)
-        'orderBy':
-            orderBy.map(_orderToJson).toList(), // Builds ordering criteria.
-      if (limit != null) 'limit': limit, // Adds a limit to the query.
+      if (filters != null && filters.isNotEmpty) 'where': _buildFilter(filters),
+      if (orderBy != null) 'orderBy': orderBy.map(_orderToJson).toList(),
+      if (limit != null) 'limit': limit,
       if (startAfter != null)
         'startAt': {
           'values': [
@@ -139,17 +168,14 @@ class FirestoreDatabaseRestService implements DatabaseService {
         },
     };
 
-    final resp = await _call(
+    final response = await _call(
       'POST',
       'projects/$projectId/databases/(default)/documents:runQuery',
-      data: {
-        'structuredQuery': structuredQuery
-      }, // Sends the structured query to Firestore.
-    );
+      data: {'structuredQuery': structuredQuery},
+    ) as List<dynamic>;
 
-    // Processes the response and returns the list of documents.
-    return (resp as List)
-        .where((e) => e['document'] != null)
+    return response
+        .where((e) => e is Map && e['document'] != null)
         .map((e) => _decode(e['document'] as Map<String, dynamic>))
         .toList();
   }
@@ -236,13 +262,23 @@ class FirestoreDatabaseRestService implements DatabaseService {
   }
 
   // Converts query values into Firestore-compatible JSON formats.
+  // In FirestoreDatabaseRestService
   Map<String, dynamic> _valueToJson(dynamic v) {
     if (v == null) return {'nullValue': null};
     if (v is String) return {'stringValue': v};
     if (v is int) return {'integerValue': v.toString()};
     if (v is double) return {'doubleValue': v};
     if (v is bool) return {'booleanValue': v};
-    if (v is DateTime) return {'timestampValue': v.toUtc().toIso8601String()};
+
+    // Handle both DateTime and Firestore Timestamp
+    if (v is DateTime) {
+      return {'timestampValue': v.toUtc().toIso8601String()};
+    }
+    if (v is Timestamp) {
+      // Add Firestore SDK Timestamp support
+      return {'timestampValue': v.toDate().toUtc().toIso8601String()};
+    }
+
     throw ArgumentError('Unsupported query value: ${v.runtimeType}');
   }
 
@@ -284,7 +320,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
           result[fieldName] = int.parse(rawValue as String);
           break;
         case 'doubleValue':
-          result[fieldName] = rawValue as double;
+          result[fieldName] = (rawValue as num).toDouble();
           break;
         case 'booleanValue':
           result[fieldName] = rawValue as bool;
@@ -331,7 +367,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
         case 'integerValue':
           return int.parse(elementValue as String);
         case 'doubleValue':
-          return elementValue as double;
+          return (elementValue as num).toDouble();
         case 'booleanValue':
           return elementValue as bool;
         case 'timestampValue':
@@ -380,27 +416,65 @@ class FirestoreDatabaseRestService implements DatabaseService {
     } else if (value is String) {
       return {'stringValue': value};
     } else if (value is int) {
-      // Firestore requires integers as string-encoded values
       return {'integerValue': value.toString()};
     } else if (value is double) {
       return {'doubleValue': value};
     } else if (value is bool) {
       return {'booleanValue': value};
     } else if (value is DateTime) {
-      // Firestore requires UTC ISO8601 timestamps
       return {'timestampValue': value.toUtc().toIso8601String()};
+    } else if (value is Timestamp) {
+      // Fix: handle Firestore Timestamp
+      return {'timestampValue': value.toDate().toUtc().toIso8601String()};
     } else if (value is List) {
-      // Recursively encode array elements
       return {
         'arrayValue': {'values': value.map(_encodeValue).toList()}
       };
     } else if (value is Map) {
-      // Recursively encode map values
       return {
         'mapValue': {'fields': _encode(value.cast<String, dynamic>())}
       };
     }
     throw ArgumentError('Unsupported data type for encoding: '
         '${value.runtimeType}');
+  }
+
+  String _generateFirestoreId([int length = 20]) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final rand = Random.secure();
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)])
+        .join();
+  }
+
+  @override
+  String generateId() {
+    return _generateFirestoreId();
+  }
+
+  @override
+  Future<void> batchUpdate(List<Map<String, dynamic>> updates) async {
+    final writes = updates.map((update) {
+      final path = update['path'] as String;
+      final data = update['data'] as Map<String, dynamic>;
+
+      if (path.split('/').length != 2) {
+        throw Exception('Invalid document path: $path');
+      }
+
+      return {
+        'update': {
+          'name': 'projects/$projectId/databases/(default)/documents/$path',
+          'fields': _encode(data),
+          'updateMask': {'fieldPaths': data.keys.toList()},
+        }
+      };
+    }).toList();
+
+    await _call(
+      'POST',
+      'projects/$projectId/databases/(default)/documents:batchWrite',
+      data: {'writes': writes},
+    );
   }
 }

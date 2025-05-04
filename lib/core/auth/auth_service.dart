@@ -55,4 +55,8 @@ abstract class AuthService {
   /// Sends password reset email to provided address.
   /// Throws exceptions for invalid/non-existent emails
   Future<void> resetPassword(String email);
+
+  /// Validates the current session
+  /// Returns true if session is valid, false otherwise
+  Future<bool> validateSession() async => true; // Default implementation
 }

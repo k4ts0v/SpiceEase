@@ -15,16 +15,16 @@ abstract class DatabaseService {
   static const String activities = 'activities';
   static const String timeBlocks = 'time_blocks';
   static const String flowmodoros = 'flowmodoros';
-  static const String achievements = 'achievements';
   static const String medications = 'medications';
-  static const String healthMeasurements = 'health_measurements';
   static const String symptoms = 'symptoms';
-  static const String symptomCategories = 'symptom_categories';
   static const String reports = 'reports';
   static const String settings = 'settings';
 
   /// Initialize the database client or REST adapter.
   Future<void> initialize();
+
+  /// Generates a database-specific unique ID
+  String generateId();
 
   /// Fetch a single document by full path (e.g. 'users/{id}').
   Future<Map<String, dynamic>?> getDocument(String path);
@@ -73,6 +73,9 @@ abstract class DatabaseService {
     String? startAfter,
     String? endBefore,
   });
+
+  /// Allows batch updating documents.
+  Future<void> batchUpdate(List<Map<String, dynamic>> updates);
 }
 
 /// Abstract representation of a query filter: basic or logical.
@@ -95,6 +98,10 @@ abstract class QueryFilter {
 
   /// Logical NOT of a filter.
   factory QueryFilter.not(QueryFilter filter) = NotFilter;
+
+  /// Array contains filter.
+  factory QueryFilter.arrayContains(String field, dynamic value) =
+      ArrayContainsFilter;
 }
 
 /// Supported comparison and substring operators.
@@ -143,6 +150,15 @@ class NotFilter implements QueryFilter {
   String? get field => null;
   final QueryFilter filter;
   const NotFilter(this.filter);
+}
+
+/// Array membership filter.
+class ArrayContainsFilter implements QueryFilter {
+  @override
+  final String field;
+  final dynamic value;
+
+  const ArrayContainsFilter(this.field, this.value);
 }
 
 /// Defines ordering for queries.

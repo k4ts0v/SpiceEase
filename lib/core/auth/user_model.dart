@@ -13,39 +13,39 @@ class AppUser {
   ///
   /// This is the primary key for user-related operations and should never
   /// be empty or null. Matches the authentication provider's UID system.
-  final String uid;
+  final String _uid;
 
   /// Verified email address associated with the account
-  ///
-  /// Null for anonymous users or accounts created without email.
-  /// Always use this instead of direct authentication provider's email field.
-  final String? email;
-
-  /// Indicates if the user authenticated anonymously
-  ///
-  /// Defaults to false. Important for differentiating temporary vs permanent
-  /// accounts in business logic and data retention policies.
-  final bool isAnonymous;
+  String _email;
 
   /// Timestamp of account creation in the authentication system
   ///
   /// Useful for analytics, account age checks, and compliance features.
   /// Null if the authentication provider doesn't supply this information.
-  final DateTime? created;
+  final DateTime? _created;
+
+  /// Getter for the unique user identifier
+  String get uid => _uid;
+
+  /// Getter for the user's email
+  String? get email => _email;
+
+  /// Getter for the user's creation date
+  DateTime? get created => _created;
 
   /// Constructs an [AppUser] instance with required authentication details
   ///
   /// Parameters:
   /// - [uid] : Required unique identifier from authentication provider
-  /// - [email] : Optional verified email address
-  /// - [isAnonymous] : Default false, set true for temporary accounts
+  /// - [email] : Verified email address
   /// - [created] : Optional account creation timestamp
-  const AppUser({
-    required this.uid,
-    this.email,
-    this.isAnonymous = false,
-    this.created,
-  });
+  AppUser({
+    required String uid,
+    email,
+    DateTime? created,
+  }) : _uid = uid,
+        _email = email,
+        _created = created;
 
   /// Creates an [AppUser] from Firebase Authentication's [User] object
   ///
@@ -62,7 +62,6 @@ class AppUser {
   factory AppUser.fromFirebase(User user) => AppUser(
         uid: user.uid,
         email: user.email,
-        isAnonymous: user.isAnonymous,
         created: user.metadata.creationTime,
       );
 
@@ -91,7 +90,6 @@ class AppUser {
       created: data['created'] != null
           ? DateTime.parse(data['created'].toString())
           : DateTime.now(),
-      isAnonymous: data['isAnonymous'] ?? false,
     );
   }
 

@@ -18,8 +18,14 @@ class FirebaseDatabaseService implements DatabaseService {
   /// Requires Firebase to be initialized elsewhere in the application
   @override
   Future<void> initialize() async {
-    // Firebase initialization should be done at app startup
+    // Firebase initialization should be Done at app startup
     _fs = FirebaseFirestore.instance;
+  }
+
+  /// Generates the ID of the document using Firestore's native ID generation.
+  @override
+  String generateId() {
+    return _fs!.collection('_id_generator').doc().id;
   }
 
   /// Retrieves a single document from Firestore
@@ -43,7 +49,17 @@ class FirebaseDatabaseService implements DatabaseService {
     String collectionPath,
     Map<String, dynamic> data,
   ) async {
-    final docRef = await _fs!.collection(collectionPath).add(data);
+    // Create the document reference first
+    final docRef = _fs!.collection(collectionPath).doc();
+
+    // Write data with Firestore doc ID embedded as 'id'
+    final dataWithId = {
+      ...data,
+      'id': docRef.id,
+    };
+
+    await docRef.set(dataWithId);
+
     final snap = await docRef.get();
     return {'id': snap.id, ...snap.data()!};
   }
@@ -54,20 +70,44 @@ class FirebaseDatabaseService implements DatabaseService {
   /// [data]: Fields to update (merge strategy)
   /// Returns: Updated document data
   @override
+  @override
   Future<Map<String, dynamic>> updateDocument(
     String path,
     Map<String, dynamic> data,
   ) async {
-    final docRef = _fs!.doc(path);
+    final parts = path.split('/');
+    if (parts.length != 2) {
+      throw Exception('Invalid path "$path"');
+    }
+
+    final collection = parts[0];
+    final docId = parts[1];
+
+    final docRef = _fs!.collection(collection).doc(docId);
+
+    // Firestore will throw if the document does not exist
     await docRef.update(data);
-    final snap = await docRef.get();
-    return {'id': snap.id, ...snap.data()!};
+
+    final updatedSnapshot = await docRef.get();
+    return {'id': updatedSnapshot.id, ...updatedSnapshot.data()!};
   }
 
-  /// Deletes a document from Firestore
+  /// Updates an existing document
+  ///
+  /// [path]: Full document path to delete
+  /// [data]: Fields to delete (merge strategy)
   @override
   Future<void> deleteDocument(String path) async {
-    await _fs!.doc(path).delete();
+    final parts = path.split('/');
+    if (parts.length != 2) {
+      throw Exception('Invalid path "$path"');
+    }
+
+    final collection = parts[0];
+    final docId = parts[1];
+
+    final docRef = _fs!.collection(collection).doc(docId);
+    await docRef.delete();
   }
 
   /// Executes a complex query with multiple filters and ordering
@@ -205,12 +245,34 @@ class FirebaseDatabaseService implements DatabaseService {
     if (orderBy != null) {
       results.sort((a, b) {
         for (final o in orderBy) {
-          final av = a[o.field];
-          final bv = b[o.field];
-          if (av is Comparable && bv is Comparable) {
+          var av = a[o.field];
+          var bv = b[o.field];
+
+          // 1) Firestore Timestamp → DateTime
+          if (av is Timestamp) av = av.toDate();
+          if (bv is Timestamp) bv = bv.toDate();
+
+          // 2) ISO-8601 string → DateTime
+          if (av is String && bv is String) {
+            final da = DateTime.tryParse(av);
+            final db = DateTime.tryParse(bv);
+            if (da != null && db != null) {
+              final cmp = da.compareTo(db);
+              if (cmp != 0) return o.descending ? -cmp : cmp;
+              continue; // equal—move to next ordering field
+            }
+          }
+
+          // 3) Compare other Comparables (but skip raw strings)
+          if (av is Comparable &&
+              bv is Comparable &&
+              av.runtimeType != String &&
+              bv.runtimeType != String) {
             final cmp = av.compareTo(bv);
             if (cmp != 0) return o.descending ? -cmp : cmp;
           }
+
+          // otherwise, equal or non-comparable: try next field
         }
         return 0;
       });
@@ -232,5 +294,30 @@ class FirebaseDatabaseService implements DatabaseService {
     }
 
     return results;
+  }
+
+  /// Performs a batch update on multiple documents.
+  ///
+  /// [updates]: A list of updates, where each update is a map containing:
+  /// - `path`: The document path (e.g., 'collection/documentId').
+  /// - `data`: A map of key-value pairs to update in the document.
+  @override
+  Future<void> batchUpdate(List<Map<String, dynamic>> updates) async {
+    final batch = _fs!.batch();
+
+    for (final update in updates) {
+      final path = update['path'] as String;
+      final data = update['data'] as Map<String, dynamic>;
+
+      final parts = path.split('/');
+      if (parts.length != 2) {
+        throw Exception('Invalid document path: $path');
+      }
+
+      final docRef = _fs!.collection(parts[0]).doc(parts[1]);
+      batch.update(docRef, data);
+    }
+
+    await batch.commit();
   }
 }

@@ -24,5 +24,6 @@
   "cancel": "Cancelar",
   "passwordResetEmail": "El correo de recuperación de contraseña se ha enviado.",
   "resetPasswordError": "Ha ocurrido un error al resetear la contraseña.",
-  "unknownError": "Ha ocurrido un error desconocido."
+  "unknownError": "Ha ocurrido un error desconocido.",
+  "username_required": "Es necesario introducir un nombre de usuario."
 }

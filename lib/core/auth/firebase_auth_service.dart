@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
+import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/auth/user_model.dart';
 import 'package:spiceease/core/database/firebase_options.dart';
@@ -69,7 +70,13 @@ class FirebaseAuthService implements AuthService {
   ///   - [password]: The user's password.
   @override
   Future<void> signIn(String email, String password) async {
-    await auth.signInWithEmailAndPassword(email: email, password: password);
+    try {
+      await auth.signInWithEmailAndPassword(email: email, password: password);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Registers a new user with email and password.
@@ -79,7 +86,14 @@ class FirebaseAuthService implements AuthService {
   ///   - [password]: The user's password.
   @override
   Future<void> register(String email, String password) async {
-    await auth.createUserWithEmailAndPassword(email: email, password: password);
+    try {
+      await auth.createUserWithEmailAndPassword(
+          email: email, password: password);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Signs out the current user.
@@ -104,7 +118,11 @@ class FirebaseAuthService implements AuthService {
   /// - Returns: `true` if a user is signed in, `false` otherwise.
   @override
   Future<bool> isSignedIn() async {
-    return auth.currentUser != null;
+    try {
+      return auth.currentUser != null;
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Retrieves the currently signed-in user.
@@ -113,8 +131,13 @@ class FirebaseAuthService implements AuthService {
   ///   or `null` if no user is signed in.
   @override
   Future<AppUser?> getCurrentUser() async {
-    final user = _auth?.currentUser;
-    return user != null ? AppUser.fromPlatformUser(user) : null;
+    try {
+      final user = _auth?.currentUser;
+      if (user == null) return null;
+      return AppUser.fromPlatformUser(user);
+    } catch (e) {
+      throw AuthException('session_expired');
+    }
   }
 
   /// Retrieves the ID token of the currently signed-in user.
@@ -122,7 +145,13 @@ class FirebaseAuthService implements AuthService {
   /// - Returns: The ID token as a [String], or `null` if no user is signed in.
   @override
   Future<String?> getCurrentIdToken() async {
-    return auth.currentUser?.getIdToken();
+    try {
+      return await auth.currentUser?.getIdToken();
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
   }
 
   /// Sends a password reset email to the user.
@@ -130,6 +159,73 @@ class FirebaseAuthService implements AuthService {
   /// - Parameter [email]: The email address to send the reset link to.
   @override
   Future<void> resetPassword(String email) async {
-    await auth.sendPasswordResetEmail(email: email);
+    try {
+      await auth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Validates the current session
+  /// Returns true if session is valid, false otherwise
+  @override
+  Future<bool> validateSession() async {
+    // Firebase SDK handles session validation automatically
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return false;
+
+    try {
+      await user.reload();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Maps Firebase error codes to application-specific error codes.
+  String _parseError(FirebaseAuthException e) {
+    final code = e.code.replaceAll('-', '_').toUpperCase();
+    switch (code) {
+      case 'CHANNEL_ERROR':
+      case 'INVALID_EMAIL':
+        return 'invalid_email';
+      case 'USER_NOT_FOUND':
+      case 'WRONG_PASSWORD':
+      case 'INVALID_CREDENTIAL':
+      case 'INVALID_LOGIN_CREDENTIALS':
+        return 'invalid_login_credentials';
+      case 'EMAIL_ALREADY_IN_USE':
+      case 'EMAIL_EXISTS':
+        return 'email_already_in_use';
+      case 'WEAK_PASSWORD':
+        return 'weak_password';
+      case 'OPERATION_NOT_ALLOWED':
+        return 'operation_not_allowed';
+      case 'TOO_MANY_REQUESTS':
+      case 'TOO_MANY_ATTEMPTS_TRY_LATER':
+        return 'too_many_attempts';
+      case 'NETWORK_REQUEST_FAILED':
+        return 'network_request_failed';
+      case 'REQUIRES_RECENT_LOGIN':
+        return 'requires_recent_login';
+      case 'USER_DISABLED':
+        return 'user_disabled';
+      case 'EXPIRED_ACTION_CODE':
+      case 'EXPIRED_OOB_CODE':
+      case 'TOKEN_EXPIRED':
+        return 'session_expired';
+      case 'MISSING_PASSWORD':
+        return 'missing_password';
+      case 'PASSWORD_MISMATCH':
+        return 'password_mismatch';
+      case 'USERNAME_REQUIRED':
+        return 'username_required';
+      default:
+        // Print for debugging and return the original code for transparency
+        debugPrint('Firebase Auth Error - Unmapped code: $code');
+        return code.toLowerCase();
+    }
   }
 }

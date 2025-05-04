@@ -1,15 +1,3 @@
-/*
- * File: userModel.dart
- * Project: k4ts0v
- * File Created: Wednesday, 16th April 2025 8:12:00 PM
- * Author: Lucas Villa (k4ts0v@protonmail.com)
- * -----
- * Last Modified: Wednesday, 16th April 2025 8:12:01 PM
- * Modified By: Lucas Villa (k4ts0v@protonmail.com)
- */
-
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class UserModel {
   // Private fields
   final String _id; // Immutable field (Document ID)
@@ -28,6 +16,8 @@ class UserModel {
   DateTime get updatedAt => _updatedAt;
 
   // Setters for mutable fields
+
+  /// Sets the username to the provided username.
   set username(String newUsername) {
     if (newUsername.isNotEmpty && newUsername.length >= 3) {
       _username = newUsername;
@@ -36,14 +26,17 @@ class UserModel {
     }
   }
 
+  /// Sets the level to the provided level.
   set level(int newLevel) {
     _level = newLevel;
   }
 
+  /// Sets the xp to the provided xp.
   set xp(int newXp) {
     _xp = newXp;
   }
 
+/// Sets the updatedAt field to the provided updatedAt.
   set updatedAt(DateTime newUpdatedAt) {
     _updatedAt = newUpdatedAt;
   }
@@ -63,27 +56,35 @@ class UserModel {
         _createdAt = createdAt,
         _updatedAt = updatedAt;
 
-  // Factory constructor for converting Firestore documents into UserModel objects
-  factory UserModel.fromFirestore(DocumentSnapshot docSnap) {
-    final data = docSnap.data() as Map<String, dynamic>;
+  /// Factory constructor that constructs UserModel from generic key-value map structure
+  /// 
+  /// Handles:
+  /// - Database-agnostic field mapping
+  /// - Type-safe conversions
+  /// - Default values for progression fields
+  /// 
+  /// [map]: Database record structure
+  factory UserModel.fromMap(Map<String, dynamic> map, {String? id}) {
     return UserModel(
-      id: docSnap.id, // Firestore document ID
-      username: data['username'], // Field mapping
-      level: data['level'] ?? 1, // Null check with default
-      xp: data['xp'] ?? 0, // Null check with default
-      createdAt:
-          (data['created_at'] as Timestamp).toDate(), // Timestamp to DateTime
-      updatedAt: (data['updated_at'] as Timestamp).toDate(),
+      id: id ?? map['id'],
+      username: map['username'], // Field mapping
+      level: map['level'] ?? 1, // Null check with default
+      xp: map['xp'] ?? 0, // Null check with default
+      createdAt: (map['created_at']).toDateTime(),
+      updatedAt: (map['updated_at']).toDateTime(),
     );
   }
 
-  // Convert Dart object to Firestore-compatible Map
+  /// Serializes user data to database-agnostic map format
+  ///
+  /// Returns:
+  /// - String keys using application-level naming conventions
+  /// - Native Dart types for database compatibility
   Map<String, dynamic> toMap() {
     return {
       'username': username,
       'level': level,
       'xp': xp,
-      // Convert DateTime to Firestore Timestamp
       'created_at': createdAt,
       'updated_at': updatedAt,
     };

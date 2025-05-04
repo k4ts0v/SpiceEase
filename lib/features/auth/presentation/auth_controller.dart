@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
-import 'package:spiceease/core/auth/firebase_auth_rest.dart';
 import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/data/models/user_model.dart';
+import 'package:spiceease/data/providers/user_provider.dart';
+import 'package:spiceease/data/services/user_service.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 /// Holds all relevant authentication state for the application.
@@ -17,7 +22,7 @@ class AuthState {
   final bool
       isConfirmPasswordVisible; // Determines if the password field should display the text or hide it.
   final bool
-      isLoading; // Indicates whether an authentication request is currently in progress.
+      isLoading; // Indicates whether an authentication request is currently In progress.
   final bool
       rememberMe; // Indicates whether the user session is going to be remembered or not (non-nullable).
   final String?
@@ -70,12 +75,14 @@ class AuthState {
 
 /// A controller that manages the [AuthState] using Riverpod's [StateNotifier].
 class AuthController extends StateNotifier<AuthState> {
-  final AuthService _service;
+  final AuthService _authService;
+  final UserService _userService;
 
-  AuthController(this._service) : super(AuthState.initial()) {
+  AuthController(this._authService, this._userService)
+      : super(AuthState.initial()) {
     // Listen to authentication state changes from the AuthService.
     // When a user signs in or out, update the state accordingly.
-    _service.authStateChanges().listen((user) {
+    _authService.authStateChanges().listen((user) {
       state = state.copyWith(user: user, isLoading: false, error: null);
     });
   }
@@ -103,7 +110,7 @@ class AuthController extends StateNotifier<AuthState> {
   Future<void> resetPassword(String email, BuildContext context) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _service.resetPassword(email);
+      await _authService.resetPassword(email);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content: Text(AppLocalizations.of(context)!.passwordResetEmail)),
@@ -122,18 +129,53 @@ class AuthController extends StateNotifier<AuthState> {
   }
 
   /// Handles user sign-in or registration depending on the current mode.
-  /// Displays loading while in progress and sets an error message if it fails.
-  Future<void> submit(String email, String password, String? confirmPassword,
-      BuildContext context) async {
+  /// Displays loading while In progress and sets an error message if it fails.
+  Future<void> submit(
+    String email,
+    String password,
+    String? confirmPassword,
+    String? username,
+    BuildContext context,
+  ) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       if (state.isLogin) {
-        await _service.signIn(email, password);
+        await _authService.signIn(email, password);
       } else {
         if (password != confirmPassword) {
           throw AuthException('password_mismatch');
         }
-        await _service.register(email, password);
+        if (username == null || username.isEmpty) {
+          throw AuthException('username_required');
+        }
+
+        // Start listening for auth changes before registration
+        final completer = Completer<void>();
+        final sub = _authService.authStateChanges().listen((user) async {
+          if (user != null && !completer.isCompleted) {
+            try {
+              // Create user profile in database
+              await _userService.createUser(UserModel(
+                id: user.uid,
+                username: username,
+                createdAt: DateTime.now(),
+                updatedAt: DateTime.now(),
+              ));
+              completer.complete();
+            } catch (e) {
+              if (!completer.isCompleted) {
+                completer.completeError(e);
+              }
+            }
+          }
+        });
+
+        // Perform registration
+        await _authService.register(email, password);
+
+        // Wait for the auth change to complete (with timeout for safety)
+        await completer.future.timeout(const Duration(seconds: 10));
+        sub.cancel();
       }
     } catch (e) {
       state = state.copyWith(
@@ -147,16 +189,30 @@ class AuthController extends StateNotifier<AuthState> {
   /// based on the contents of their messages. This avoids relying on the exception
   /// class names and instead handles errors by matching message contents.
   String _parseError(dynamic error, BuildContext context) {
-    final message = error
-        .toString()
-        .toLowerCase()
-        .replaceAll(RegExp("authexception: "), "");
+    String message;
+
+    // Handle AuthException format
+    if (error.toString().toLowerCase().contains('authexception: ')) {
+      message = error
+          .toString()
+          .toLowerCase()
+          .replaceAll(RegExp(r'authexception:\s*'), '');
+    } else {
+      // Handle raw error messages
+      message = error.toString().toLowerCase();
+    }
+
+    debugPrint('Auth Error Message: $message'); // For debugging
     final localizations = AppLocalizations.of(context)!;
 
     switch (message) {
-      case 'invalid_login_credentials' || 'wrong_password' || 'user_not_found':
+      case 'invalid_login_credentials':
+      case 'wrong_password':
+      case 'user_not_found':
+      case 'invalid_credential':
         return localizations.invalidLoginCredentials;
-      case 'email_already_in_use' || 'email_exists':
+      case 'email_already_in_use':
+      case 'email_exists':
         return localizations.emailAlreadyInUse;
       case 'missing_password':
         return localizations.missingPassword;
@@ -165,16 +221,29 @@ class AuthController extends StateNotifier<AuthState> {
       case 'invalid_email':
         return localizations.invalidEmail;
       case 'session_expired':
-        return localizations.sessionExpired;
-      case 'password_reset_failed':
-        return localizations.resetPasswordError;
       case 'token_expired':
+      case 'expired_action_code':
         return localizations.sessionExpired;
+      case 'network_request_failed':
+      // return localizations.networkError;
+      case 'too_many_attempts':
+      // return localizations.tooManyAttempts;
+      case 'user_disabled':
+      // return localizations.userDisabled;
+      case 'requires_recent_login':
+      // return localizations.requiresRecentLogin;
+      case 'operation_not_allowed':
+      // return localizations.operationNotAllowed;
       case 'weak_password':
-        return "Password should be at least 6 characters. (not localized)";
+      // return localizations.weakPassword;
+      case 'username_required':
+      // return localizations.usernameRequired;
       default:
-        return message;
-      // return localizations.unknownError;
+        debugPrint('Unhandled auth error: $message');
+        // Return the message instead of a generic error
+        return message.contains('firebase_auth/')
+            ? message.split('firebase_auth/')[1]
+            : message;
     }
   }
 }
@@ -182,6 +251,8 @@ class AuthController extends StateNotifier<AuthState> {
 /// Provides the [AuthController] to the Riverpod dependency injection system.
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
-  final service = ref.read(authServiceProvider);
-  return AuthController(service);
+  final authService = ref.read(authServiceProvider);
+  final userService =
+      ref.read(userServiceProvider); // Make sure this provider exists
+  return AuthController(authService, userService);
 });

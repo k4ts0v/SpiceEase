@@ -24,5 +24,6 @@
   "cancel": "Cancel",
   "passwordResetEmail": "The email for resetting the password was sent!",
   "resetPasswordError": "An error ocurred while resetting the password.",
-  "unknownError": "An unknown error happened."
+  "unknownError": "An unknown error happened.",
+  "username_required": "Username is required."
 }

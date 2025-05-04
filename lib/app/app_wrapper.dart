@@ -1,8 +1,8 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/app/home_screen.dart';
 import 'package:spiceease/features/auth/presentation/auth_controller.dart';
 import 'package:spiceease/features/auth/presentation/auth_screen.dart';
+import 'package:spiceease/features/navigation_bar.dart';
 
 /// A widget that decides whether to display the HomeScreen or AuthScreen
 /// based on the user's authentication state.
@@ -16,6 +16,6 @@ class AppWrapper extends ConsumerWidget {
 
     /// Displays the HomeScreen if the user is authenticated.
     /// Otherwise, shows the AuthScreen to handle authentication.
-    return authState.user != null ? const HomeScreen() : const AuthScreen();
+    return authState.user != null ? const NavBar() : const AuthScreen();
   }
 }

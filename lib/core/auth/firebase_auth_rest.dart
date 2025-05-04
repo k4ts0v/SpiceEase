@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/user_model.dart';
 import 'auth_service.dart';
 
@@ -92,7 +93,19 @@ class FirebaseAuthRestService implements AuthService {
   Future<void> initialize() async {
     final token = await _storage.read(key: 'idToken');
     if (token != null) {
-      _authController.add(await _getCurrentUser());
+      try {
+        // Add token validation and refresh if needed
+        final claims = _parseJwt(token);
+        if (claims == null ||
+            DateTime.now().millisecondsSinceEpoch > claims['exp'] * 1000) {
+          await refreshToken();
+        }
+        _authController.add(await _getCurrentUser());
+      } catch (e) {
+        // Handle initialization errors gracefully
+        await signOut();
+        throw AuthException('Session expired');
+      }
     }
   }
 
@@ -149,7 +162,7 @@ class FirebaseAuthRestService implements AuthService {
     if (refreshToken == null) throw AuthException('No refresh token');
 
     try {
-      final response = await Dio().post(
+      final response = await _dio.post(
         'https://securetoken.googleapis.com/v1/token',
         data: {
           'grant_type': 'refresh_token',
@@ -258,19 +271,36 @@ class FirebaseAuthRestService implements AuthService {
   ///
   /// Used during initialization and token refresh
   Future<AppUser?> _getCurrentUser() async {
-    try {
-      final response = await _dio.post(
-        'accounts:lookup',
-        queryParameters: {'key': apiKey},
-        data: {'idToken': await _storage.read(key: 'idToken')},
-      );
+  try {
+    final token = await _storage.read(key: 'idToken');
+    if (token == null) return null;
 
-      return AppUser.fromPlatformUser(response.data['users'][0]);
-    } on DioException {
+    final response = await _dio.post(
+      'accounts:lookup',
+      queryParameters: {'key': apiKey},
+      data: {'idToken': token},
+    );
+
+    if (response.data == null || response.data['users'] == null) {
       await signOut();
-      throw AuthException('Session expired');
+      return null;
     }
+
+    return AppUser.fromPlatformUser(response.data['users'][0]);
+  } on DioException catch (e) {
+    if (e.response?.statusCode == 401) {
+      try {
+        await refreshToken();
+        return getCurrentUser();
+      } catch (_) {
+        await signOut();
+        throw AuthException('Session expired');
+      }
+    }
+    await signOut();
+    throw AuthException(_parseError(e));
   }
+}
 
   /// Parse error responses from Firebase
   ///
@@ -323,15 +353,33 @@ class FirebaseAuthRestService implements AuthService {
       throw AuthException(_parseError(e));
     }
   }
-}
 
-/// Custom authentication exception
-///
-/// Wraps error messages from Firebase API
-class AuthException implements Exception {
-  final String message;
-  AuthException(this.message);
+  /// Validate stored tokens and refresh if needed
+  Future<bool> validateSession() async {
+    try {
+      final token = await _storage.read(key: 'idToken');
+      if (token == null) return false;
 
-  @override
-  String toString() => 'AuthException: $message';
+      final claims = _parseJwt(token);
+      if (claims == null ||
+          DateTime.now().millisecondsSinceEpoch > claims['exp'] * 1000) {
+        await refreshToken();
+      }
+
+      final user = await _getCurrentUser();
+      return user != null;
+    } catch (e) {
+      await signOut();
+      return false;
+    }
+  }
+
+  /// Check token expiration
+  bool _isTokenExpired(String token) {
+    final claims = _parseJwt(token);
+    if (claims == null) return true;
+
+    final expiry = claims['exp'] * 1000;
+    return DateTime.now().millisecondsSinceEpoch > expiry;
+  }
 }
