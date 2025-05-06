@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
+import 'package:intl/intl.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class CalendarWidget extends ConsumerWidget {
   const CalendarWidget({Key? key}) : super(key: key);
@@ -9,30 +11,56 @@ class CalendarWidget extends ConsumerWidget {
   @override
   Widget build(BuildContext ctx, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
+    final localizations = AppLocalizations.of(ctx)!;
+    final locale = Localizations.localeOf(ctx).languageCode;
 
     return Material(
       child: TableCalendar(
         firstDay: DateTime.utc(2020, 1, 1),
         lastDay: DateTime.utc(2099, 12, 31),
         focusedDay: selectedDate,
+        locale: locale, // Set the calendar locale
         selectedDayPredicate: (day) => isSameDay(selectedDate, day),
         onDaySelected: (selectedDay, focusedDay) {
           ref.read(selectedDateProvider.notifier).state = selectedDay;
         },
         startingDayOfWeek: StartingDayOfWeek.monday,
         calendarFormat: CalendarFormat.month,
-        headerStyle:
-            const HeaderStyle(formatButtonVisible: false, titleCentered: true),
+        headerStyle: HeaderStyle(
+          formatButtonVisible: false,
+          titleCentered: true,
+          titleTextFormatter: (date, locale) {
+            // Format month name according to the locale
+            return DateFormat.yMMMM(locale).format(date);
+          },
+        ),
         daysOfWeekStyle: const DaysOfWeekStyle(
           weekdayStyle: TextStyle(fontWeight: FontWeight.bold),
           weekendStyle: TextStyle(fontWeight: FontWeight.bold),
         ),
+        calendarBuilders: CalendarBuilders(
+          dowBuilder: (context, day) {
+            // Custom day of week labels using localized strings
+            final weekdayString = DateFormat.E(locale).format(day);
+            return Center(
+              child: Text(
+                weekdayString,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            );
+          },
+        ),
         calendarStyle: CalendarStyle(
-          todayDecoration:
-              BoxDecoration(color: Colors.transparent, shape: BoxShape.circle, border: Border.all(color: Colors.blue, width: 2.0)),
+          todayDecoration: BoxDecoration(
+            color: Colors.transparent,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.blue, width: 2.0),
+          ),
           todayTextStyle: const TextStyle(color: Colors.black),
-          selectedDecoration:
-              const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
+          selectedDecoration: const BoxDecoration(
+            color: Colors.blueAccent,
+            shape: BoxShape.circle,
+          ),
           selectedTextStyle: const TextStyle(color: Colors.white),
         ),
       ),

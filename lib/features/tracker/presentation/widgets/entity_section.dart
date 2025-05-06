@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class EntitySection<T> extends StatelessWidget {
   final String title;
@@ -22,6 +23,8 @@ class EntitySection<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -59,6 +62,7 @@ class EntitySection<T> extends StatelessWidget {
                     padding: const EdgeInsets.all(8),
                   ),
                   onPressed: onAdd,
+                  tooltip: localizations.addNew,
                 ),
               ],
             ),
@@ -68,12 +72,12 @@ class EntitySection<T> extends StatelessWidget {
           else if (error != null)
             Center(child: Text(error!))
           else if (items.isEmpty)
-            const Center(
+            Center(
               child: Padding(
-                padding: EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
                 child: Text(
-                  'No items yet',
-                  style: TextStyle(color: Colors.black54),
+                  localizations.noItemsYet,
+                  style: const TextStyle(color: Colors.black54),
                 ),
               ),
             )

@@ -10,10 +10,12 @@ import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/modals.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/entity_section.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class EntitySections extends ConsumerWidget {
   final Function(BuildContext, Widget) showModal;
   final DateTime selectedDate;
+
   const EntitySections({
     Key? key,
     required this.showModal,
@@ -26,20 +28,13 @@ class EntitySections extends ConsumerWidget {
     final tasks = ref.watch(taskStateNotifierProvider(selectedDate));
     final habits = ref.watch(habitStateNotifierProvider(selectedDate));
 
-    // Add these prints to debug
-    print("EntitySections - Selected date: $selectedDate");
-    print("EntitySections - Symptoms: ${symptoms.length}");
-    print("EntitySections - Tasks: ${tasks.length}");
-    print(
-        "EntitySections - Tasks titles: ${tasks.map((t) => t.title).toList()}");
-    print("EntitySections - Habits: ${habits.length}");
-
     final today = DateTime.now();
+    final localizations = AppLocalizations.of(context)!;
 
     return Column(
       children: [
         EntitySection<SymptomModel>(
-          title: 'Symptoms',
+          title: localizations.symptoms,
           items: symptoms,
           isLoading: false,
           error: null,
@@ -51,7 +46,7 @@ class EntitySections extends ConsumerWidget {
           itemBuilder: (symptom) => ListTile(
             title: Text(symptom.name),
             subtitle: Text(
-                'Category: ${symptom.category} | Severity: ${symptom.severity}'),
+                '${localizations.category}: ${symptom.category} | ${localizations.severity}: ${symptom.severity}'),
             trailing: Text(
               DateFormat('HH:mm').format(symptom.createdAt.toLocal()),
               style: const TextStyle(color: Colors.grey),
@@ -60,16 +55,14 @@ class EntitySections extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         EntitySection<TaskModel>(
-          title: 'Tasks',
+          title: localizations.tasks,
           items: tasks,
           isLoading: false,
           error: null,
           onTap: (task) =>
               showModal(context, TaskEditorModal(ref: ref, existing: task)),
           onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
-          // ...existing code...
           itemBuilder: (task) {
-            final today = DateTime.now();
             final isCompleted = task.completedAt != null &&
                 task.completedAt!.year == today.year &&
                 task.completedAt!.month == today.month &&
@@ -89,7 +82,7 @@ class EntitySections extends ConsumerWidget {
                     ),
                   ),
                   subtitle: Text(
-                    '${task.dueDate != null ? "Due: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : "No due date"} | Status: ${task.status}',
+                    '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${task.status}',
                     style: TextStyle(
                       color:
                           isCompleted ? Colors.grey : const Color(0xFF5A5A5A),
@@ -98,7 +91,7 @@ class EntitySections extends ConsumerWidget {
                   trailing: Checkbox(
                     value: isCompleted,
                     onChanged: (value) async {
-                      final newStatus = value == true ? 'Done' : 'Pending';
+                      final newStatus = value == true ? localizations.done : localizations.pending;
                       final newCompletedAt =
                           value == true ? DateTime.now() : null;
 
@@ -117,8 +110,6 @@ class EntitySections extends ConsumerWidget {
                     },
                   ),
                 ),
-                // Replace the subtask mapping code with this:
-
                 if (task.subtasks != null && task.subtasks!.isNotEmpty)
                   ...task.subtasks!.map(
                     (subtask) => ListTile(
@@ -141,8 +132,7 @@ class EntitySections extends ConsumerWidget {
                       subtitle: Text(subtask.rawTimeValue != null &&
                               subtask.rawTimeUnit != null
                           ? '${subtask.rawTimeValue} ${subtask.rawTimeUnit}'
-                          : 'No time estimate'),
-                      // Make subtask clickable
+                          : localizations.noTimeEstimate),
                       onTap: () {
                         showModal(
                           context,
@@ -153,7 +143,6 @@ class EntitySections extends ConsumerWidget {
                           ),
                         );
                       },
-                      // Keep existing checkbox for quick toggling
                       trailing: Checkbox(
                         value: subtask.completed,
                         onChanged: (value) async {
@@ -189,7 +178,7 @@ class EntitySections extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         EntitySection<HabitModel>(
-          title: 'Habits',
+          title: localizations.habits,
           items: habits,
           isLoading: false,
           error: null,
@@ -207,20 +196,19 @@ class EntitySections extends ConsumerWidget {
             String getFrequencyText() {
               switch (habit.frequency) {
                 case 1:
-                  return 'daily';
+                  return localizations.daily;
                 case 7:
-                  return 'weekly';
+                  return localizations.weekly;
                 case -1:
                   final days = habit.customDays?.join(', ') ?? '';
-                  return 'monthly (days $days)';
+                  return '${localizations.monthlyDays} $days';
                 default:
                   return '';
               }
             }
 
             return ListTile(
-              leading: const Icon(Icons
-                  .sync_rounded), // Changed to match tasks but with different icon
+              leading: const Icon(Icons.sync_rounded),
               title: Text(
                 habit.title,
                 style: TextStyle(
@@ -229,7 +217,7 @@ class EntitySections extends ConsumerWidget {
                 ),
               ),
               subtitle: Text(
-                '${habit.description.isNotEmpty ? habit.description : 'No description'} | Frequency: ${getFrequencyText()}',
+                '${habit.description.isNotEmpty ? habit.description : localizations.noDescription} | ${localizations.frequency}: ${getFrequencyText()}',
                 style: TextStyle(
                   color: isCompleted ? Colors.grey : Color(0xFF5A5A5A),
                 ),

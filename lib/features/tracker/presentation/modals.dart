@@ -1,5 +1,3 @@
-// lib/features/tracker/presentation/modals.dart
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -14,6 +12,7 @@ import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/services/estimator_service.dart';
 import 'package:spiceease/data/services/magic_todo_service.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 import 'tracker_controller.dart';
 
 // —— Base Editor Modal —— //
@@ -35,6 +34,8 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Dialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(
@@ -49,8 +50,8 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
             children: [
               Text(
                 widget.existing != null
-                    ? 'Edit ${getTitle()}'
-                    : 'New ${getTitle()}',
+                    ? localizations.editTitle(getTitle())
+                    : localizations.newTitle(getTitle()),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -69,13 +70,14 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                         showDialog(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: Text('Delete ${getTitle()}?'),
-                            content: Text(
-                                'Are you sure you want to delete "${getDeleteLabel()}"?'),
+                            title: Text(localizations
+                                .deleteConfirmationTitle(getTitle())),
+                            content: Text(localizations
+                                .deleteConfirmationMessage(getDeleteLabel())),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel',
+                                child: Text(localizations.cancel,
                                     style: TextStyle(color: Colors.blueAccent)),
                               ),
                               TextButton(
@@ -83,8 +85,8 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                                   Navigator.pop(context);
                                   onDelete();
                                 },
-                                child: const Text(
-                                  'Delete',
+                                child: Text(
+                                  localizations.delete,
                                   style: TextStyle(color: Colors.red),
                                 ),
                               ),
@@ -92,22 +94,21 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                           ),
                         );
                       },
-                      child: const Text(
-                        'Delete',
+                      child: Text(
+                        localizations.delete,
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
                   const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('Cancel',
+                    child: Text(localizations.cancel,
                         style: TextStyle(color: Colors.blueAccent)),
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
-                    // style: ModalStyles.buttonStyle,
                     onPressed: onSave,
-                    child: const Text('Save'),
+                    child: Text(localizations.save),
                   ),
                 ],
               ),
@@ -164,42 +165,62 @@ class _SymptomEditorModalState
 
   @override
   Widget buildForm() {
-    final predefinedCategories = ['Physical', 'Psychological', 'Custom'];
+    final localizations = AppLocalizations.of(context)!;
+
+    // Map English category names to localized ones
+    final Map<String, String> categoryMap = {
+      'Physical': localizations.physical,
+      'Psychological': localizations.psychological,
+      'Custom': localizations.custom
+    };
+
+    // Get the localized version of the current category
+    final localizedCategory = categoryMap[_category] ?? localizations.physical;
+
+    final predefinedCategories = [
+      localizations.physical,
+      localizations.psychological,
+      localizations.custom
+    ];
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: _nameC,
-          decoration: const InputDecoration(labelText: 'Name'),
+          decoration: InputDecoration(labelText: localizations.name),
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            const Text('Category:'),
+            Text('${localizations.category}:'),
             const SizedBox(width: 16),
             if (_isCustomCategory)
               Expanded(
                 child: TextFormField(
                   controller: _customCatC,
                   decoration:
-                      const InputDecoration(labelText: 'Custom Category'),
+                      InputDecoration(labelText: localizations.customCategory),
                   onChanged: (value) => setState(() => _category = value),
                 ),
               )
             else
               DropdownButton<String>(
-                value: _category,
+                value: localizedCategory,
                 items: predefinedCategories
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
                 onChanged: (v) => setState(() {
-                  if (v == 'Custom') {
+                  if (v == localizations.custom) {
                     _isCustomCategory = true;
                     _customCatC.text = _category == 'Custom' ? '' : _category;
-                  } else {
+                    _category = 'Custom';
+                  } else if (v == localizations.physical) {
                     _isCustomCategory = false;
-                    _category = v!;
+                    _category = 'Physical';
+                  } else if (v == localizations.psychological) {
+                    _isCustomCategory = false;
+                    _category = 'Psychological';
                   }
                 }),
               ),
@@ -208,7 +229,7 @@ class _SymptomEditorModalState
         const SizedBox(height: 12),
         Row(
           children: [
-            const Text('Severity:'),
+            Text('${localizations.severity}:'),
             Expanded(
               child: Slider(
                 min: 1,
@@ -230,7 +251,7 @@ class _SymptomEditorModalState
   void onSave() async {
     if (_nameC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
+        SnackBar(content: Text(AppLocalizations.of(context)!.nameRequired)),
       );
       return;
     }
@@ -255,18 +276,7 @@ class _SymptomEditorModalState
       );
     }
   }
-
-  @override
-  String getDeleteLabel() => widget.existing?.name ?? 'this symptom';
-
-  @override
-  void onDelete() async {
-    Navigator.of(context).pop();
-    final ctrl = widget.ref.read(trackerControllerProvider);
-    await ctrl.deleteSymptom(widget.existing!.id, super.widget.ref);
-  }
 }
-
 // —— Habit Editor —— //
 
 class HabitEditorModal extends TrackingEditorModal {
@@ -286,8 +296,8 @@ class _HabitEditorModalState
   late TextEditingController _titleC, _descC;
   late String _freqLabel;
   List<int> _selectedDays = [];
-  bool _markAsCompleted = false; // Checkbox for marking as completed
-  final _freqOpts = ['Daily', 'Weekly', 'Monthly'];
+  bool _markAsCompleted = false;
+  List<String>? _freqOpts;
   final List<String> _weekdays = [
     'Monday',
     'Tuesday',
@@ -298,6 +308,10 @@ class _HabitEditorModalState
     'Sunday',
   ];
   String? _selectedDay;
+
+  // Map to translate between internal and UI values
+  Map<String, String> _freqMapToDisplay = {};
+  Map<String, String> _freqMapToInternal = {};
 
   @override
   void initState() {
@@ -326,47 +340,76 @@ class _HabitEditorModalState
 
   /// Maps a human-readable label to a frequency integer.
   int _mapLabelToFrequency(String label) {
-    if (label == 'Daily') return 1;
-    if (label == 'Weekly') return 7;
-    if (label == 'Monthly') return -1;
+    if (label == 'Daily' || label == _freqMapToInternal['Daily']) return 1;
+    if (label == 'Weekly' || label == _freqMapToInternal['Weekly']) return 7;
+    if (label == 'Monthly' || label == _freqMapToInternal['Monthly']) return -1;
     return 1; // Default to Daily
   }
 
   @override
   Widget buildForm() {
+    final localizations = AppLocalizations.of(context)!;
+
+    // Setup mapping between internal and UI values
+    _freqMapToDisplay = {
+      'Daily': localizations.daily,
+      'Weekly': localizations.weekly,
+      'Monthly': localizations.monthly
+    };
+    _freqMapToInternal = {
+      'Daily': localizations.daily,
+      'Weekly': localizations.weekly,
+      'Monthly': localizations.monthly
+    };
+
+    // Get localized options
+    _freqOpts = [
+      localizations.daily,
+      localizations.weekly,
+      localizations.monthly
+    ];
+
+    // Get the localized version of current frequency
+    final localizedFreq = _freqMapToDisplay[_freqLabel] ?? localizations.daily;
+
     return Column(mainAxisSize: MainAxisSize.min, children: [
       TextField(
         controller: _titleC,
-        decoration: const InputDecoration(labelText: 'Title'),
+        decoration: InputDecoration(labelText: localizations.title),
       ),
       const SizedBox(height: 12),
       TextField(
         controller: _descC,
-        decoration: const InputDecoration(labelText: 'Description'),
+        decoration: InputDecoration(labelText: localizations.description),
       ),
       const SizedBox(height: 12),
       DropdownButtonFormField<String>(
-        value: _freqLabel,
-        decoration: const InputDecoration(labelText: 'Frequency'),
+        value: localizedFreq,
+        decoration: InputDecoration(labelText: localizations.frequency),
         items: _freqOpts
-            .map((o) => DropdownMenuItem(value: o, child: Text(o)))
+            ?.map((o) => DropdownMenuItem(value: o, child: Text(o)))
             .toList(),
         onChanged: (v) => setState(() {
-          _freqLabel = v!;
+          // Map back to internal representation
+          if (v == localizations.daily) {
+            _freqLabel = 'Daily';
+          } else if (v == localizations.weekly) {
+            _freqLabel = 'Weekly';
+          } else if (v == localizations.monthly) {
+            _freqLabel = 'Monthly';
+          }
           _selectedDays.clear(); // Reset selected days when frequency changes
         }),
       ),
       if (_freqLabel == 'Weekly') ...[
         const SizedBox(height: 16),
-        // ChipTheme(
-        // data: ModalStyles.chipTheme,
         Wrap(
           spacing: 8,
           children: List.generate(7, (i) {
             final weekday = i + 1;
             return FilterChip(
-              label:
-                  Text(DateFormat('EEEE').format(DateTime(2024, 1, weekday))),
+              label: Text(DateFormat('EEEE', localizations.localeName)
+                  .format(DateTime(2024, 1, weekday))),
               selected: _selectedDays.contains(weekday),
               onSelected: (selected) => setState(() {
                 if (selected) {
@@ -383,9 +426,9 @@ class _HabitEditorModalState
         const SizedBox(height: 12),
         TextField(
           controller: TextEditingController(text: _selectedDay ?? ''),
-          decoration: const InputDecoration(
-            labelText: 'Enter Day of Month (1-31)',
-            hintText: 'e.g., 1, 15, 31',
+          decoration: InputDecoration(
+            labelText: localizations.enterDayOfMonth,
+            hintText: localizations.dayOfMonthHint,
           ),
           keyboardType: TextInputType.number,
           onChanged: (value) {
@@ -394,7 +437,6 @@ class _HabitEditorModalState
         ),
         const SizedBox(height: 12),
         ElevatedButton(
-          // style: ModalStyles.buttonStyle,
           onPressed: () {
             if (_selectedDay != null) {
               final day = int.tryParse(_selectedDay!);
@@ -407,18 +449,18 @@ class _HabitEditorModalState
               }
             }
           },
-          child: const Text('Add Day of Month'),
+          child: Text(localizations.addDayOfMonth),
         ),
       ],
       const SizedBox(height: 12),
-      //     ChipTheme(
-      // data: ModalStyles.chipTheme,
       Wrap(
         spacing: 8,
         children: _selectedDays
             .map((day) => Chip(
-                  label: Text(
-                      _freqLabel == 'Weekly' ? _weekdays[day - 1] : 'Day $day'),
+                  label: Text(_freqLabel == 'Weekly'
+                      ? DateFormat('EEEE', localizations.localeName)
+                          .format(DateTime(2024, 1, day))
+                      : localizations.dayNumber(day.toString())),
                   onDeleted: () {
                     setState(() {
                       _selectedDays.remove(day);
@@ -430,7 +472,7 @@ class _HabitEditorModalState
       if (widget.existing != null) ...[
         const SizedBox(height: 12),
         CheckboxListTile(
-          title: const Text('Mark as Completed'),
+          title: Text(localizations.markAsCompleted),
           value: _markAsCompleted,
           onChanged: (value) async {
             setState(() {
@@ -465,19 +507,23 @@ class _HabitEditorModalState
 
   @override
   void onSave() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(content: Text(localizations.titleRequired)),
       );
       return;
     }
 
     if ((_freqLabel == 'Weekly' || _freqLabel == 'Monthly') &&
         _selectedDays.isEmpty) {
+      String message = _freqLabel == 'Weekly'
+          ? localizations.selectWeekday
+          : localizations.selectDayOfMonth;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(
-                'Please select at least one ${_freqLabel == 'Weekly' ? 'weekday' : 'day of the month'}')),
+        SnackBar(content: Text(message)),
       );
       return;
     }
@@ -508,16 +554,6 @@ class _HabitEditorModalState
         markAsCompleted: _markAsCompleted,
       );
     }
-  }
-
-  @override
-  String getDeleteLabel() => widget.existing?.title ?? 'this habit';
-
-  @override
-  void onDelete() async {
-    Navigator.of(context).pop();
-    final ctrl = widget.ref.read(trackerControllerProvider);
-    await ctrl.deleteHabit(widget.existing!.id);
   }
 }
 
@@ -596,11 +632,11 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   }
 
   Future<void> _generateSubtasks() async {
+    final localizations = AppLocalizations.of(context)!;
     print('Generating subtasks...');
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Title is required for generating subtasks')),
+        SnackBar(content: Text(localizations.titleRequiredForSubtasks)),
       );
       return;
     }
@@ -654,7 +690,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('No subtasks were generated')),
+          SnackBar(content: Text(localizations.noSubtasksGenerated)),
         );
         return;
       }
@@ -663,7 +699,9 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     } catch (e) {
       print('Error generating subtasks: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to generate subtasks: $e')),
+        SnackBar(
+            content:
+                Text(localizations.failedToGenerateSubtasks(e.toString()))),
       );
     } finally {
       setState(() => _isLoadingSubtasks = false);
@@ -672,6 +710,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
 
   @override
   Widget buildForm() {
+    final localizations = AppLocalizations.of(context)!;
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -679,19 +719,19 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           children: [
             TextField(
               controller: _titleC,
-              decoration: const InputDecoration(labelText: 'Title*'),
+              decoration: InputDecoration(labelText: '${localizations.title}*'),
               autofocus: true,
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _descC,
-              decoration: const InputDecoration(labelText: 'Description'),
+              decoration: InputDecoration(labelText: localizations.description),
               maxLines: 3,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               value: _status,
-              decoration: const InputDecoration(labelText: 'Status'),
+              decoration: InputDecoration(labelText: localizations.status),
               items: _statusOptions
                   .map((status) => DropdownMenuItem(
                         value: status,
@@ -706,13 +746,13 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                 Expanded(
                   child: Text(
                     _dueDate == null
-                        ? 'No due date set'
-                        : 'Due: ${DateFormat.yMd().format(_dueDate!)}',
+                        ? localizations.noDueDateSet
+                        : '${localizations.due}: ${DateFormat.yMd().format(_dueDate!)}',
                   ),
                 ),
                 TextButton(
                   onPressed: () => _pickDate(context, true),
-                  child: const Text('Set Due Date'),
+                  child: Text(localizations.setDueDate),
                 ),
               ],
             ),
@@ -722,20 +762,20 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                 Expanded(
                   child: Text(
                     _completedAt == null
-                        ? 'Not completed'
-                        : 'Completed: ${DateFormat.yMd().format(_completedAt!)}',
+                        ? localizations.notCompleted
+                        : '${localizations.completed}: ${DateFormat.yMd().format(_completedAt!)}',
                   ),
                 ),
                 TextButton(
                   onPressed: () => _pickDate(context, false),
-                  child: const Text('Set Completed'),
+                  child: Text(localizations.setCompleted),
                 ),
               ],
             ),
             const SizedBox(height: 12),
             Row(
               children: [
-                const Text('Priority:'),
+                Text('${localizations.priority}:'),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Slider(
@@ -752,7 +792,6 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             const SizedBox(height: 12),
-            // Update the EstimatorWidget implementation in _TaskEditorModalState:
 
             Row(
               children: [
@@ -765,8 +804,6 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                         // Store the original values without conversion
                         _estimatedTime = int.tryParse(time) ?? 0;
                         _estimatedUnit = unit;
-
-                        // No need to convert to minutes anymore
                       });
                     },
                     initialValue: _estimatedTime?.toString(),
@@ -775,24 +812,25 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
 
-// Add this to show the estimation with units
+            // Add this to show the estimation with units
             if (_estimatedTime != null &&
                 _estimatedUnit != null &&
                 _estimatedUnit!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
-                child: Text('Estimated time: $_estimatedTime $_estimatedUnit'),
+                child: Text(
+                    '${localizations.estimatedTime}: ${_estimatedTime.toString()} ${_estimatedUnit!}'),
               ),
             const SizedBox(height: 16),
-// Second row - Subtasks
+
+            // Second row - Subtasks
             Row(
               children: [
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                          "Feeling like that's too much? Break it into subtasks!"),
+                      Text(localizations.breakIntoSubtasksPrompt),
                       const SizedBox(height: 8),
                       ElevatedButton(
                         onPressed: _isLoadingSubtasks
@@ -808,7 +846,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                                 child:
                                     CircularProgressIndicator(strokeWidth: 2),
                               )
-                            : const Text('Break it into subtasks'),
+                            : Text(localizations.breakIntoSubtasks),
                       ),
                     ],
                   ),
@@ -823,9 +861,11 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
 
   @override
   void onSave() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(content: Text(localizations.titleRequired)),
       );
       return;
     }
@@ -861,7 +901,11 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   }
 
   @override
-  String getDeleteLabel() => widget.existing?.title ?? 'this task';
+  String getDeleteLabel() =>
+      widget.existing?.title ?? AppLocalizations.of(context)!.thisTask;
+
+  @override
+  String getTitle() => AppLocalizations.of(context)!.task;
 
   @override
   void onDelete() async {
@@ -908,15 +952,17 @@ class _SubtaskEditorModalState
 
   @override
   Widget buildForm() {
+    final localizations = AppLocalizations.of(context)!;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text('Subtask for: ${widget.parentTask.title}',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        Text(localizations.subtaskFor(widget.parentTask.title),
+            style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
         TextField(
           controller: _titleC,
-          decoration: const InputDecoration(labelText: 'Title*'),
+          decoration: InputDecoration(labelText: '${localizations.title}*'),
           maxLines: 5,
           autofocus: true,
         ),
@@ -945,11 +991,11 @@ class _SubtaskEditorModalState
 
         // Show the current estimate with raw values
         if (_rawTimeValue.isNotEmpty)
-          Text('Current estimate: $_rawTimeValue $_rawTimeUnit'),
+          Text(localizations.currentEstimate(_rawTimeValue, _rawTimeUnit)),
         const SizedBox(height: 12),
 
         CheckboxListTile(
-          title: const Text('Completed'),
+          title: Text(localizations.completed),
           value: _completed,
           onChanged: (value) => setState(() => _completed = value ?? false),
         ),
@@ -959,9 +1005,11 @@ class _SubtaskEditorModalState
 
   @override
   void onSave() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Title is required')),
+        SnackBar(content: Text(localizations.titleRequired)),
       );
       return;
     }
@@ -978,6 +1026,12 @@ class _SubtaskEditorModalState
       rawTimeUnit: _rawTimeUnit,
     );
   }
+
+  @override
+  String getDeleteLabel() => widget.subtask.title;
+
+  @override
+  String getTitle() => AppLocalizations.of(context)!.subtask;
 }
 
 // —— Mood Editor —— //
@@ -1007,6 +1061,8 @@ class _MoodLevelEditorModalState
 
   @override
   Widget buildForm() {
+    final localizations = AppLocalizations.of(context)!;
+
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Wrap(
         spacing: 10,
@@ -1032,8 +1088,10 @@ class _MoodLevelEditorModalState
       TextField(
         controller: _notesC,
         maxLines: 3,
-        decoration: const InputDecoration(
-            labelText: 'Notes', border: OutlineInputBorder()),
+        decoration: InputDecoration(
+          labelText: localizations.notes,
+          border: const OutlineInputBorder(),
+        ),
       ),
     ]);
   }
@@ -1051,6 +1109,27 @@ class _MoodLevelEditorModalState
         _notesC.text.trim(),
       );
     }
+  }
+
+  @override
+  String getDeleteLabel() {
+    final localizations = AppLocalizations.of(context)!;
+    return widget.existing?.notes?.isNotEmpty == true
+        ? widget.existing!.notes!
+        : localizations.thisMoodEntry;
+  }
+
+  @override
+  String getTitle() {
+    final localizations = AppLocalizations.of(context)!;
+    return localizations.mood;
+  }
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteMood(widget.existing!.id, widget.ref);
   }
 }
 
@@ -1081,6 +1160,8 @@ class _EnergyLevelEditorModalState
 
   @override
   Widget buildForm() {
+    final localizations = AppLocalizations.of(context)!;
+
     return Column(mainAxisSize: MainAxisSize.min, children: [
       Wrap(
         spacing: 10,
@@ -1106,8 +1187,10 @@ class _EnergyLevelEditorModalState
       TextField(
         controller: _notesC,
         maxLines: 3,
-        decoration: const InputDecoration(
-            labelText: 'Notes', border: OutlineInputBorder()),
+        decoration: InputDecoration(
+          labelText: localizations.notes,
+          border: const OutlineInputBorder(),
+        ),
       ),
     ]);
   }
@@ -1125,6 +1208,21 @@ class _EnergyLevelEditorModalState
         _notesC.text.trim(),
       );
     }
+  }
+
+  @override
+  String getDeleteLabel() => widget.existing?.notes?.isNotEmpty == true
+      ? widget.existing!.notes!
+      : AppLocalizations.of(context)!.thisEnergyEntry;
+
+  @override
+  String getTitle() => AppLocalizations.of(context)!.energy;
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteEnergy(widget.existing!.id, widget.ref);
   }
 }
 
@@ -1197,28 +1295,34 @@ class _MedicationEditorModalState
   }
 
   String _mapLabelToFrequency(String label) {
-    switch (label) {
-      case 'Daily':
-        return 'daily';
-      case 'Weekly':
-        return 'weekly';
-      case 'Monthly':
-        return 'monthly';
-      default:
-        return 'daily';
-    }
+    final localizations = AppLocalizations.of(context)!;
+
+    if (label == localizations.daily) return 'daily';
+    if (label == localizations.weekly) return 'weekly';
+    if (label == localizations.monthly) return 'monthly';
+    return 'daily';
   }
 
   @override
   Widget buildForm() {
-    final predefinedUnits = ['ml', 'mg', 'g', 'tablets', 'custom'];
+    final localizations = AppLocalizations.of(context)!;
+    final predefinedUnits = ['ml', 'mg', 'g', 'tablets', localizations.custom];
+
+    // Map frequency labels to localized strings
+    final Map<String, String> freqMap = {
+      'Daily': localizations.daily,
+      'Weekly': localizations.weekly,
+      'Monthly': localizations.monthly
+    };
+
+    _freqLabel = freqMap[_freqLabel] ?? localizations.daily;
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextFormField(
           controller: _nameC,
-          decoration: const InputDecoration(labelText: 'Name'),
+          decoration: InputDecoration(labelText: localizations.name),
         ),
         const SizedBox(height: 16),
         Row(
@@ -1226,7 +1330,7 @@ class _MedicationEditorModalState
             Expanded(
               child: TextFormField(
                 controller: _doseC,
-                decoration: const InputDecoration(labelText: 'Dose'),
+                decoration: InputDecoration(labelText: localizations.dose),
                 keyboardType: TextInputType.number,
               ),
             ),
@@ -1235,7 +1339,8 @@ class _MedicationEditorModalState
               Expanded(
                 child: TextFormField(
                   controller: _customUnitC,
-                  decoration: const InputDecoration(labelText: 'Custom Unit'),
+                  decoration:
+                      InputDecoration(labelText: localizations.customUnit),
                   onChanged: (value) => setState(() {
                     _unit = value;
                   }),
@@ -1248,7 +1353,7 @@ class _MedicationEditorModalState
                     .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                     .toList(),
                 onChanged: (v) => setState(() {
-                  if (v == 'custom') {
+                  if (v == localizations.custom) {
                     _isCustomUnit = true;
                     _customUnitC.text = _unit == 'custom' ? '' : _unit;
                   } else {
@@ -1262,23 +1367,25 @@ class _MedicationEditorModalState
         const SizedBox(height: 16),
         DropdownButton<String>(
           value: _freqLabel,
-          items: ['Daily', 'Weekly', 'Monthly']
-              .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-              .toList(),
+          items: [
+            localizations.daily,
+            localizations.weekly,
+            localizations.monthly
+          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
           onChanged: (v) => setState(() {
             _freqLabel = v!;
             _selectedDays.clear();
           }),
         ),
-        if (_freqLabel == 'Weekly') ...[
+        if (_freqLabel == localizations.weekly) ...[
           const SizedBox(height: 16),
           Wrap(
             spacing: 8,
             children: List.generate(7, (i) {
               final weekday = i + 1;
               return FilterChip(
-                label:
-                    Text(DateFormat('EEEE').format(DateTime(2024, 1, weekday))),
+                label: Text(DateFormat('EEEE', localizations.localeName)
+                    .format(DateTime(2024, 1, weekday))),
                 selected: _selectedDays.contains(weekday),
                 onSelected: (selected) => setState(() {
                   if (selected) {
@@ -1290,16 +1397,16 @@ class _MedicationEditorModalState
               );
             }),
           ),
-        ] else if (_freqLabel == 'Monthly') ...[
+        ] else if (_freqLabel == localizations.monthly) ...[
           const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: TextFormField(
                   controller: _monthlyDayC,
-                  decoration: const InputDecoration(
-                    labelText: 'Day of Month (1-31)',
-                    hintText: 'Enter a number and press Add',
+                  decoration: InputDecoration(
+                    labelText: localizations.dayOfMonth,
+                    hintText: localizations.enterDayHint,
                   ),
                   keyboardType: TextInputType.number,
                 ),
@@ -1315,6 +1422,7 @@ class _MedicationEditorModalState
                     });
                   }
                 },
+                tooltip: localizations.addDay,
               ),
             ],
           ),
@@ -1323,7 +1431,7 @@ class _MedicationEditorModalState
             spacing: 8,
             children: (_selectedDays.toList()..sort())
                 .map((day) => Chip(
-                      label: Text('Day $day'),
+                      label: Text(localizations.dayNumber(day.toString())),
                       onDeleted: () =>
                           setState(() => _selectedDays.remove(day)),
                     ))
@@ -1333,13 +1441,14 @@ class _MedicationEditorModalState
         const SizedBox(height: 16),
         Row(
           children: [
-            const Text('Times per day:'),
+            Text(localizations.timesPerDay),
             const SizedBox(width: 16),
             if (_isCustomTimes)
               Expanded(
                 child: TextFormField(
                   controller: _customTimesC,
-                  decoration: const InputDecoration(labelText: 'Custom Times'),
+                  decoration:
+                      InputDecoration(labelText: localizations.customValue),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
                     final times = int.tryParse(value);
@@ -1351,18 +1460,19 @@ class _MedicationEditorModalState
               )
             else
               DropdownButton<dynamic>(
-                value: _timesPerDay > 5 ? 'custom' : _timesPerDay,
+                value: _timesPerDay > 5 ? localizations.custom : _timesPerDay,
                 items: [
                   ...List.generate(
                     5,
                     (i) =>
                         DropdownMenuItem(value: i + 1, child: Text('${i + 1}')),
                   ),
-                  const DropdownMenuItem(
-                      value: 'custom', child: Text('Custom')),
+                  DropdownMenuItem(
+                      value: localizations.custom,
+                      child: Text(localizations.custom)),
                 ],
                 onChanged: (v) => setState(() {
-                  if (v == 'custom') {
+                  if (v == localizations.custom) {
                     _isCustomTimes = true;
                     _customTimesC.text = _timesPerDay.toString();
                   } else {
@@ -1376,7 +1486,7 @@ class _MedicationEditorModalState
         if (widget.existing != null) ...[
           const SizedBox(height: 16),
           CheckboxListTile(
-            title: const Text('Mark as taken'),
+            title: Text(localizations.markAsTaken),
             value: _markAsTaken,
             onChanged: (v) => setState(() => _markAsTaken = v!),
           ),
@@ -1387,24 +1497,27 @@ class _MedicationEditorModalState
 
   @override
   void onSave() async {
+    final localizations = AppLocalizations.of(context)!;
+
     if (_nameC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Name is required')),
+        SnackBar(content: Text(localizations.nameRequired)),
       );
       return;
     }
 
     if (_doseC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Dose is required')),
+        SnackBar(content: Text(localizations.doseRequired)),
       );
       return;
     }
 
-    if ((_freqLabel == 'Weekly' || _freqLabel == 'Monthly') &&
+    if ((_freqLabel == localizations.weekly ||
+            _freqLabel == localizations.monthly) &&
         _selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one day')),
+        SnackBar(content: Text(localizations.selectAtLeastOneDay)),
       );
       return;
     }
@@ -1441,9 +1554,22 @@ class _MedicationEditorModalState
       );
     }
   }
+
+  @override
+  String getDeleteLabel() =>
+      widget.existing?.name ?? AppLocalizations.of(context)!.thisMedication;
+
+  @override
+  String getTitle() => AppLocalizations.of(context)!.medication;
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteMedication(widget.existing!.id, widget.ref);
+  }
 }
 
-// Replace the EstimatorModal class with this:
 class EstimatorWidget extends ConsumerStatefulWidget {
   final String title;
   final String description;
@@ -1483,13 +1609,15 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Row(
       children: [
         Expanded(
           child: TextField(
             enabled: false,
             decoration: InputDecoration(
-              labelText: 'Estimated time',
+              labelText: localizations.estimatedTimeLabel,
               border: const OutlineInputBorder(),
             ),
             controller: TextEditingController(
@@ -1528,7 +1656,7 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
                   height: 20,
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
-              : const Text('Estimate'),
+              : Text(localizations.estimate),
         ),
       ],
     );
@@ -1547,6 +1675,8 @@ class SubtaskList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: subtasks
@@ -1568,7 +1698,8 @@ class SubtaskList extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Text('${subtask.rawTimeValue} min'),
+                    Text(localizations
+                        .minutesAbbreviation(subtask.rawTimeValue ?? '0')),
                   ],
                 ),
               ))

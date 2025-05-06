@@ -16,6 +16,7 @@ import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/modals.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/icon_list_launcher.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class IconGrid extends ConsumerWidget {
   final Function(BuildContext, Widget) showModal;
@@ -38,6 +39,8 @@ class IconGrid extends ConsumerWidget {
     final habits = ref.watch(habitStateNotifierProvider(selectedDate));
     final medication = ref.watch(medicationStateNotifierProvider(selectedDate));
 
+    final localizations = AppLocalizations.of(context)!;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -58,14 +61,15 @@ class IconGrid extends ConsumerWidget {
         alignment: WrapAlignment.center,
         children: [
           IconListLauncher<EnergyModel>(
-            title: 'Energy',
+            title: localizations.energy,
             icon: const Icon(Icons.bolt),
             items: energy,
             onAdd: () => showModal(context, EnergyLevelEditorModal(ref: ref)),
             onTap: (e) => showModal(
                 context, EnergyLevelEditorModal(ref: ref, existing: e)),
             itemBuilder: (e) => '${e.energyLevel}',
-            additionalTextBuilder: (e) => 'Additional notes: ${e.notes}',
+            additionalTextBuilder: (e) =>
+                '${localizations.additionalNotes}: ${e.notes}',
             onDelete: (e) =>
                 ref.read(trackerControllerProvider).deleteEnergy(e.id, ref),
             onEdit: (e) => showModal(
@@ -74,14 +78,15 @@ class IconGrid extends ConsumerWidget {
                 energy.isEmpty ? '—' : '${energy.last.energyLevel}/10',
           ),
           IconListLauncher<MoodModel>(
-            title: 'Mood',
+            title: localizations.mood,
             icon: const Icon(Icons.face),
             items: moods,
             onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
             onTap: (mood) => showModal(
                 context, MoodLevelEditorModal(ref: ref, existing: mood)),
             itemBuilder: (e) => '${e.moodLevel}',
-            additionalTextBuilder: (e) => 'Additional notes: ${e.notes}',
+            additionalTextBuilder: (e) =>
+                '${localizations.additionalNotes}: ${e.notes}',
             onDelete: (e) =>
                 ref.read(trackerControllerProvider).deleteMood(e.id, ref),
             onEdit: (e) =>
@@ -90,14 +95,15 @@ class IconGrid extends ConsumerWidget {
                 moods.isEmpty ? '—' : '${moods.last.moodLevel}/10',
           ),
           IconListLauncher<MedicationModel>(
-            title: 'Medication',
+            title: localizations.medication,
             icon: const Icon(Icons.medication),
             items: medication,
             onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
             onTap: (med) => showModal(
                 context, MedicationEditorModal(ref: ref, existing: med)),
             itemBuilder: (m) => m.name,
-            additionalTextBuilder: (m) => 'Dose: ${m.dose} ${m.unit}',
+            additionalTextBuilder: (m) =>
+                '${localizations.dose}: ${m.dose} ${m.unit}',
             onDelete: (m) =>
                 ref.read(trackerControllerProvider).deleteMedication(m.id, ref),
             onEdit: (m) => showModal(
@@ -115,7 +121,7 @@ class IconGrid extends ConsumerWidget {
             },
           ),
           IconListLauncher<SymptomModel>(
-            title: 'Symptoms',
+            title: localizations.symptoms,
             icon: const Icon(Icons.healing),
             items: symptoms,
             onAdd: () => showModal(context, SymptomEditorModal(ref: ref)),
@@ -123,7 +129,7 @@ class IconGrid extends ConsumerWidget {
                 context, SymptomEditorModal(ref: ref, existing: symptom)),
             itemBuilder: (s) => s.name,
             additionalTextBuilder: (s) =>
-                'Category: ${s.category}\nSeverity: ${s.severity}',
+                '${localizations.category}: ${s.category}\n${localizations.severity}: ${s.severity}',
             onDelete: (s) =>
                 ref.read(trackerControllerProvider).deleteSymptom(s.id, ref),
             onEdit: (s) =>
@@ -131,7 +137,7 @@ class IconGrid extends ConsumerWidget {
             statsLabelBuilder: () => '${symptoms.length}',
           ),
           IconListLauncher<TaskModel>(
-            title: 'Tasks',
+            title: localizations.tasks,
             icon: const Icon(Icons.task_alt),
             items: tasks,
             onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
@@ -139,7 +145,7 @@ class IconGrid extends ConsumerWidget {
                 showModal(context, TaskEditorModal(ref: ref, existing: task)),
             itemBuilder: (t) => t.title,
             additionalTextBuilder: (t) =>
-                '${t.dueDate != null ? "Due: ${DateFormat('EEE, d MMMM').format(t.dueDate!.toLocal())}" : "No due date"} | Status: ${t.status}',
+                '${t.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM', localizations.localeName).format(t.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${t.status}',
             onDelete: (s) =>
                 ref.read(trackerControllerProvider).deleteTask(s.id),
             onEdit: (s) =>
@@ -157,7 +163,7 @@ class IconGrid extends ConsumerWidget {
             },
           ),
           IconListLauncher<HabitModel>(
-            title: 'Habits',
+            title: localizations.habits,
             icon: const Icon(Icons.sync_rounded),
             items: habits,
             onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
@@ -165,7 +171,7 @@ class IconGrid extends ConsumerWidget {
                 showModal(context, HabitEditorModal(ref: ref, existing: habit)),
             itemBuilder: (h) => h.title,
             additionalTextBuilder: (h) =>
-                'Due: ${DateFormat('EEE, d MMMM').format(h.nextDueDate!.toLocal())} | Description: ${h.description}',
+                '${localizations.due}: ${DateFormat('EEE, d MMMM', localizations.localeName).format(h.nextDueDate!.toLocal())} | ${localizations.description}: ${h.description}',
             onDelete: (s) =>
                 ref.read(trackerControllerProvider).deleteHabit(s.id),
             onEdit: (s) =>

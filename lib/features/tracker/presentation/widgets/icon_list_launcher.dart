@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/list_modal.dart';
 
 class IconListLauncher<T> extends StatelessWidget {
@@ -29,6 +30,8 @@ class IconListLauncher<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Container(
       width: 100,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
@@ -103,6 +106,8 @@ class IconListLauncher<T> extends StatelessWidget {
   }
 
   Widget _buildListItem(BuildContext context, T item) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
@@ -138,18 +143,23 @@ class IconListLauncher<T> extends StatelessWidget {
   }
 
   void _showDeleteConfirmation(BuildContext context, T item) {
+    final localizations = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Confirm Delete'),
-        content: Text('Are you sure you want to delete "${itemBuilder(item)}"?'),
+        title: Text(localizations.confirmDelete),
+        content: Text(localizations.deleteConfirmationMessage(itemBuilder(item))),
         actions: [
           TextButton(
-            child: const Text('Cancel'),
+            child: Text(localizations.cancel),
             onPressed: () => Navigator.of(context).pop(),
           ),
           TextButton(
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+            child: Text(
+              localizations.delete,
+              style: const TextStyle(color: Colors.red),
+            ),
             onPressed: () {
               onDelete(item);
               Navigator.of(context).pop();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class ListModal<T> extends StatelessWidget {
   final String title;
@@ -18,6 +19,8 @@ class ListModal<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final localizations = AppLocalizations.of(context)!;
+
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -47,12 +50,12 @@ class ListModal<T> extends StatelessWidget {
             ],
             const SizedBox(height: 16),
             if (items.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(16),
                   child: Text(
-                    'No items yet',
-                    style: TextStyle(color: Colors.black54),
+                    localizations.noItemsYet,
+                    style: const TextStyle(color: Colors.black54),
                   ),
                 ),
               )
