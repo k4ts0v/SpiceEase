@@ -10,8 +10,7 @@ class TaskModel {
   String _status; // Mutable field with setter
   DateTime? _dueDate; // Mutable field with setter
   DateTime? _completedAt; // Mutable field with setter
-  int? _estimatedTime; // Mutable field with setter
-  String? _estimatedUnit; // Mutable field with setter
+  String? _estimatedTime; // Mutable field with setter
   int _priority; // Mutable field with setter
   final DateTime _createdAt; // Immutable field
   DateTime _updatedAt; // Mutable field
@@ -20,6 +19,8 @@ class TaskModel {
   final String? _parentTaskId; // null for root tasks, populated for subtasks
   final bool _isSubtask; // flag to easily identify subtasks
   final int _subtaskOrder; // position within parent's subtasks
+  DateTime? _startTime;
+  DateTime? _endTime;
 
   // Constructor
   TaskModel({
@@ -30,8 +31,7 @@ class TaskModel {
     String status = 'pending',
     DateTime? dueDate,
     DateTime? completedAt,
-    int? estimatedTime,
-    String? estimatedUnit,
+    String? estimatedTime,
     int priority = 1,
     required DateTime createdAt,
     required DateTime updatedAt,
@@ -40,6 +40,8 @@ class TaskModel {
     final String? parentTaskId,
     final bool isSubtask = false,
     final int subtaskOrder = 0,
+    DateTime? startTime,
+    DateTime? endTime,
   })  : _id = id,
         _userId = userId,
         _title = title,
@@ -48,7 +50,6 @@ class TaskModel {
         _dueDate = dueDate,
         _completedAt = completedAt,
         _estimatedTime = estimatedTime,
-        _estimatedUnit = estimatedUnit,
         _priority = priority,
         _createdAt = createdAt,
         _updatedAt = updatedAt,
@@ -56,7 +57,9 @@ class TaskModel {
         _subtasks = subtasks ?? [],
         _parentTaskId = parentTaskId,
         _isSubtask = isSubtask,
-        _subtaskOrder = subtaskOrder;
+        _subtaskOrder = subtaskOrder,
+        _startTime = startTime,
+        _endTime = endTime;
 
   // Getters
   String get id => _id;
@@ -66,8 +69,7 @@ class TaskModel {
   String get status => _status;
   DateTime? get dueDate => _dueDate;
   DateTime? get completedAt => _completedAt;
-  int? get estimatedTime => _estimatedTime;
-  String? get estimatedUnit => _estimatedUnit;
+  String? get estimatedTime => _estimatedTime;
   int get priority => _priority;
   DateTime get createdAt => _createdAt;
   DateTime get updatedAt => _updatedAt;
@@ -76,7 +78,8 @@ class TaskModel {
   String? get parentTaskId => _parentTaskId;
   bool get isSubtask => _isSubtask;
   int get subtaskOrder => _subtaskOrder;
-
+  DateTime? get startTime => _startTime;
+  DateTime? get endTime => _endTime;
 
   // Setters
   set title(String newTitle) {
@@ -103,12 +106,8 @@ class TaskModel {
     _completedAt = newCompletedAt;
   }
 
-  set estimatedTime(int? newEstimatedTime) {
+  set estimatedTime(String? newEstimatedTime) {
     _estimatedTime = newEstimatedTime;
-  }
-
-  set estimatedUnit(String? newEstimatedUnit) {
-    _estimatedUnit = newEstimatedUnit;
   }
 
   set priority(int newPriority) {
@@ -132,48 +131,47 @@ class TaskModel {
 
   // Update the fromMap method to safely convert double to int:
 
-factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
-  DateTime? _parseDynamicDate(dynamic v) {
-    if (v == null) return null;
-    if (v is DateTime) return v;
-    if (v is Timestamp) return v.toDate();
-    if (v is String) {
-      return DateTime.tryParse(v);
+  factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    DateTime? _parseDynamicDate(dynamic v) {
+      if (v == null) return null;
+      if (v is DateTime) return v;
+      if (v is Timestamp) return v.toDate();
+      if (v is String) {
+        return DateTime.tryParse(v);
+      }
+      return null;
     }
-    return null;
-  }
 
-  // Safely handle numeric values that might be doubles or ints
-  int? _parseEstimatedTime(dynamic value) {
-    if (value == null) return null;
-    if (value is int) return value;
-    if (value is double) return value.toInt();
-    return null;
+    return TaskModel(
+      id: id ?? (map['id'] as String),
+      userId: map['user_id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String? ?? '',
+      status: map['status'] as String? ?? 'pending',
+      dueDate: _parseDynamicDate(map['due_date']),
+      completedAt: _parseDynamicDate(map['completed_at']),
+      // Use the safe conversion function
+      estimatedTime: map['estimated_time'] != null
+          ? map['estimated_time']
+              .toString() // Convert int, double, or String to String
+          : null,
+      priority: map['priority'] is double
+          ? (map['priority'] as double).toInt()
+          : (map['priority'] as int? ?? 1),
+      createdAt: _parseDynamicDate(map['created_at'])!,
+      updatedAt: _parseDynamicDate(map['updated_at'])!,
+      subtasks: (map['subtasks'] as List?)
+              ?.map((s) => SubtaskModel.fromMap(s))
+              .toList() ??
+          [],
+      parentTaskId: map['parent_task_id'] as String?,
+      isSubtask: map['is_subtask'] as bool? ?? false,
+      subtaskOrder: map['subtask_order'] is double
+          ? (map['subtask_order'] as double).toInt()
+          : (map['subtask_order'] as int? ?? 0),
+      startTime: _parseDynamicDate(map['start_time']),
+      endTime: _parseDynamicDate(map['end_time']));
   }
-
-  return TaskModel(
-    id: id ?? (map['id'] as String),
-    userId: map['user_id'] as String,
-    title: map['title'] as String,
-    description: map['description'] as String? ?? '',
-    status: map['status'] as String? ?? 'pending',
-    dueDate: _parseDynamicDate(map['due_date']),
-    completedAt: _parseDynamicDate(map['completed_at']),
-    // Use the safe conversion function
-    estimatedTime: _parseEstimatedTime(map['estimated_time']),
-    estimatedUnit: (map['estimated_unit'] as String?),
-    priority: map['priority'] is double ? (map['priority'] as double).toInt() : (map['priority'] as int? ?? 1),
-    createdAt: _parseDynamicDate(map['created_at'])!,
-    updatedAt: _parseDynamicDate(map['updated_at'])!,
-    subtasks: (map['subtasks'] as List?)
-            ?.map((s) => SubtaskModel.fromMap(s))
-            .toList() ??
-        [],
-    parentTaskId: map['parent_task_id'] as String?,
-    isSubtask: map['is_subtask'] as bool? ?? false,
-    subtaskOrder: map['subtask_order'] is double ? (map['subtask_order'] as double).toInt() : (map['subtask_order'] as int? ?? 0),
-  );
-}
 
   /// Serializes this TaskModel to a Map, storing dates as ISO-8601 strings.
   Map<String, dynamic> toMap() {
@@ -193,6 +191,8 @@ factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
       'parent_task_id': _parentTaskId,
       'is_subtask': _isSubtask,
       'subtask_order': _subtaskOrder,
+      'start_time': _startTime,
+      'end_time': _endTime,
     };
   }
 
@@ -204,8 +204,7 @@ factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
     String? status,
     DateTime? dueDate,
     DateTime? completedAt,
-    int? estimatedTime,
-    String? estimatedUnit,
+    String? estimatedTime,
     int? priority,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -214,6 +213,8 @@ factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
     String? parentTaskId,
     bool? isSubtask,
     int? subtaskOrder,
+    DateTime? startTime,
+    DateTime? endTime,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -224,7 +225,6 @@ factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
       dueDate: dueDate ?? this.dueDate,
       completedAt: completedAt ?? this.completedAt,
       estimatedTime: estimatedTime ?? this.estimatedTime,
-      estimatedUnit: estimatedUnit ?? this.estimatedUnit,
       priority: priority ?? this.priority,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -233,6 +233,58 @@ factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       isSubtask: isSubtask ?? this.isSubtask,
       subtaskOrder: subtaskOrder ?? this.subtaskOrder,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
     );
+  }
+
+  TaskModel toggleCompletion() {
+    final bool isCurrentlyCompleted = status == 'Done' || completedAt != null;
+
+    if (!isCurrentlyCompleted) {
+      // If not completed, mark as completed
+      return TaskModel(
+        id: id,
+        userId: userId,
+        title: title,
+        description: description,
+        status: 'Done', // Set status to Done
+        dueDate: dueDate,
+        completedAt: DateTime.now(), // Set completedAt to now
+        estimatedTime: estimatedTime,
+        priority: priority,
+        createdAt: createdAt,
+        updatedAt: DateTime.now(),
+        hasDueDate: hasDueDate,
+        subtasks: subtasks,
+        parentTaskId: parentTaskId,
+        isSubtask: isSubtask,
+        subtaskOrder: subtaskOrder,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    } else {
+      // If completed, mark as not completed
+      return TaskModel(
+        id: id,
+        userId: userId,
+        title: title,
+        description: description,
+        status: 'In Progress', // Set status to In Progress
+        dueDate: dueDate,
+        completedAt: null, // Clear completedAt
+        estimatedTime: estimatedTime,
+        priority: priority,
+        createdAt: createdAt,
+        updatedAt: DateTime.now(),
+        hasDueDate: hasDueDate,
+        subtasks: subtasks,
+        parentTaskId: parentTaskId,
+        isSubtask: isSubtask,
+        subtaskOrder: subtaskOrder,
+        startTime: startTime,
+        endTime: endTime,
+      );
+    }
   }
 }

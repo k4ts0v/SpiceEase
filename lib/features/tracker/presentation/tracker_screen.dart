@@ -31,7 +31,7 @@ class TrackerScreen extends ConsumerWidget {
         child: SafeArea(
           child: Column(
             children: [
-              const TrackerHeader(),
+              const AppHeader(),
               const SizedBox(height: 12),
               const CalendarWidget(),
               const SizedBox(height: 12),

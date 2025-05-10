@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spiceease/data/models/habit_model.dart';
+import 'package:spiceease/data/models/medication_model.dart';
 import 'package:spiceease/data/models/symptom_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/habit_provider.dart';
+import 'package:spiceease/data/providers/medication_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/modals.dart';
@@ -25,8 +27,29 @@ class EntitySections extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final symptoms = ref.watch(symptomStateNotifierProvider(selectedDate));
+    final medications =
+        ref.watch(medicationStateNotifierProvider(selectedDate));
     final tasks = ref.watch(taskStateNotifierProvider(selectedDate));
     final habits = ref.watch(habitStateNotifierProvider(selectedDate));
+
+    // Extract data, loading status, and errors manually
+    List<SymptomModel> symptomsList =
+        symptoms is List<SymptomModel> ? symptoms : [];
+    bool symptomsLoading = false;
+    String? symptomsError;
+
+    List<MedicationModel> medicationsList =
+        medications is List<MedicationModel> ? medications : [];
+    bool medicationsLoading = false;
+    String? medicationsError;
+
+    List<TaskModel> tasksList = tasks is List<TaskModel> ? tasks : [];
+    bool tasksLoading = false;
+    String? tasksError;
+
+    List<HabitModel> habitsList = habits is List<HabitModel> ? habits : [];
+    bool habitsLoading = false;
+    String? habitsError;
 
     final today = DateTime.now();
     final localizations = AppLocalizations.of(context)!;
@@ -35,9 +58,9 @@ class EntitySections extends ConsumerWidget {
       children: [
         EntitySection<SymptomModel>(
           title: localizations.symptoms,
-          items: symptoms,
-          isLoading: false,
-          error: null,
+          items: symptomsList,
+          isLoading: symptomsLoading,
+          error: symptomsError,
           onTap: (symptom) => showModal(
             context,
             SymptomEditorModal(ref: ref, existing: symptom),
@@ -54,145 +77,233 @@ class EntitySections extends ConsumerWidget {
           ),
         ),
         const SizedBox(height: 20),
-        EntitySection<TaskModel>(
-          title: localizations.tasks,
-          items: tasks,
-          isLoading: false,
-          error: null,
-          onTap: (task) =>
-              showModal(context, TaskEditorModal(ref: ref, existing: task)),
-          onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
-          itemBuilder: (task) {
-            final isCompleted = task.completedAt != null &&
-                task.completedAt!.year == today.year &&
-                task.completedAt!.month == today.month &&
-                task.completedAt!.day == today.day;
-
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.task_alt),
-                  title: Text(
-                    task.title,
-                    style: TextStyle(
-                      decoration:
-                          isCompleted ? TextDecoration.lineThrough : null,
-                      color: isCompleted ? Colors.grey : Colors.black,
-                    ),
-                  ),
-                  subtitle: Text(
-                    '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${task.status}',
-                    style: TextStyle(
-                      color:
-                          isCompleted ? Colors.grey : const Color(0xFF5A5A5A),
-                    ),
-                  ),
-                  trailing: Checkbox(
-                    value: isCompleted,
-                    onChanged: (value) async {
-                      final newStatus = value == true ? localizations.done : localizations.pending;
-                      final newCompletedAt =
-                          value == true ? DateTime.now() : null;
-
-                      await ref.read(trackerControllerProvider).updateTask(
-                            task.id,
-                            task.title,
-                            task.description,
-                            newStatus,
-                            task.dueDate,
-                            newCompletedAt,
-                            task.estimatedTime,
-                            task.estimatedUnit,
-                            task.priority,
-                            task.subtasks,
-                          );
-                    },
-                  ),
-                ),
-                if (task.subtasks != null && task.subtasks!.isNotEmpty)
-                  ...task.subtasks!.map(
-                    (subtask) => ListTile(
-                      leading: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          SizedBox(width: 32),
-                          Icon(Icons.task_alt),
-                        ],
-                      ),
-                      title: Text(
-                        '${subtask.title}',
-                        style: TextStyle(
-                          decoration: subtask.completed
-                              ? TextDecoration.lineThrough
-                              : null,
-                          color: subtask.completed ? Colors.grey : Colors.black,
-                        ),
-                      ),
-                      subtitle: Text(subtask.rawTimeValue != null &&
-                              subtask.rawTimeUnit != null
-                          ? '${subtask.rawTimeValue} ${subtask.rawTimeUnit}'
-                          : localizations.noTimeEstimate),
-                      onTap: () {
-                        showModal(
-                          context,
-                          SubtaskEditorModal(
-                            ref: ref,
-                            parentTask: task,
-                            subtask: subtask,
-                          ),
-                        );
+        EntitySection<MedicationModel>(
+          title: localizations.medication,
+          items: medicationsList,
+          isLoading: medicationsLoading,
+          error: medicationsError,
+          onTap: (medication) => showModal(
+            context,
+            MedicationEditorModal(ref: ref, existing: medication),
+          ),
+          onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+          itemBuilder: (medication) {
+            // For all medications, use a consistent ListTile
+            return ListTile(
+              title: Text(medication.name),
+              subtitle: Text(
+                  '${localizations.dose}: ${medication.dose} ${medication.unit}' +
+                      (medication.timesPerDay <= 1
+                          ? ' | ${medication.takenTimes > 0 ? localizations.takenS : localizations.notTaken}'
+                          : ' | ${medication.takenTimes}/${medication.timesPerDay} ${localizations.taken}')),
+              trailing: medication.timesPerDay <= 1
+                  ? // Simple checkbox for once-daily medications
+                  Checkbox(
+                      value: medication.takenTimes > 0,
+                      onChanged: (value) async {
+                        if (value != null) {
+                          final newTakenTimes =
+                              value ? medication.timesPerDay : 0;
+                          await ref
+                              .read(trackerControllerProvider)
+                              .updateMedication(
+                                medication.id,
+                                medication.name,
+                                medication.dose,
+                                medication.unit,
+                                newTakenTimes,
+                                medication.frequency,
+                                medication.customDays,
+                                medication.timesPerDay,
+                                value ? DateTime.now() : null,
+                              );
+                        }
                       },
-                      trailing: Checkbox(
-                        value: subtask.completed,
-                        onChanged: (value) async {
-                          final updatedSubtasks = [...task.subtasks!];
-                          final index = updatedSubtasks.indexOf(subtask);
-                          if (index != -1) {
-                            updatedSubtasks[index] = subtask.copyWith(
-                              completed: value ?? false,
-                            );
-
-                            await ref
-                                .read(trackerControllerProvider)
-                                .updateTask(
-                                  task.id,
-                                  task.title,
-                                  task.description,
-                                  task.status,
-                                  task.dueDate,
-                                  task.completedAt,
-                                  task.estimatedTime,
-                                  task.estimatedUnit,
-                                  task.priority,
-                                  updatedSubtasks,
-                                );
-                          }
-                        },
-                      ),
+                    )
+                  : // For multi-dose medications, show +/- buttons
+                  Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          iconSize: 20,
+                          onPressed: medication.takenTimes > 0
+                              ? () async {
+                                  await ref
+                                      .read(trackerControllerProvider)
+                                      .updateMedication(
+                                        medication.id,
+                                        medication.name,
+                                        medication.dose,
+                                        medication.unit,
+                                        (medication.takenTimes - 1),
+                                        medication.frequency,
+                                        medication.customDays,
+                                        medication.timesPerDay,
+                                        medication.lastTaken,
+                                      );
+                                }
+                              : null,
+                          color: Colors.red,
+                        ),
+                        Container(
+                          decoration: BoxDecoration(
+                            color:
+                                medication.takenTimes >= medication.timesPerDay
+                                    ? Colors.green
+                                    : Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                          padding: const EdgeInsets.all(8),
+                          margin: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            '${medication.takenTimes}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          iconSize: 20,
+                          onPressed:
+                              medication.takenTimes < medication.timesPerDay
+                                  ? () async {
+                                      await ref
+                                          .read(trackerControllerProvider)
+                                          .updateMedication(
+                                            medication.id,
+                                            medication.name,
+                                            medication.dose,
+                                            medication.unit,
+                                            (medication.takenTimes + 1),
+                                            medication.frequency,
+                                            medication.customDays,
+                                            medication.timesPerDay,
+                                            medication.lastTaken,
+                                          );
+                                    }
+                                  : null,
+                          color: Colors.green,
+                        ),
+                      ],
                     ),
-                  ),
-              ],
             );
           },
         ),
         const SizedBox(height: 20),
+        EntitySection<TaskModel>(
+            title: localizations.tasks,
+            items: tasksList,
+            isLoading: tasksLoading,
+            error: tasksError,
+            onTap: (task) =>
+                showModal(context, TaskEditorModal(ref: ref, existing: task)),
+            onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
+            itemBuilder: (task) {
+              final isCompleted = task.completedAt != null &&
+                  task.completedAt!.year == today.year &&
+                  task.completedAt!.month == today.month &&
+                  task.completedAt!.day == today.day;
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.task_alt),
+                    title: Text(
+                      task.title,
+                      style: TextStyle(
+                        decoration:
+                            isCompleted ? TextDecoration.lineThrough : null,
+                        color: isCompleted ? Colors.grey : Colors.black,
+                      ),
+                    ),
+                    subtitle: Text(
+                      '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${task.status}',
+                    ),
+                    trailing: Checkbox(
+                      value: task.status == 'Done' || task.completedAt != null,
+                      onChanged: (value) async {
+                        final service = ref.read(taskServiceProvider);
+                        final currentTask = await service.getTaskById(task.id);
+
+                        if (currentTask != null) {
+                          final updatedTask = currentTask.toggleCompletion();
+                          await service.updateTask(currentTask.id, updatedTask);
+                          ref.refresh(taskStateNotifierProvider(selectedDate));
+                        }
+                      },
+                    ),
+                  ),
+
+                  // Display subtasks if present
+                  if (task.subtasks != null && task.subtasks!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(
+                          left: 0.0), // No extra padding needed
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0, vertical: 8.0),
+                            child: Text(
+                              "${localizations.subtasks} (${task.subtasks!.length})",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                                color: Colors.blueGrey,
+                              ),
+                            ),
+                          ),
+                          SubtaskList(
+                            subtasks: task.subtasks!,
+                            parentTask: task, // Pass the parent task
+                            onToggle: (subtask) async {
+                              final ctrl = ref.read(trackerControllerProvider);
+                              final updated = subtask.copyWith(
+                                  completed: !subtask.completed);
+                              await ctrl.updateSubtask(
+                                task.id,
+                                subtask,
+                                updated.title,
+                                updated.completed,
+                                rawTimeValue: updated.rawTimeValue ?? '',
+                              );
+                            }, ref: ref,
+                          ),
+                        ],
+                      ),
+                    )
+                ],
+              );
+            }),
+        const SizedBox(height: 20),
         EntitySection<HabitModel>(
           title: localizations.habits,
-          items: habits,
-          isLoading: false,
-          error: null,
+          items: habitsList,
+          isLoading: habitsLoading,
+          error: habitsError,
           onTap: (habit) => showModal(
             context,
             HabitEditorModal(ref: ref, existing: habit),
           ),
           onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
           itemBuilder: (habit) {
+            // Original habit builder code
             final isCompleted = habit.lastCompleted != null &&
                 habit.lastCompleted!.year == today.year &&
                 habit.lastCompleted!.month == today.month &&
                 habit.lastCompleted!.day == today.day;
 
+            // Frequency text function
             String getFrequencyText() {
               switch (habit.frequency) {
                 case 1:
@@ -218,22 +329,20 @@ class EntitySections extends ConsumerWidget {
               ),
               subtitle: Text(
                 '${habit.description.isNotEmpty ? habit.description : localizations.noDescription} | ${localizations.frequency}: ${getFrequencyText()}',
-                style: TextStyle(
-                  color: isCompleted ? Colors.grey : Color(0xFF5A5A5A),
-                ),
               ),
               trailing: Checkbox(
-                  value: isCompleted,
-                  onChanged: (value) async {
-                    await ref.read(trackerControllerProvider).updateHabit(
-                          habit.id,
-                          habit.title,
-                          habit.description,
-                          habit.frequency,
-                          habit.customDays,
-                          markAsCompleted: value ?? false,
-                        );
-                  }),
+                value: isCompleted,
+                onChanged: (value) async {
+                  await ref.read(trackerControllerProvider).updateHabit(
+                        habit.id,
+                        habit.title,
+                        habit.description,
+                        habit.frequency,
+                        habit.customDays,
+                        markAsCompleted: value ?? false,
+                      );
+                },
+              ),
             );
           },
         ),

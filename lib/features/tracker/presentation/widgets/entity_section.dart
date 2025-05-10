@@ -40,6 +40,7 @@ class EntitySection<T> extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -68,9 +69,15 @@ class EntitySection<T> extends StatelessWidget {
             ),
           ),
           if (isLoading)
-            const Center(child: CircularProgressIndicator())
+            const Center(child: Padding(
+              padding: EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(),
+            ))
           else if (error != null)
-            Center(child: Text(error!))
+            Center(child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(error!),
+            ))
           else if (items.isEmpty)
             Center(
               child: Padding(
@@ -82,16 +89,24 @@ class EntitySection<T> extends StatelessWidget {
               ),
             )
           else
-            ListView.separated(
+            ListView.builder(
               padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: items.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
-              itemBuilder: (context, index) => InkWell(
-                onTap: () => onTap(items[index]),
-                child: itemBuilder(items[index]),
-              ),
+              itemBuilder: (context, index) {
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    InkWell(
+                      onTap: () => onTap(items[index]),
+                      child: itemBuilder(items[index]),
+                    ),
+                    if (index < items.length - 1)
+                      const Divider(height: 1),
+                  ],
+                );
+              },
             ),
         ],
       ),

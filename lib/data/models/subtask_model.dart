@@ -6,7 +6,7 @@ class SubtaskModel {
   int _order; // Mutable field with setter
   bool _completed; // Mutable field with setter
   String? _rawTimeValue; // Raw time value for database compatibility
-  String? _rawTimeUnit; // Raw time unit for database compatibility
+
 
   // Getters for accessing private fields
   String get id => _id;
@@ -15,7 +15,6 @@ class SubtaskModel {
   int get order => _order;
   bool get completed => _completed;
   String? get rawTimeValue => _rawTimeValue;
-  String? get rawTimeUnit => _rawTimeUnit;
 
   // Setters for mutable fields
 
@@ -56,8 +55,7 @@ class SubtaskModel {
         _title = title,
         _order = order,
         _completed = completed,
-        _rawTimeValue = rawTimeValue,
-        _rawTimeUnit = rawTimeUnit;
+        _rawTimeValue = rawTimeValue;
 
   /// Factory constructor that constructs SubtaskModel from generic key-value map structure
   ///
@@ -91,7 +89,6 @@ class SubtaskModel {
       'order': _order,
       'completed': _completed,
       'raw_time_value': rawTimeValue,
-      'raw_time_unit': rawTimeUnit,
     };
   }
 
@@ -111,7 +108,6 @@ class SubtaskModel {
       order: order ?? this.order,
       completed: completed ?? this.completed,
       rawTimeValue: rawTimeValue ?? this.rawTimeValue,
-      rawTimeUnit: rawTimeUnit ?? this.rawTimeUnit,
     );
   }
 }

@@ -170,21 +170,27 @@ class IconGrid extends ConsumerWidget {
             onTap: (habit) =>
                 showModal(context, HabitEditorModal(ref: ref, existing: habit)),
             itemBuilder: (h) => h.title,
-            additionalTextBuilder: (h) =>
-                '${localizations.due}: ${DateFormat('EEE, d MMMM', localizations.localeName).format(h.nextDueDate!.toLocal())} | ${localizations.description}: ${h.description}',
+            additionalTextBuilder: (h) {
+              final dueDate = h.nextDueDate;
+              final duePart = (dueDate == null)
+                  ? '${localizations.noDueDate}'
+                  : '${localizations.due}: ${DateFormat('EEE, d MMMM', localizations.localeName).format(dueDate.toLocal())}';
+              return '$duePart | ${localizations.description}: ${h.description}';
+            },
             onDelete: (s) =>
                 ref.read(trackerControllerProvider).deleteHabit(s.id),
             onEdit: (s) =>
                 showModal(context, HabitEditorModal(ref: ref, existing: s)),
             statsLabelBuilder: () {
               if (habits.isEmpty) return '—';
-              final completedToday = habits.where((h) {
-                final today = DateTime.now();
-                return h.lastCompleted != null &&
-                    h.lastCompleted!.year == today.year &&
-                    h.lastCompleted!.month == today.month &&
-                    h.lastCompleted!.day == today.day;
-              }).length;
+              final today = DateTime.now();
+              final completedToday = habits
+                  .where((h) =>
+                      h.lastCompleted != null &&
+                      h.lastCompleted!.year == today.year &&
+                      h.lastCompleted!.month == today.month &&
+                      h.lastCompleted!.day == today.day)
+                  .length;
               return '$completedToday/${habits.length}';
             },
           ),

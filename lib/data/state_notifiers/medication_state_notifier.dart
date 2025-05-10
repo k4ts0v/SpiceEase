@@ -20,6 +20,7 @@ class MedicationStateNotifier extends StateNotifier<List<MedicationModel>> {
     _setLoading(true);
     try {
       final medications = await _medicationService.getMedicationsForDate(_date);
+      print('Fetched ${medications.length} medications for date: $_date');
       if (!mounted) return;
       state = medications;
       _setLoading(false);

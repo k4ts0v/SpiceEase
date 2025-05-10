@@ -29,7 +29,6 @@ dependencies:
   intl: any
   flutter_localization: ^0.3.2
   table_calendar: ^3.0.9
-  appflowy_board: ^0.1.2
   collection: ^1.17.0
 
 dev_dependencies:

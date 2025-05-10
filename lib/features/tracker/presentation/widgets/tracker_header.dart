@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-class TrackerHeader extends StatelessWidget {
-  const TrackerHeader({Key? key}) : super(key: key);
+class AppHeader extends StatelessWidget {
+  const AppHeader({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

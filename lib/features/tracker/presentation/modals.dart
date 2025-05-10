@@ -276,6 +276,13 @@ class _SymptomEditorModalState
       );
     }
   }
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteSymptom(widget.existing!.id, widget.ref);
+  }
 }
 // —— Habit Editor —— //
 
@@ -555,9 +562,18 @@ class _HabitEditorModalState
       );
     }
   }
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteHabit(widget.existing!.id);
+  }
 }
 
 // —— Task Editor —— //
+
+//TODO: task estimation is not working properly.
 
 class TaskEditorModal extends TrackingEditorModal {
   final TaskModel? existing;
@@ -569,6 +585,7 @@ class TaskEditorModal extends TrackingEditorModal {
     this.existing,
     this.initialStatus,
     this.initialValue,
+    DateTime? selectedDate,
   }) : super(key: key, ref: ref);
 
   @override
@@ -580,13 +597,10 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   String _status = 'Pending';
   DateTime? _dueDate;
   DateTime? _completedAt;
-  int? _estimatedTime;
-  String? _estimatedUnit;
+  String? _estimatedTime;
   late int _priority;
   List<SubtaskModel> _subtasks = [];
   bool _isLoadingSubtasks = false;
-
-  final List<String> _statusOptions = ['Pending', 'In Progress', 'Done'];
 
   @override
   void initState() {
@@ -603,12 +617,34 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     _status = widget.existing?.status ?? 'Pending';
     _dueDate = widget.existing?.dueDate;
     _completedAt = widget.existing?.completedAt;
-    _estimatedTime = (widget.existing?.estimatedTime ?? 0) as int?;
-    _estimatedUnit = widget.existing?.estimatedUnit;
+    _estimatedTime = widget.existing?.estimatedTime;
     _priority = widget.existing?.priority ?? 1;
     if (widget.initialStatus != null) {
       _status = widget.initialStatus!;
     }
+  }
+
+  // Helper method to get localized version of the status
+  String _getLocalizedStatus(String status, AppLocalizations localizations) {
+    switch (status) {
+      case 'Pending':
+        return localizations.pending;
+      case 'In Progress':
+        return localizations.inProgress;
+      case 'Done':
+        return localizations.done;
+      default:
+        return localizations.pending;
+    }
+  }
+
+  // Helper method to convert localized status back to internal format
+  String _getInternalStatus(
+      String localizedStatus, AppLocalizations localizations) {
+    if (localizedStatus == localizations.pending) return 'Pending';
+    if (localizedStatus == localizations.inProgress) return 'In Progress';
+    if (localizedStatus == localizations.done) return 'Done';
+    return 'Pending';
   }
 
   Future<void> _pickDate(BuildContext context, bool isDueDate) async {
@@ -653,11 +689,36 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
       if (subtasks.isNotEmpty) {
         setState(() {
           _subtasks = subtasks;
-          // Update main task estimated time based on subtasks
-          _estimatedTime = subtasks.fold(
-              0,
-              (sum, subtask) =>
-                  sum! + (int.parse(subtask.rawTimeValue ?? '0') ~/ 60));
+
+          // Calculate the total estimated time from subtasks
+          int totalMinutes = 0;
+
+          for (var subtask in subtasks) {
+            if (subtask.rawTimeValue != null &&
+                subtask.rawTimeValue!.isNotEmpty) {
+              // Parse the human-readable time string
+              final String timeStr = subtask.rawTimeValue!.toLowerCase();
+
+              // Extract the numeric value using a regex
+              final RegExp numRegex = RegExp(r'(\d+)');
+              final match = numRegex.firstMatch(timeStr);
+              if (match != null) {
+                int value = int.parse(match.group(1)!);
+
+                // Convert to minutes based on the unit
+                if (timeStr.contains('second')) {
+                  value = (value / 60).ceil(); // Convert seconds to minutes
+                } else if (timeStr.contains('hour')) {
+                  value *= 60; // Convert hours to minutes
+                }
+
+                totalMinutes += value;
+              }
+            }
+          }
+
+          // Update main task estimated time in minutes
+          _estimatedTime = totalMinutes.toString();
         });
 
         final ctrl = widget.ref.read(trackerControllerProvider);
@@ -683,7 +744,6 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
             widget.existing!.dueDate,
             widget.existing!.completedAt,
             _estimatedTime,
-            _estimatedUnit,
             widget.existing!.priority,
             subtasks,
           );
@@ -712,6 +772,16 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
 
+    // Get localized status options
+    final List<String> localizedStatusOptions = [
+      localizations.pending,
+      localizations.inProgress,
+      localizations.done
+    ];
+
+    // Get localized version of current status
+    final String localizedStatus = _getLocalizedStatus(_status, localizations);
+
     return SafeArea(
       child: SingleChildScrollView(
         child: Column(
@@ -730,15 +800,30 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _status,
+              value: localizedStatus,
               decoration: InputDecoration(labelText: localizations.status),
-              items: _statusOptions
+              items: localizedStatusOptions
                   .map((status) => DropdownMenuItem(
                         value: status,
                         child: Text(status),
                       ))
                   .toList(),
-              onChanged: (value) => setState(() => _status = value!),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    // Convert back to internal status representation
+                    _status = _getInternalStatus(value, localizations);
+
+                    // Automatically sync completion date with status
+                    if (_status == 'Done') {
+                      _completedAt ??= DateTime.now();
+                    } else {
+                      // Clear completion date when moving out of Done status
+                      _completedAt = null;
+                    }
+                  });
+                }
+              },
             ),
             const SizedBox(height: 12),
             Row(
@@ -766,9 +851,28 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                         : '${localizations.completed}: ${DateFormat.yMd().format(_completedAt!)}',
                   ),
                 ),
-                TextButton(
-                  onPressed: () => _pickDate(context, false),
-                  child: Text(localizations.setCompleted),
+                Row(
+                  children: [
+                    if (_completedAt != null)
+                      // Add a clear button when completed
+                      TextButton(
+                        onPressed: () => setState(() {
+                          _completedAt = null;
+                          // Also update status if it's "Done"
+                          if (_status == 'Done') {
+                            _status = 'In Progress';
+                          }
+                        }),
+                        child: Text(localizations.clearCompletion),
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
+                        ),
+                      ),
+                    TextButton(
+                      onPressed: () => _pickDate(context, false),
+                      child: Text(localizations.setCompleted),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -802,8 +906,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                     onEstimateUpdated: (time, unit) {
                       setState(() {
                         // Store the original values without conversion
-                        _estimatedTime = int.tryParse(time) ?? 0;
-                        _estimatedUnit = unit;
+                        _estimatedTime = time;
                       });
                     },
                     initialValue: _estimatedTime?.toString(),
@@ -813,13 +916,11 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
             ),
 
             // Add this to show the estimation with units
-            if (_estimatedTime != null &&
-                _estimatedUnit != null &&
-                _estimatedUnit!.isNotEmpty)
+            if (_estimatedTime != null && _estimatedTime!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                    '${localizations.estimatedTime}: ${_estimatedTime.toString()} ${_estimatedUnit!}'),
+                    '${localizations.estimatedTimeLabel}: ${_estimatedTime}'),
               ),
             const SizedBox(height: 16),
 
@@ -870,6 +971,15 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
       return;
     }
 
+    // Fix completion logic: Set completedAt based on status
+    if (_status == 'Done') {
+      // If status is "Done" but no completion date is set, use current time
+      _completedAt ??= DateTime.now();
+    } else {
+      // If status is not "Done", clear the completion date
+      _completedAt = null;
+    }
+
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
 
@@ -879,7 +989,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         description: _descC.text.trim(),
         status: _status,
         dueDate: _dueDate,
-        completedAt: _completedAt,
+        completedAt: _completedAt, // This will be null if not completed
         estimatedTime: _estimatedTime,
         priority: _priority,
         subtasks: [],
@@ -891,9 +1001,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         _descC.text.trim(),
         _status,
         _dueDate,
-        _completedAt,
+        _completedAt, // This will be null if not completed
         _estimatedTime,
-        _estimatedUnit,
         _priority,
         _subtasks,
       );
@@ -947,9 +1056,9 @@ class _SubtaskEditorModalState
 
     // Initialize raw time values if available
     _rawTimeValue = widget.subtask.rawTimeValue ?? '';
-    _rawTimeUnit = widget.subtask.rawTimeUnit ?? '';
   }
 
+  // In _SubtaskEditorModalState class, replace the problematic estimated time display:
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
@@ -987,11 +1096,7 @@ class _SubtaskEditorModalState
             ),
           ],
         ),
-        const SizedBox(height: 12),
 
-        // Show the current estimate with raw values
-        if (_rawTimeValue.isNotEmpty)
-          Text(localizations.currentEstimate(_rawTimeValue, _rawTimeUnit)),
         const SizedBox(height: 12),
 
         CheckboxListTile(
@@ -1006,25 +1111,68 @@ class _SubtaskEditorModalState
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
-
     if (_titleC.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(localizations.titleRequired)),
-      );
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(localizations.titleRequired)));
       return;
     }
 
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
 
+    // update this subtask
     await ctrl.updateSubtask(
       widget.parentTask.id,
       widget.subtask,
       _titleC.text.trim(),
       _completed,
       rawTimeValue: _rawTimeValue,
-      rawTimeUnit: _rawTimeUnit,
     );
+
+     // when *all* subtasks now have an estimate, sum them and update parent
+    final all = widget.parentTask.subtasks;
+    if (all != null && all.isNotEmpty &&
+        all.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
+      int totalSeconds = 0;
+      final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
+      for (final st in all) {
+        final raw = st.rawTimeValue!.trim();
+        final match = regex.firstMatch(raw);
+        if (match != null) {
+          final value = double.parse(match.group(1)!);
+          final unit = match.group(2)!.toLowerCase();
+          if (unit.startsWith('h')) {
+            totalSeconds += (value * 3600).round();
+          } else if (unit.startsWith('min')) {
+            totalSeconds += (value * 60).round();
+          } else {
+            totalSeconds += value.round();
+          }
+        }
+      }
+      String sumEstimate;
+      if (totalSeconds >= 3600) {
+        final hours = totalSeconds / 3600;
+        sumEstimate = '${hours.toStringAsFixed((hours % 1 == 0) ? 0 : 1)} ${localizations.hours}';
+      } else if (totalSeconds >= 60) {
+        final minutes = totalSeconds / 60;
+        sumEstimate = '${minutes.toStringAsFixed((minutes % 1 == 0) ? 0 : 1)} ${localizations.minutes}';
+      } else {
+        sumEstimate = '$totalSeconds ${localizations.seconds}';
+      }
+
+      await ctrl.updateTask(
+        widget.parentTask.id,
+        widget.parentTask.title,
+        widget.parentTask.description,
+        widget.parentTask.status,
+        widget.parentTask.dueDate,
+        widget.parentTask.completedAt,
+        sumEstimate,
+        widget.parentTask.priority,
+        widget.parentTask.subtasks,
+      );
+    }
   }
 
   @override
@@ -1244,6 +1392,7 @@ class _MedicationEditorModalState
   final _nameC = TextEditingController();
   final _doseC = TextEditingController();
   String _unit = 'mg';
+  int _takenTimes = 0;
   final _customUnitC = TextEditingController();
   bool _isCustomUnit = false;
   String _freqLabel = 'Daily';
@@ -1260,9 +1409,23 @@ class _MedicationEditorModalState
     if (widget.existing != null) {
       _nameC.text = widget.existing!.name;
       _doseC.text = widget.existing!.dose.toString();
+      _takenTimes = widget.existing!.takenTimes;
+
+      // Check if the medication was taken today
+      if (widget.existing!.lastTaken != null) {
+        final now = DateTime.now();
+        final lastTaken = widget.existing!.lastTaken!;
+
+        // Compare year, month, and day to see if it was taken today
+        _markAsTaken = lastTaken.year == now.year &&
+            lastTaken.month == now.month &&
+            lastTaken.day == now.day;
+      } else {
+        _markAsTaken = false;
+      }
 
       // Check if the unit is one of the predefined ones
-      final predefinedUnits = ['ml', 'mg', 'g', 'pills', 'tablets'];
+      final predefinedUnits = ['ml', 'mg', 'g', 'tablets'];
       if (predefinedUnits.contains(widget.existing!.unit)) {
         _unit = widget.existing!.unit;
       } else {
@@ -1303,196 +1466,266 @@ class _MedicationEditorModalState
     return 'daily';
   }
 
+  // Fix: Add this helper method to map internal frequency to localized string
+  String _getLocalizedFrequency() {
+    final localizations = AppLocalizations.of(context)!;
+
+    switch (_freqLabel) {
+      case 'Daily':
+        return localizations.daily;
+      case 'Weekly':
+        return localizations.weekly;
+      case 'Monthly':
+        return localizations.monthly;
+      default:
+        return localizations.daily;
+    }
+  }
+
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
-    final predefinedUnits = ['ml', 'mg', 'g', 'tablets', localizations.custom];
+    final predefinedUnits = [
+      'ml',
+      'mg',
+      'g',
+      localizations.tablets,
+      localizations.custom
+    ];
 
-    // Map frequency labels to localized strings
-    final Map<String, String> freqMap = {
-      'Daily': localizations.daily,
-      'Weekly': localizations.weekly,
-      'Monthly': localizations.monthly
-    };
+    // Fix: Get the correctly localized frequency value
+    final localizedFreq = _getLocalizedFrequency();
 
-    _freqLabel = freqMap[_freqLabel] ?? localizations.daily;
+    // Fix: Define the available frequency options
+    final freqOptions = [
+      localizations.daily,
+      localizations.weekly,
+      localizations.monthly
+    ];
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextFormField(
-          controller: _nameC,
-          decoration: InputDecoration(labelText: localizations.name),
+    return Column(mainAxisSize: MainAxisSize.min, children: [
+      TextFormField(
+        controller: _nameC,
+        decoration: InputDecoration(labelText: localizations.name),
+      ),
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Expanded(
+            child: TextFormField(
+              controller: _doseC,
+              decoration: InputDecoration(labelText: localizations.dose),
+              keyboardType: TextInputType.number,
+            ),
+          ),
+          const SizedBox(width: 16),
+          if (_isCustomUnit)
+            Expanded(
+              child: TextFormField(
+                controller: _customUnitC,
+                decoration:
+                    InputDecoration(labelText: localizations.customUnit),
+                onChanged: (value) => setState(() {
+                  _unit = value;
+                }),
+              ),
+            )
+          else
+            DropdownButton<String>(
+              value: _unit,
+              items: predefinedUnits
+                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .toList(),
+              onChanged: (v) => setState(() {
+                if (v == localizations.custom) {
+                  _isCustomUnit = true;
+                  _customUnitC.text = _unit == 'custom' ? '' : _unit;
+                } else {
+                  _isCustomUnit = false;
+                  _unit = v!;
+                }
+              }),
+            ),
+        ],
+      ),
+      const SizedBox(height: 16),
+      // Fix: Use the proper value and update internal representation correctly
+      DropdownButton<String>(
+        value: localizedFreq,
+        items: freqOptions
+            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+            .toList(),
+        onChanged: (v) => setState(() {
+          // Fix: Map the localized value back to internal representation
+          if (v == localizations.daily) {
+            _freqLabel = 'Daily';
+          } else if (v == localizations.weekly) {
+            _freqLabel = 'Weekly';
+          } else if (v == localizations.monthly) {
+            _freqLabel = 'Monthly';
+          }
+          _selectedDays.clear();
+        }),
+      ),
+      if (_freqLabel == 'Weekly') ...[
+        const SizedBox(height: 16),
+        Wrap(
+          spacing: 8,
+          children: List.generate(7, (i) {
+            final weekday = i + 1;
+            return FilterChip(
+              label: Text(DateFormat('EEEE', localizations.localeName)
+                  .format(DateTime(2024, 1, weekday))),
+              selected: _selectedDays.contains(weekday),
+              onSelected: (selected) => setState(() {
+                if (selected) {
+                  _selectedDays.add(weekday);
+                } else {
+                  _selectedDays.remove(weekday);
+                }
+              }),
+            );
+          }),
         ),
+      ] else if (_freqLabel == 'Monthly') ...[
         const SizedBox(height: 16),
         Row(
           children: [
             Expanded(
               child: TextFormField(
-                controller: _doseC,
-                decoration: InputDecoration(labelText: localizations.dose),
+                controller: _monthlyDayC,
+                decoration: InputDecoration(
+                  labelText: localizations.dayOfMonth,
+                  hintText: localizations.enterDayHint,
+                ),
                 keyboardType: TextInputType.number,
               ),
             ),
-            const SizedBox(width: 16),
-            if (_isCustomUnit)
-              Expanded(
-                child: TextFormField(
-                  controller: _customUnitC,
-                  decoration:
-                      InputDecoration(labelText: localizations.customUnit),
-                  onChanged: (value) => setState(() {
-                    _unit = value;
-                  }),
-                ),
-              )
-            else
-              DropdownButton<String>(
-                value: _unit,
-                items: predefinedUnits
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  if (v == localizations.custom) {
-                    _isCustomUnit = true;
-                    _customUnitC.text = _unit == 'custom' ? '' : _unit;
-                  } else {
-                    _isCustomUnit = false;
-                    _unit = v!;
-                  }
-                }),
-              ),
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: () {
+                final day = int.tryParse(_monthlyDayC.text);
+                if (day != null && day >= 1 && day <= 31) {
+                  setState(() {
+                    _selectedDays.add(day);
+                    _monthlyDayC.clear();
+                  });
+                }
+              },
+              tooltip: localizations.addDay,
+            ),
           ],
         ),
         const SizedBox(height: 16),
-        DropdownButton<String>(
-          value: _freqLabel,
-          items: [
-            localizations.daily,
-            localizations.weekly,
-            localizations.monthly
-          ].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-          onChanged: (v) => setState(() {
-            _freqLabel = v!;
-            _selectedDays.clear();
-          }),
+        Wrap(
+          spacing: 8,
+          children: (_selectedDays.toList()..sort())
+              .map((day) => Chip(
+                    label: Text(localizations.dayNumber(day.toString())),
+                    onDeleted: () => setState(() => _selectedDays.remove(day)),
+                  ))
+              .toList(),
         ),
-        if (_freqLabel == localizations.weekly) ...[
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            children: List.generate(7, (i) {
-              final weekday = i + 1;
-              return FilterChip(
-                label: Text(DateFormat('EEEE', localizations.localeName)
-                    .format(DateTime(2024, 1, weekday))),
-                selected: _selectedDays.contains(weekday),
-                onSelected: (selected) => setState(() {
-                  if (selected) {
-                    _selectedDays.add(weekday);
-                  } else {
-                    _selectedDays.remove(weekday);
-                  }
-                }),
-              );
-            }),
-          ),
-        ] else if (_freqLabel == localizations.monthly) ...[
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: TextFormField(
-                  controller: _monthlyDayC,
-                  decoration: InputDecoration(
-                    labelText: localizations.dayOfMonth,
-                    hintText: localizations.enterDayHint,
-                  ),
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () {
-                  final day = int.tryParse(_monthlyDayC.text);
-                  if (day != null && day >= 1 && day <= 31) {
-                    setState(() {
-                      _selectedDays.add(day);
-                      _monthlyDayC.clear();
-                    });
+      ],
+      const SizedBox(height: 16),
+      Row(
+        children: [
+          Text(localizations.timesPerDay),
+          const SizedBox(width: 16),
+          if (_isCustomTimes)
+            Expanded(
+              child: TextFormField(
+                controller: _customTimesC,
+                decoration:
+                    InputDecoration(labelText: localizations.customValue),
+                keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  final times = int.tryParse(value);
+                  if (times != null && times > 0) {
+                    setState(() => _timesPerDay = times);
                   }
                 },
-                tooltip: localizations.addDay,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            children: (_selectedDays.toList()..sort())
-                .map((day) => Chip(
-                      label: Text(localizations.dayNumber(day.toString())),
-                      onDeleted: () =>
-                          setState(() => _selectedDays.remove(day)),
-                    ))
-                .toList(),
-          ),
-        ],
-        const SizedBox(height: 16),
-        Row(
-          children: [
-            Text(localizations.timesPerDay),
-            const SizedBox(width: 16),
-            if (_isCustomTimes)
-              Expanded(
-                child: TextFormField(
-                  controller: _customTimesC,
-                  decoration:
-                      InputDecoration(labelText: localizations.customValue),
-                  keyboardType: TextInputType.number,
-                  onChanged: (value) {
-                    final times = int.tryParse(value);
-                    if (times != null && times > 0) {
-                      setState(() => _timesPerDay = times);
-                    }
-                  },
+            )
+          else
+            DropdownButton<dynamic>(
+              value: _timesPerDay > 5 ? localizations.custom : _timesPerDay,
+              items: [
+                ...List.generate(
+                  5,
+                  (i) =>
+                      DropdownMenuItem(value: i + 1, child: Text('${i + 1}')),
                 ),
-              )
-            else
-              DropdownButton<dynamic>(
-                value: _timesPerDay > 5 ? localizations.custom : _timesPerDay,
-                items: [
-                  ...List.generate(
-                    5,
-                    (i) =>
-                        DropdownMenuItem(value: i + 1, child: Text('${i + 1}')),
-                  ),
-                  DropdownMenuItem(
-                      value: localizations.custom,
-                      child: Text(localizations.custom)),
-                ],
-                onChanged: (v) => setState(() {
-                  if (v == localizations.custom) {
-                    _isCustomTimes = true;
-                    _customTimesC.text = _timesPerDay.toString();
-                  } else {
-                    _isCustomTimes = false;
-                    _timesPerDay = v as int;
-                  }
-                }),
-              ),
-          ],
-        ),
-        if (widget.existing != null) ...[
-          const SizedBox(height: 16),
+                DropdownMenuItem(
+                    value: localizations.custom,
+                    child: Text(localizations.custom)),
+              ],
+              onChanged: (v) => setState(() {
+                if (v == localizations.custom) {
+                  _isCustomTimes = true;
+                  _customTimesC.text = _timesPerDay.toString();
+                } else {
+                  _isCustomTimes = false;
+                  _timesPerDay = v as int;
+                }
+              }),
+            ),
+        ],
+      ),
+      if (widget.existing != null) ...[
+        const SizedBox(height: 16),
+        if (_timesPerDay <= 1)
           CheckboxListTile(
             title: Text(localizations.markAsTaken),
             value: _markAsTaken,
             onChanged: (v) => setState(() => _markAsTaken = v!),
+          )
+        else ...[
+          const SizedBox(height: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(localizations.unitsTaken,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.remove_circle),
+                    onPressed: _takenTimes > 0
+                        ? () => setState(() => _takenTimes--)
+                        : null,
+                  ),
+                  SizedBox(
+                    width: 80,
+                    child: Center(
+                      child: Text(
+                        '$_takenTimes / $_timesPerDay',
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add_circle),
+                    onPressed: _takenTimes < _timesPerDay
+                        ? () => setState(() => _takenTimes++)
+                        : null,
+                  ),
+                ],
+              ),
+              // Progress indicator
+              LinearProgressIndicator(
+                value: _timesPerDay > 0 ? _takenTimes / _timesPerDay : 0,
+                backgroundColor: Colors.grey[300],
+                valueColor: AlwaysStoppedAnimation<Color>(
+                    _takenTimes >= _timesPerDay ? Colors.green : Colors.blue),
+              ),
+            ],
           ),
         ],
       ],
-    );
+    ]);
   }
 
   @override
@@ -1547,6 +1780,7 @@ class _MedicationEditorModalState
         _nameC.text.trim(),
         double.parse(_doseC.text),
         unitToSave,
+        _takenTimes,
         frequency,
         customDays,
         _timesPerDay,
@@ -1589,7 +1823,8 @@ class EstimatorWidget extends ConsumerStatefulWidget {
 }
 
 class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
-  String _estimatedTime = 'Estimated time';
+  String _rawEstimate = '';
+  String _estimatedTime = '';
   String _estimatedUnit = '';
   bool _isLoading = false;
 
@@ -1597,13 +1832,15 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
   void initState() {
     super.initState();
     // Set initial value if provided
-    if (widget.initialValue != null) {
-      _estimatedTime = widget.initialValue!;
+    if (widget.initialValue != null && widget.initialValue!.isNotEmpty) {
+      _rawEstimate = widget.initialValue!;
 
-      // FIXED: Use addPostFrameCallback to avoid setState during build
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        widget.onEstimateUpdated(_estimatedTime, _estimatedUnit);
-      });
+      // Only notify parent if we have a valid initial value
+      if (_rawEstimate.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          widget.onEstimateUpdated(_rawEstimate, '');
+        });
+      }
     }
   }
 
@@ -1611,52 +1848,82 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
 
-    return Row(
+    // Display the parsed values if available, otherwise show the label
+    final String displayText = (_estimatedTime.isNotEmpty)
+        ? "$_estimatedTime $_estimatedUnit"
+        : (_rawEstimate.isNotEmpty)
+            ? _rawEstimate
+            : localizations.estimatedTimeLabel;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: TextField(
-            enabled: false,
-            decoration: InputDecoration(
-              labelText: localizations.estimatedTimeLabel,
-              border: const OutlineInputBorder(),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                enabled: false,
+                decoration: InputDecoration(
+                  labelText: localizations.estimatedTimeLabel,
+                  border: const OutlineInputBorder(),
+                ),
+                controller: TextEditingController(text: displayText),
+              ),
             ),
-            controller: TextEditingController(
-                text: "${_estimatedTime} ${_estimatedUnit}"),
-          ),
-        ),
-        const SizedBox(width: 6),
-        ElevatedButton(
-          onPressed: _isLoading
-              ? null
-              : () async {
-                  setState(() => _isLoading = true);
-                  try {
-                    final estimatorService = ref.read(estimatorServiceProvider);
-                    final result = await estimatorService.estimateTask(
-                      widget.title,
-                      widget.description,
-                      "Give the estimate in numbers",
-                    );
-                    if (result is String) {
-                      final parsed =
-                          await estimatorService.parseResponse(result);
-                      setState(() {
-                        _estimatedTime = parsed['estimate'].toString();
-                        _estimatedUnit = parsed['unit'];
-                      });
-                      widget.onEstimateUpdated(_estimatedTime, _estimatedUnit);
-                    }
-                  } finally {
-                    setState(() => _isLoading = false);
-                  }
-                },
-          child: _isLoading
-              ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(localizations.estimate),
+            const SizedBox(width: 6),
+            ElevatedButton(
+              onPressed: _isLoading
+                  ? null
+                  : () async {
+                      setState(() => _isLoading = true);
+                      try {
+                        final estimatorService =
+                            ref.read(estimatorServiceProvider);
+                        print("Estimating task with title: ${widget.title}");
+
+                        // First get the raw API response
+                        final result = await estimatorService.estimateTask(
+                          widget.title,
+                          widget.description,
+                          localizations.estimateInstructions,
+                        );
+
+                        print("API estimation result: $result");
+
+                        if (result is String && result.isNotEmpty) {
+                          // Then parse the response to extract time and unit
+                          final parsed = await estimatorService
+                              .parseResponseWithLocale(result, context);
+                          print("Parsed estimation: $parsed");
+
+                          if (parsed != null) {
+                            setState(() {
+                              _rawEstimate = parsed['estimate'] + ' ' +  parsed['unit'];
+                            });
+                          }
+
+                          // Pass the raw estimate to parent
+                          widget.onEstimateUpdated(_rawEstimate, '');
+                          print(_rawEstimate);
+                        }
+                      } catch (e) {
+                        print("Error estimating task: $e");
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("Error: $e")),
+                        );
+                      } finally {
+                        setState(() => _isLoading = false);
+                      }
+                    },
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(localizations.estimate),
+            ),
+          ],
         ),
       ],
     );
@@ -1666,11 +1933,15 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
 class SubtaskList extends StatelessWidget {
   final List<SubtaskModel> subtasks;
   final Function(SubtaskModel) onToggle;
+  final TaskModel parentTask;
+  final WidgetRef ref; // Add this parameter
 
   const SubtaskList({
     Key? key,
     required this.subtasks,
     required this.onToggle,
+    required this.parentTask,
+    required this.ref, // Add this required parameter
   }) : super(key: key);
 
   @override
@@ -1679,31 +1950,52 @@ class SubtaskList extends StatelessWidget {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: subtasks
-          .map((subtask) => Padding(
-                padding: const EdgeInsets.only(left: 15),
-                child: Row(
-                  children: [
-                    Checkbox(
-                      value: subtask.completed,
-                      onChanged: (_) => onToggle(subtask),
-                    ),
-                    Expanded(
-                      child: Text(
-                        subtask.title,
-                        style: TextStyle(
-                          decoration: subtask.completed
-                              ? TextDecoration.lineThrough
-                              : null,
-                        ),
-                      ),
-                    ),
-                    Text(localizations
-                        .minutesAbbreviation(subtask.rawTimeValue ?? '0')),
-                  ],
+      children: subtasks.map((subtask) {
+        return Container(
+          margin: const EdgeInsets.only(left: 15.0),
+          child: ListTile(
+            contentPadding: const EdgeInsets.only(left: 0, right: 16.0),
+            leading: const Padding(
+              padding: EdgeInsets.only(left: 8.0),
+              child: Icon(Icons.task_alt, size: 20),
+            ),
+            title: Text(
+              subtask.title,
+              style: TextStyle(
+                decoration:
+                    subtask.completed ? TextDecoration.lineThrough : null,
+                color: subtask.completed ? Colors.grey : Colors.black,
+                fontSize: 14.0, // Slightly smaller than parent task
+              ),
+            ),
+            subtitle: Text(
+              subtask.rawTimeValue != null && subtask.rawTimeValue!.isNotEmpty
+                ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
+                : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
+              style: const TextStyle(fontSize: 12.0),
+            ),
+            // Make the entire ListTile tappable to open the edit modal
+            onTap: () {
+              showDialog(
+                context: context,
+                builder: (context) => SubtaskEditorModal(
+                  ref: ref, // Use the passed ref
+                  parentTask: parentTask,
+                  subtask: subtask,
                 ),
-              ))
-          .toList(),
+              );
+            },
+            // Align the checkbox with the parent task's checkbox
+            trailing: SizedBox(
+              width: 24, // Same width as parent task's checkbox
+              child: Checkbox(
+                value: subtask.completed,
+                onChanged: (_) => onToggle(subtask),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

@@ -41,3 +41,5 @@ android {
 flutter {
     source = "../.."
 }
+
+// TODO: Modify icon and initial screen.

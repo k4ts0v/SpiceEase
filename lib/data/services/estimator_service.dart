@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 final estimatorServiceProvider = Provider((ref) => EstimatorService(ref));
 
@@ -9,39 +10,36 @@ class EstimatorService {
   final Ref ref;
   final Dio _dio = Dio();
 
+  /// Tip: to average 10 minutes and 1 hour, convert both to minutes:
+  /// 10 → 10, 60 → 60, sum=70, avg=35 → 35 minutes.
   EstimatorService(this.ref);
 
-  /// Maps energy level to spiciness.
   int _spicinessFromEnergy(int energy) {
-    if (energy <= 2) return 5;
-    if (energy <= 4) return 4;
+    if (energy <= 2) return 1;
+    if (energy <= 4) return 2;
     if (energy <= 6) return 3;
-    if (energy <= 8) return 2;
-    return 1;
+    if (energy <= 8) return 4;
+    return 5;
   }
 
-  /// Estimates the task using goblin.tools API.
   Future<dynamic> estimateTask(
-      String title, String description, String? condition) async {
-    // Get last recorded energy from EnergyService.
+    String title,
+    String description,
+    String? condition,
+  ) async {
     final energyService = ref.read(energyServiceProvider);
-    final int? lastEnergy =
-        (await energyService.getLastEnergyEntry())?.energyLevel;
-
-    final int spiciness = _spicinessFromEnergy(lastEnergy ?? 0);
+    final lastEntry = await energyService.getLastEnergyEntry();
+    final int spiciness = _spicinessFromEnergy(lastEntry?.energyLevel ?? 0);
 
     final body = {
-      "text": "$title $description",
+      "text": "$title $description $condition",
       "spiciness": spiciness,
       "Ancestors": [],
     };
-
     final response = await _dio.post(
       "https://goblin.tools/api/estimator",
       data: body,
-      options: Options(
-        headers: {"Content-Type": "application/json"},
-      ),
+      options: Options(headers: {"Content-Type": "application/json"}),
     );
 
     print(body);
@@ -49,94 +47,202 @@ class EstimatorService {
     return response.data;
   }
 
-  Future<Map<String, dynamic>> parseResponse(dynamic response,
-      [BuildContext? context]) async {
-    if (response is! String) return {'estimate': 0, 'unit': 'horas'};
+  /// Parses an API response like “10 minutes” or “10 to 30 minutes”
+  /// into a numeric estimate + a final unit chosen by the numeric average.
+  Future<Map<String, dynamic>?> parseResponseWithLocale(
+    String response,
+    BuildContext context,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final unitMappings = _getUnitMappings(l10n);
+    final unitsToMinutes = _getUnitConversions();
 
-    String input = response.toLowerCase().trim();
-    int estimate = 0;
-    String unit = 'horas';
+    try {
+      // Special case: “0 seconds” → just return 5 seconds
+      if (_hasZeroSeconds(response, unitMappings['second']!)) {
+        return {"estimate": "5", "unit": "seconds"};
+      }
 
-    // Patterns to match various time formats
-    final patterns = [
-      // "2 a 8 horas" - Spanish range with space-a-space
-      RegExp(r'(\d+)\s+a\s+\d+\s+(\w+)'),
+      // “X u (to|a) Y v”
+      final multiRegex = RegExp(
+        r'(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)\s+(?:to|a)\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)'
+      );
+      final mm = multiRegex.firstMatch(response);
+      if (mm != null) {
+        final a = int.parse(mm.group(1)!);
+        final u1raw = mm.group(2)!;
+        final b = int.parse(mm.group(3)!);
+        final u2raw = mm.group(4)!;
 
-      // "2-8 horas" - Range with hyphen
-      RegExp(r'(\d+)-\d+\s+(\w+)'),
+        final base1 = _findBaseUnit(u1raw.toLowerCase(), unitMappings);
+        final base2 = _findBaseUnit(u2raw.toLowerCase(), unitMappings);
 
-      // "from 2 to 8 hours" or "de 2 a 8 horas"
-      RegExp(r'(?:from|de)\s+(\d+)\s+(?:to|a)\s+\d+\s+(\w+)'),
+        final m1 = a * unitsToMinutes[base1]!;
+        final m2 = b * unitsToMinutes[base2]!;
+        final avgMin = (m1 + m2) / 2;
 
-      // "2 hours" - Simple number and unit
-      RegExp(r'(\d+)\s+(\w+)'),
-    ];
+        return _formatAverage(avgMin, unitMappings, unitsToMinutes);
+      }
 
-    // Try each pattern in sequence
-    for (final pattern in patterns) {
-      final match = pattern.firstMatch(input);
-      if (match != null) {
-        // Always take the first number as the estimate (conservative approach)
-        estimate = int.parse(match.group(1)!);
-        // For the last pattern, group(2) is the unit, for the others we need to parse
-        unit = match.group(2) ?? 'horas';
+      // English range: “X to Y unit”
+      final enRange = RegExp(r'(\d+)\s+to\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
+      final matchEnRange = enRange.firstMatch(response);
+      if (matchEnRange != null) {
+        final a = int.parse(matchEnRange.group(1)!);
+        final b = int.parse(matchEnRange.group(2)!);
+        final rawUnit = matchEnRange.group(3)!;
+
+        final base = _findBaseUnit(rawUnit.toLowerCase(), unitMappings);
+        final avgMin = ((a + b) / 2) * unitsToMinutes[base]!;
+
+        return _formatAverage(avgMin, unitMappings, unitsToMinutes);
+      }
+
+      // Spanish range: “X a Y unidad”
+      final esRange = RegExp(r'(\d+)\s+a\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
+      final matchEsRange = esRange.firstMatch(response);
+      if (matchEsRange != null) {
+        final a = int.parse(matchEsRange.group(1)!);
+        final b = int.parse(matchEsRange.group(2)!);
+        final rawUnit = matchEsRange.group(3)!;
+
+        final base = _findBaseUnit(rawUnit.toLowerCase(), unitMappings);
+        final avgMin = ((a + b) / 2) * unitsToMinutes[base]!;
+
+        return _formatAverage(avgMin, unitMappings, unitsToMinutes);
+      }
+
+      // Single value: “X unit”
+      final singleExp = RegExp(r'(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
+      final matchSingle = singleExp.firstMatch(response);
+      if (matchSingle != null) {
+        final a = int.parse(matchSingle.group(1)!);
+        final rawUnit = matchSingle.group(2)!;
+
+        final base = _findBaseUnit(rawUnit.toLowerCase(), unitMappings);
+        final avgMin = a * unitsToMinutes[base]!;
+
+        return _formatAverage(avgMin, unitMappings, unitsToMinutes);
+      }
+
+      // Fallback: any first number
+      final onlyNum = RegExp(r'(\d+)').firstMatch(response);
+      if (onlyNum != null) {
+        return {"estimate": onlyNum.group(1)!, "unit": ""};
+      }
+    } catch (e) {
+      print("Error parsing estimation: $e");
+    }
+    return null;
+  }
+
+  /// Picks the best display unit for the computed average (in minutes).
+  /// For example, 35.0 remains “35 minutes” instead of “0.58 hours,”
+  /// and 1.0 remains “1 minute.”
+  Map<String, dynamic> _formatAverage(
+    double avgMin,
+    Map<String, List<String>> unitMappings,
+    Map<String, double> unitsToMinutes,
+  ) {
+    // The top-down order from largest to smallest
+    final order = ['month', 'week', 'day', 'hour', 'minute', 'second'];
+
+    String chosen = 'minute';
+    double value = avgMin;
+
+    // find the largest unit for which the final numeric is >= 1
+    for (final unit in order) {
+      final conv = avgMin / unitsToMinutes[unit]!;
+      if (conv >= 1) {
+        chosen = unit;
+        value = conv;
         break;
       }
     }
 
-    // Use the Spanish unit with proper singular/plural form
-    unit = _getSpanishUnit(unit, estimate);
+    // Round to int if no fraction, else 2 decimals
+    final numericValue = (value % 1 == 0)
+      ? value.toInt().toString()
+      : value.toStringAsFixed(2);
 
-    return {'estimate': estimate, 'unit': unit};
+    // Some simple singular/plural logic for English
+    // If we only have a float of exactly 1.0, it’s singular; otherwise plural.
+    final doubleVal = double.tryParse(value.toString()) ?? 0;
+    final isSingular = doubleVal == 1.0;
+
+    // Basic map of English singular + plural forms
+    // This is used solely when displaying "35 minutes," "2 hours," etc.
+    final singularPlural = <String, List<String>>{
+      'month':  ['month', 'months'],
+      'week':   ['week', 'weeks'],
+      'day':    ['day', 'days'],
+      'hour':   ['hour', 'hours'],
+      'minute': ['minute', 'minutes'],
+      'second': ['second','seconds'],
+    };
+    final forms = singularPlural[chosen] ?? ['?', '?'];
+    final displayUnit = isSingular ? forms[0] : forms[1];
+
+    return {
+      "estimate": numericValue,
+      "unit": displayUnit,
+    };
   }
 
-  /// Returns the Spanish unit with proper singular/plural form based on the estimate
-  String _getSpanishUnit(String unit, int estimate) {
-    final String lowercaseUnit = unit.toLowerCase();
-
-    // First detect what type of unit we have
-    final String unitType = _detectUnitType(lowercaseUnit);
-
-    // Then return the proper Spanish form based on estimate
-    return _getSpanishForm(unitType, estimate);
+  /// Returns the dictionary of recognized (English + Spanish + from l10n) units
+  Map<String, List<String>> _getUnitMappings(AppLocalizations l10n) {
+    return {
+      'second': [
+        'second','seconds','segundo','segundos',
+        l10n.second, l10n.seconds
+      ],
+      'minute': [
+        'minute','minutes','minuto','minutos',
+        l10n.minute, l10n.minutes
+      ],
+      'hour': [
+        'hour','hours','hora','horas',
+        l10n.hour, l10n.hours
+      ],
+      'day': [
+        'day','days','día','dias','dia',
+        l10n.day, l10n.days
+      ],
+      'week': [
+        'week','weeks','semana','semanas',
+        l10n.week, l10n.weeks
+      ],
+      'month': [
+        'month','months','mes','meses',
+        l10n.month, l10n.months
+      ],
+    };
   }
 
-  /// Detects the unit type (minute, hour, day, etc.)
-  String _detectUnitType(String unit) {
-    if (unit.contains('min') || unit.contains('minut')) {
-      return 'minute';
-    } else if (unit.contains('hor') || unit.contains('hour')) {
-      return 'hour';
-    } else if (unit.contains('día') || unit.contains('day')) {
-      return 'day';
-    } else if (unit.contains('semana') || unit.contains('week')) {
-      return 'week';
-    } else if (unit.contains('mes') || unit.contains('month')) {
-      return 'month';
-    } else if (unit.contains('segundo') || unit.contains('second')) {
-      return 'second';
-    } else {
-      return 'hour'; // Default to hour
-    }
+  /// Each key is a base unit; each value is how many minutes that unit has
+  Map<String, double> _getUnitConversions() {
+    return {
+      'second': 1 / 60,
+      'minute': 1,
+      'hour':   60,
+      'day':    60 * 24,
+      'week':   60 * 24 * 7,
+      'month':  60 * 24 * 30,
+    };
   }
 
-  /// Returns the Spanish form of the unit based on count
-  String _getSpanishForm(String unitType, int count) {
-    switch (unitType) {
-      case 'minute':
-        return count == 1 ? 'minuto' : 'minutos';
-      case 'hour':
-        return count == 1 ? 'hora' : 'horas';
-      case 'day':
-        return count == 1 ? 'día' : 'días';
-      case 'week':
-        return count == 1 ? 'semana' : 'semanas';
-      case 'month':
-        return count == 1 ? 'mes' : 'meses';
-      case 'second':
-        return count == 1 ? 'segundo' : 'segundos';
-      default:
-        return count == 1 ? 'hora' : 'horas';
-    }
+  bool _hasZeroSeconds(String text, List<String> seconds) {
+    final t = text.toLowerCase();
+    return seconds.any((x) => t.contains("0 $x"));
+  }
+
+  /// Finds the “base unit” of any recognized label in [unitMappings].
+  String _findBaseUnit(String raw, Map<String, List<String>> unitMappings) {
+    return unitMappings.entries
+        .firstWhere(
+          (e) => e.value.any((u) => raw.contains(u.toLowerCase())),
+          orElse: () => MapEntry('minute', []),
+        )
+        .key;
   }
 }

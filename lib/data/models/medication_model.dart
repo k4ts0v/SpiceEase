@@ -6,6 +6,7 @@ class MedicationModel {
   final String name;
   final double dose;
   final String unit;
+  final int takenTimes;
   final String frequency;
   final List<int>? customDays;
   final int timesPerDay;
@@ -20,6 +21,7 @@ class MedicationModel {
     required this.name,
     required this.dose,
     required this.unit,
+    required this.takenTimes,
     required this.frequency,
     this.customDays,
     required this.timesPerDay,
@@ -33,6 +35,7 @@ class MedicationModel {
     String? name,
     double? dose,
     String? unit,
+    int? takenTimes,
     String? frequency,
     List<int>? customDays,
     int? timesPerDay,
@@ -46,6 +49,7 @@ class MedicationModel {
       name: name ?? this.name,
       dose: dose ?? this.dose,
       unit: unit ?? this.unit,
+      takenTimes: takenTimes ?? this.takenTimes,
       frequency: frequency ?? this.frequency,
       customDays: customDays ?? this.customDays,
       timesPerDay: timesPerDay ?? this.timesPerDay,
@@ -70,7 +74,8 @@ class MedicationModel {
             orElse: () => customDays!.first,
           );
           return lastTaken!.add(
-            Duration(days: nextDay > today ? nextDay - today : 7 - today + nextDay),
+            Duration(
+                days: nextDay > today ? nextDay - today : 7 - today + nextDay),
           );
         }
         return lastTaken!.add(const Duration(days: 7));
@@ -112,6 +117,7 @@ class MedicationModel {
       'name': name,
       'dose': dose,
       'unit': unit,
+      'taken_times': takenTimes,
       'frequency': frequency,
       'custom_days': customDays,
       'times_per_day': timesPerDay,
@@ -133,10 +139,14 @@ class MedicationModel {
               ? (map['dose'] as int).toDouble()
               : double.tryParse(map['dose'].toString()) ?? 0.0,
       unit: map['unit'] ?? '',
+            takenTimes: (map['taken_times'] is int)
+          ? map['taken_times']
+          : (map['taken_times'] is double)
+              ? (map['taken_times'] as double).toInt()
+              : int.tryParse(map['taken_times']?.toString() ?? '0') ?? 0,
       frequency: map['frequency'] ?? '',
-      customDays: (map['custom_days'] as List<dynamic>?)
-          ?.map((e) => e as int)
-          .toList(),
+      customDays:
+          (map['custom_days'] as List<dynamic>?)?.map((e) => e as int).toList(),
       timesPerDay: (map['times_per_day'] is int)
           ? map['times_per_day']
           : int.tryParse(map['times_per_day'].toString()) ?? 1,

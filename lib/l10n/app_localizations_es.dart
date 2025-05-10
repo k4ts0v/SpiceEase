@@ -268,8 +268,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get estimate => 'Estimar';
 
   @override
-  String estimatedTime(Object time, Object unit) {
-    return 'Tiempo estimado: $time $unit';
+  String estimatedTime(Object time) {
+    return 'Tiempo estimado: $time';
   }
 
   @override
@@ -361,6 +361,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get subtask => 'Subtarea';
 
   @override
+  String get subtasks => 'Subtareas';
+
+  @override
   String subtaskFor(Object taskTitle) {
     return 'Subtarea de: $taskTitle';
   }
@@ -425,4 +428,164 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get additionalNotes => 'Notas adicionales';
+
+  @override
+  String get timeManagement => 'Gestión del Tiempo';
+
+  @override
+  String get kanban => 'Kanban';
+
+  @override
+  String get kanbanDescription => 'Visualiza tu flujo de trabajo con tarjetas organizadas en columnas para seguir el progreso.';
+
+  @override
+  String get timeBlocks => 'Bloques de Tiempo';
+
+  @override
+  String get timeBlocksDescription => 'Programa tu día en bloques de tiempo dedicados para aumentar el enfoque y la productividad.';
+
+  @override
+  String get flowmodoro => 'Flowmodoro';
+
+  @override
+  String get flowmodoroDescription => 'Trabaja mientras te sientas productivo, luego recarga energías con un descanso proporcional.';
+
+  @override
+  String get noTasksInThisColumn => 'No hay tareas en esta columna';
+
+  @override
+  String get inProgress => 'En progreso';
+
+  @override
+  String get todo => 'Por hacer';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get tasksWithoutDueDate => 'Tareas sin fecha límite';
+
+  @override
+  String get noTasksWithoutDueDate => 'No hay tareas sin fecha límite';
+
+  @override
+  String get noTasks => 'No hay tareas';
+
+  @override
+  String get unitsTaken => 'Unidades tomadas hoy';
+
+  @override
+  String unitTakenOf(Object taken, Object total) {
+    return '$taken de $total tomadas';
+  }
+
+  @override
+  String get taken => 'Tomadas';
+
+  @override
+  String get takenS => 'Tomada';
+
+  @override
+  String get notTaken => 'Sin tomar';
+
+  @override
+  String get refresh => 'Actualizar';
+
+  @override
+  String errorSavingTask(Object error) {
+    return 'Error guardando la tarea: $error';
+  }
+
+  @override
+  String get home => 'Inicio';
+
+  @override
+  String get settings => 'Ajustes';
+
+  @override
+  String get insights => 'Reportes';
+
+  @override
+  String get profile => 'Perfil';
+
+  @override
+  String get dragTasksHere => 'Arrastra tareas aquí';
+
+  @override
+  String get lowestPriority => 'Prioridad más baja';
+
+  @override
+  String get lowPriority => 'Prioridad baja';
+
+  @override
+  String get mediumPriority => 'Prioridad media';
+
+  @override
+  String get highPriority => 'Prioridad alta';
+
+  @override
+  String get highestPriority => 'Prioridad más alta';
+
+  @override
+  String get newTask => 'Nueva tarea';
+
+  @override
+  String get loading => 'Cargando...';
+
+  @override
+  String get initializationError => 'Error de inicialización';
+
+  @override
+  String get close => 'Cerrar';
+
+  @override
+  String get clearCompletion => 'Eliminar finalización';
+
+  @override
+  String get tablets => 'Comprimidos';
+
+  @override
+  String get second => 'segundo';
+
+  @override
+  String get seconds => 'segundos';
+
+  @override
+  String get minute => 'minuto';
+
+  @override
+  String get minutes => 'minutos';
+
+  @override
+  String get hour => 'hora';
+
+  @override
+  String get hours => 'horas';
+
+  @override
+  String get day => 'día';
+
+  @override
+  String get days => 'días';
+
+  @override
+  String get week => 'semana';
+
+  @override
+  String get weeks => 'semanas';
+
+  @override
+  String get month => 'mes';
+
+  @override
+  String get months => 'meses';
+
+  @override
+  String get estimateInstructions => 'Da la estimación en números. Para rangos de números, sepáralos usando \'a\'.';
+
+  @override
+  String get allTasksScheduled => 'Todas las tareas están programadas';
+
+  @override
+  String get unscheduledTasks => 'Tareas no programadas';
 }

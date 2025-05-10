@@ -18,7 +18,7 @@ import 'app_localizations_es.dart';
 /// `supportedLocales` list. For example:
 ///
 /// ```dart
-/// import 'gen_l10n/app_localizations.dart';
+/// import 'l10n/app_localizations.dart';
 ///
 /// return MaterialApp(
 ///   localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -584,8 +584,8 @@ abstract class AppLocalizations {
   /// No description provided for @estimatedTime.
   ///
   /// In en, this message translates to:
-  /// **'Estimated time: {time} {unit}'**
-  String estimatedTime(Object time, Object unit);
+  /// **'Estimated time: {time}'**
+  String estimatedTime(Object time);
 
   /// No description provided for @generateSubtasks.
   ///
@@ -755,6 +755,12 @@ abstract class AppLocalizations {
   /// **'Subtask'**
   String get subtask;
 
+  /// No description provided for @subtasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtasks'**
+  String get subtasks;
+
   /// No description provided for @subtaskFor.
   ///
   /// In en, this message translates to:
@@ -874,6 +880,318 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Additional notes'**
   String get additionalNotes;
+
+  /// No description provided for @timeManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Management'**
+  String get timeManagement;
+
+  /// No description provided for @kanban.
+  ///
+  /// In en, this message translates to:
+  /// **'Kanban'**
+  String get kanban;
+
+  /// No description provided for @kanbanDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Visualize your workflow with cards organized in columns to track progress.'**
+  String get kanbanDescription;
+
+  /// No description provided for @timeBlocks.
+  ///
+  /// In en, this message translates to:
+  /// **'Time Blocks'**
+  String get timeBlocks;
+
+  /// No description provided for @timeBlocksDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule your day in dedicated time blocks to increase focus and productivity.'**
+  String get timeBlocksDescription;
+
+  /// No description provided for @flowmodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Flowmodoro'**
+  String get flowmodoro;
+
+  /// No description provided for @flowmodoroDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Work while you feel productive, then take a proportional break to recharge.'**
+  String get flowmodoroDescription;
+
+  /// No description provided for @noTasksInThisColumn.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks in this column'**
+  String get noTasksInThisColumn;
+
+  /// No description provided for @inProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'In Progress'**
+  String get inProgress;
+
+  /// No description provided for @todo.
+  ///
+  /// In en, this message translates to:
+  /// **'To Do'**
+  String get todo;
+
+  /// No description provided for @error.
+  ///
+  /// In en, this message translates to:
+  /// **'Error'**
+  String get error;
+
+  /// No description provided for @tasksWithoutDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks without due date'**
+  String get tasksWithoutDueDate;
+
+  /// No description provided for @noTasksWithoutDueDate.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks without due date'**
+  String get noTasksWithoutDueDate;
+
+  /// No description provided for @noTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks'**
+  String get noTasks;
+
+  /// No description provided for @unitsTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Units Taken Today'**
+  String get unitsTaken;
+
+  /// No description provided for @unitTakenOf.
+  ///
+  /// In en, this message translates to:
+  /// **'{taken} of {total} taken'**
+  String unitTakenOf(Object taken, Object total);
+
+  /// No description provided for @taken.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken'**
+  String get taken;
+
+  /// No description provided for @takenS.
+  ///
+  /// In en, this message translates to:
+  /// **'Taken'**
+  String get takenS;
+
+  /// No description provided for @notTaken.
+  ///
+  /// In en, this message translates to:
+  /// **'Not taken'**
+  String get notTaken;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @errorSavingTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Error saving task: {error}'**
+  String errorSavingTask(Object error);
+
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settings;
+
+  /// No description provided for @insights.
+  ///
+  /// In en, this message translates to:
+  /// **'Insights'**
+  String get insights;
+
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @dragTasksHere.
+  ///
+  /// In en, this message translates to:
+  /// **'Drag tasks here'**
+  String get dragTasksHere;
+
+  /// No description provided for @lowestPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest Priority'**
+  String get lowestPriority;
+
+  /// No description provided for @lowPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Low Priority'**
+  String get lowPriority;
+
+  /// No description provided for @mediumPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium Priority'**
+  String get mediumPriority;
+
+  /// No description provided for @highPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'High Priority'**
+  String get highPriority;
+
+  /// No description provided for @highestPriority.
+  ///
+  /// In en, this message translates to:
+  /// **'Highest Priority'**
+  String get highestPriority;
+
+  /// No description provided for @newTask.
+  ///
+  /// In en, this message translates to:
+  /// **'New Task'**
+  String get newTask;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loading;
+
+  /// No description provided for @initializationError.
+  ///
+  /// In en, this message translates to:
+  /// **'Initialization error'**
+  String get initializationError;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @clearCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear completion'**
+  String get clearCompletion;
+
+  /// No description provided for @tablets.
+  ///
+  /// In en, this message translates to:
+  /// **'Tablets'**
+  String get tablets;
+
+  /// No description provided for @second.
+  ///
+  /// In en, this message translates to:
+  /// **'second'**
+  String get second;
+
+  /// No description provided for @seconds.
+  ///
+  /// In en, this message translates to:
+  /// **'seconds'**
+  String get seconds;
+
+  /// No description provided for @minute.
+  ///
+  /// In en, this message translates to:
+  /// **'minute'**
+  String get minute;
+
+  /// No description provided for @minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'minutes'**
+  String get minutes;
+
+  /// No description provided for @hour.
+  ///
+  /// In en, this message translates to:
+  /// **'hour'**
+  String get hour;
+
+  /// No description provided for @hours.
+  ///
+  /// In en, this message translates to:
+  /// **'hours'**
+  String get hours;
+
+  /// No description provided for @day.
+  ///
+  /// In en, this message translates to:
+  /// **'day'**
+  String get day;
+
+  /// No description provided for @days.
+  ///
+  /// In en, this message translates to:
+  /// **'days'**
+  String get days;
+
+  /// No description provided for @week.
+  ///
+  /// In en, this message translates to:
+  /// **'week'**
+  String get week;
+
+  /// No description provided for @weeks.
+  ///
+  /// In en, this message translates to:
+  /// **'weeks'**
+  String get weeks;
+
+  /// No description provided for @month.
+  ///
+  /// In en, this message translates to:
+  /// **'month'**
+  String get month;
+
+  /// No description provided for @months.
+  ///
+  /// In en, this message translates to:
+  /// **'months'**
+  String get months;
+
+  /// No description provided for @estimateInstructions.
+  ///
+  /// In en, this message translates to:
+  /// **'Give the estimate in numbers. For ranges, separate them using \'to\'.'**
+  String get estimateInstructions;
+
+  /// No description provided for @allTasksScheduled.
+  ///
+  /// In en, this message translates to:
+  /// **'All tasks are scheduled'**
+  String get allTasksScheduled;
+
+  /// No description provided for @unscheduledTasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Unscheduled tasks'**
+  String get unscheduledTasks;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

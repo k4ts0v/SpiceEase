@@ -268,8 +268,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get estimate => 'Estimate';
 
   @override
-  String estimatedTime(Object time, Object unit) {
-    return 'Estimated time: $time $unit';
+  String estimatedTime(Object time) {
+    return 'Estimated time: $time';
   }
 
   @override
@@ -361,6 +361,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subtask => 'Subtask';
 
   @override
+  String get subtasks => 'Subtasks';
+
+  @override
   String subtaskFor(Object taskTitle) {
     return 'Subtask for: $taskTitle';
   }
@@ -425,4 +428,164 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get additionalNotes => 'Additional notes';
+
+  @override
+  String get timeManagement => 'Time Management';
+
+  @override
+  String get kanban => 'Kanban';
+
+  @override
+  String get kanbanDescription => 'Visualize your workflow with cards organized in columns to track progress.';
+
+  @override
+  String get timeBlocks => 'Time Blocks';
+
+  @override
+  String get timeBlocksDescription => 'Schedule your day in dedicated time blocks to increase focus and productivity.';
+
+  @override
+  String get flowmodoro => 'Flowmodoro';
+
+  @override
+  String get flowmodoroDescription => 'Work while you feel productive, then take a proportional break to recharge.';
+
+  @override
+  String get noTasksInThisColumn => 'No tasks in this column';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get todo => 'To Do';
+
+  @override
+  String get error => 'Error';
+
+  @override
+  String get tasksWithoutDueDate => 'Tasks without due date';
+
+  @override
+  String get noTasksWithoutDueDate => 'No tasks without due date';
+
+  @override
+  String get noTasks => 'No tasks';
+
+  @override
+  String get unitsTaken => 'Units Taken Today';
+
+  @override
+  String unitTakenOf(Object taken, Object total) {
+    return '$taken of $total taken';
+  }
+
+  @override
+  String get taken => 'Taken';
+
+  @override
+  String get takenS => 'Taken';
+
+  @override
+  String get notTaken => 'Not taken';
+
+  @override
+  String get refresh => 'Refresh';
+
+  @override
+  String errorSavingTask(Object error) {
+    return 'Error saving task: $error';
+  }
+
+  @override
+  String get home => 'Home';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get insights => 'Insights';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get dragTasksHere => 'Drag tasks here';
+
+  @override
+  String get lowestPriority => 'Lowest Priority';
+
+  @override
+  String get lowPriority => 'Low Priority';
+
+  @override
+  String get mediumPriority => 'Medium Priority';
+
+  @override
+  String get highPriority => 'High Priority';
+
+  @override
+  String get highestPriority => 'Highest Priority';
+
+  @override
+  String get newTask => 'New Task';
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get initializationError => 'Initialization error';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get clearCompletion => 'Clear completion';
+
+  @override
+  String get tablets => 'Tablets';
+
+  @override
+  String get second => 'second';
+
+  @override
+  String get seconds => 'seconds';
+
+  @override
+  String get minute => 'minute';
+
+  @override
+  String get minutes => 'minutes';
+
+  @override
+  String get hour => 'hour';
+
+  @override
+  String get hours => 'hours';
+
+  @override
+  String get day => 'day';
+
+  @override
+  String get days => 'days';
+
+  @override
+  String get week => 'week';
+
+  @override
+  String get weeks => 'weeks';
+
+  @override
+  String get month => 'month';
+
+  @override
+  String get months => 'months';
+
+  @override
+  String get estimateInstructions => 'Give the estimate in numbers. For ranges, separate them using \'to\'.';
+
+  @override
+  String get allTasksScheduled => 'All tasks are scheduled';
+
+  @override
+  String get unscheduledTasks => 'Unscheduled tasks';
 }
