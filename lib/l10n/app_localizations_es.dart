@@ -84,6 +84,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownError => 'Ha ocurrido un error desconocido.';
 
   @override
+  String get username => 'Nombre de usuario';
+
+  @override
   String get username_required => 'Es necesario introducir un nombre de usuario.';
 
   @override
@@ -588,4 +591,102 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get unscheduledTasks => 'Tareas no programadas';
+
+  @override
+  String get noEndTime => 'Sin hora de finalización';
+
+  @override
+  String get setEndTime => 'Establecer hora de finalización';
+
+  @override
+  String get setStartTime => 'Establecer hora de inicio';
+
+  @override
+  String get startTime => 'Hora de inicio';
+
+  @override
+  String get noStartTime => 'Sin hora de inicio';
+
+  @override
+  String get endTime => 'Hora de finalización';
+
+  @override
+  String get clear => 'Limpiar';
+
+  @override
+  String get selectTaskForFlowmodoro => 'Seleccionar una tarea para flowmodoro';
+
+  @override
+  String get flowmodoroExplanation => 'Concéntrate en una tarea a la vez con intervalos de trabajo y descanso';
+
+  @override
+  String get selectATaskToStart => 'Selecciona una tarea para comenzar';
+
+  @override
+  String get configureFlowmodoro => 'Configurar flowmodoro';
+
+  @override
+  String get focusTime => 'Tiempo de enfoque';
+
+  @override
+  String get breakTime => 'Tiempo de descanso';
+
+  @override
+  String get cyclesToComplete => 'Ciclos a completar';
+
+  @override
+  String get cycles => 'ciclos';
+
+  @override
+  String get startFlowmodoro => 'Iniciar flowmodoro';
+
+  @override
+  String get stopFlowmodoro => 'Detener flowmodoro';
+
+  @override
+  String get flowmodoroCompleted => 'Flowmodoro completado';
+
+  @override
+  String get markTaskAsCompleted => '¿Deseas marcar esta tarea como completada?';
+
+  @override
+  String get notYet => 'Aún No';
+
+  @override
+  String get markAsDone => 'Marcar como completada';
+
+  @override
+  String get taskMarkedAsCompleted => 'Tarea marcada como completada';
+
+  @override
+  String get cycleProgress => 'Ciclo \$1 de \$2';
+
+  @override
+  String get relax => 'Relájate';
+
+  @override
+  String get focus => 'Concéntrate';
+
+  @override
+  String get noTasksAvailable => 'No hay tareas disponibles';
+
+  @override
+  String errorMarkingTaskComplete(Object error) {
+    return 'Error marcando la tarea como completada: $error';
+  }
+
+  @override
+  String get breakTimeEnded => 'Tiempo de Descanso Terminado';
+
+  @override
+  String get focusTimeEnded => 'Tiempo de Enfoque Terminado';
+
+  @override
+  String get timeToFocusAgain => '¡Es hora de volver a concentrarse en su tarea!';
+
+  @override
+  String get timeToTakeABreak => '¡Buen trabajo! Es hora de tomar un breve descanso.';
+
+  @override
+  String get gotIt => 'Entendido';
 }

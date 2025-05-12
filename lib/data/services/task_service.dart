@@ -26,8 +26,9 @@ class TaskService {
   Future<TaskModel> createTask(TaskModel task) => _repository.createTask(task);
 
   /// Updates an existing task by delegating to the repository.
-  Future<TaskModel> updateTask(String id, TaskModel task) =>
-      _repository.updateTask(id, task);
+  Future<TaskModel> updateTask(String id, TaskModel task) async {
+    return await _repository.updateTask(id, task);
+  }
 
   /// Deletes a task by delegating to the repository.
   Future<void> deleteTask(String id) => _repository.deleteTask(id);

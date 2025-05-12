@@ -84,6 +84,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownError => 'An unknown error happened.';
 
   @override
+  String get username => 'Username';
+
+  @override
   String get username_required => 'Username is required.';
 
   @override
@@ -588,4 +591,102 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get unscheduledTasks => 'Unscheduled tasks';
+
+  @override
+  String get noEndTime => 'No end time set';
+
+  @override
+  String get setEndTime => 'Set end time';
+
+  @override
+  String get setStartTime => 'Set start time';
+
+  @override
+  String get startTime => 'Start time';
+
+  @override
+  String get noStartTime => 'No start time set';
+
+  @override
+  String get endTime => 'End time';
+
+  @override
+  String get clear => 'Clear';
+
+  @override
+  String get selectTaskForFlowmodoro => 'Select a task for Flowmodoro';
+
+  @override
+  String get flowmodoroExplanation => 'Focus on one task at a time with timed work and break intervals';
+
+  @override
+  String get selectATaskToStart => 'Select a task to start';
+
+  @override
+  String get configureFlowmodoro => 'Configure flowmodoro';
+
+  @override
+  String get focusTime => 'Focus Time';
+
+  @override
+  String get breakTime => 'Break Time';
+
+  @override
+  String get cyclesToComplete => 'Cycles to complete';
+
+  @override
+  String get cycles => 'cycles';
+
+  @override
+  String get startFlowmodoro => 'Start flowmodoro';
+
+  @override
+  String get stopFlowmodoro => 'Stop flowmodoro';
+
+  @override
+  String get flowmodoroCompleted => 'Flowmodoro completed';
+
+  @override
+  String get markTaskAsCompleted => 'Would you like to mark this task as completed?';
+
+  @override
+  String get notYet => 'Not Yet';
+
+  @override
+  String get markAsDone => 'Mark as done';
+
+  @override
+  String get taskMarkedAsCompleted => 'Task marked as completed';
+
+  @override
+  String get cycleProgress => 'Cycle \$1 of \$2';
+
+  @override
+  String get relax => 'Relax';
+
+  @override
+  String get focus => 'Focus';
+
+  @override
+  String get noTasksAvailable => 'No tasks available';
+
+  @override
+  String errorMarkingTaskComplete(Object error) {
+    return 'Error marking task as complete: $error';
+  }
+
+  @override
+  String get breakTimeEnded => 'Break Time Ended';
+
+  @override
+  String get focusTimeEnded => 'Focus Time Ended';
+
+  @override
+  String get timeToFocusAgain => 'Time to focus on your task again!';
+
+  @override
+  String get timeToTakeABreak => 'Great work! Time to take a short break.';
+
+  @override
+  String get gotIt => 'Got it';
 }

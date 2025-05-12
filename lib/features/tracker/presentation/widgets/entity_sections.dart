@@ -7,6 +7,7 @@ import 'package:spiceease/data/models/symptom_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/habit_provider.dart';
 import 'package:spiceease/data/providers/medication_provider.dart';
+import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/modals.dart';
@@ -99,25 +100,33 @@ class EntitySections extends ConsumerWidget {
               trailing: medication.timesPerDay <= 1
                   ? // Simple checkbox for once-daily medications
                   Checkbox(
-                      value: medication.takenTimes > 0,
+                      value: medication.takenTimes >= medication.timesPerDay,
                       onChanged: (value) async {
-                        if (value != null) {
-                          final newTakenTimes =
-                              value ? medication.timesPerDay : 0;
-                          await ref
-                              .read(trackerControllerProvider)
-                              .updateMedication(
-                                medication.id,
-                                medication.name,
-                                medication.dose,
-                                medication.unit,
-                                newTakenTimes,
-                                medication.frequency,
-                                medication.customDays,
-                                medication.timesPerDay,
-                                value ? DateTime.now() : null,
-                              );
-                        }
+                        final selectedDate = ref.read(selectedDateProvider);
+                        final newTakenTimes =
+                            value == true ? medication.timesPerDay : 0;
+                        final newLastTaken =
+                            value == true ? selectedDate : null;
+
+                        final updatedMed = medication.copyWith(
+                          takenTimes: newTakenTimes,
+                          lastTaken: newLastTaken,
+                        );
+
+                        await ref
+                            .read(trackerControllerProvider)
+                            .updateMedication(
+                              medication.id,
+                              medication.name,
+                              medication.dose,
+                              medication.unit,
+                              newTakenTimes,
+                              medication.frequency,
+                              medication.customDays,
+                              medication.timesPerDay,
+                              newLastTaken,
+                              updatedMed.calculateNextDueDate(),
+                            );
                       },
                     )
                   : // For multi-dose medications, show +/- buttons
@@ -131,6 +140,17 @@ class EntitySections extends ConsumerWidget {
                           iconSize: 20,
                           onPressed: medication.takenTimes > 0
                               ? () async {
+                                  final newTimes = medication.takenTimes - 1;
+                                  final selectedDate =
+                                      ref.read(selectedDateProvider);
+                                  final newLastTaken =
+                                      newTimes > 0 ? selectedDate : null;
+
+                                  final updatedMed = medication.copyWith(
+                                    takenTimes: newTimes,
+                                    lastTaken: newLastTaken,
+                                  );
+
                                   await ref
                                       .read(trackerControllerProvider)
                                       .updateMedication(
@@ -138,11 +158,12 @@ class EntitySections extends ConsumerWidget {
                                         medication.name,
                                         medication.dose,
                                         medication.unit,
-                                        (medication.takenTimes - 1),
+                                        newTimes,
                                         medication.frequency,
                                         medication.customDays,
                                         medication.timesPerDay,
-                                        medication.lastTaken,
+                                        newLastTaken,
+                                        updatedMed.calculateNextDueDate(),
                                       );
                                 }
                               : null,
@@ -171,24 +192,35 @@ class EntitySections extends ConsumerWidget {
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
                           iconSize: 20,
-                          onPressed:
-                              medication.takenTimes < medication.timesPerDay
-                                  ? () async {
-                                      await ref
-                                          .read(trackerControllerProvider)
-                                          .updateMedication(
-                                            medication.id,
-                                            medication.name,
-                                            medication.dose,
-                                            medication.unit,
-                                            (medication.takenTimes + 1),
-                                            medication.frequency,
-                                            medication.customDays,
-                                            medication.timesPerDay,
-                                            medication.lastTaken,
-                                          );
-                                    }
-                                  : null,
+                          onPressed: medication.takenTimes <
+                                  medication.timesPerDay
+                              ? () async {
+                                  final newTimes = medication.takenTimes + 1;
+                                  final selectedDate =
+                                      ref.read(selectedDateProvider);
+                                  final newLastTaken = selectedDate;
+
+                                  final updatedMed = medication.copyWith(
+                                    takenTimes: newTimes,
+                                    lastTaken: newLastTaken,
+                                  );
+
+                                  await ref
+                                      .read(trackerControllerProvider)
+                                      .updateMedication(
+                                        medication.id,
+                                        medication.name,
+                                        medication.dose,
+                                        medication.unit,
+                                        newTimes,
+                                        medication.frequency,
+                                        medication.customDays,
+                                        medication.timesPerDay,
+                                        newLastTaken,
+                                        updatedMed.calculateNextDueDate(),
+                                      );
+                                }
+                              : null,
                           color: Colors.green,
                         ),
                       ],
@@ -277,7 +309,8 @@ class EntitySections extends ConsumerWidget {
                                 updated.completed,
                                 rawTimeValue: updated.rawTimeValue ?? '',
                               );
-                            }, ref: ref,
+                            },
+                            ref: ref,
                           ),
                         ],
                       ),

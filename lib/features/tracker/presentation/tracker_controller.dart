@@ -205,67 +205,43 @@ class TrackerController {
 
     await service.createMedication(medication);
     await ref
-    .read(medicationStateNotifierProvider(selectedDate).notifier)
-    .fetchMedications();
+        .read(medicationStateNotifierProvider(selectedDate).notifier)
+        .fetchMedications();
   }
 
   Future<void> updateMedication(
-    String id,
-    String name,
-    double dose,
-    String unit,
-    int? takenTimes,
-    String frequency,
-    List<int>? customDays,
-    int timesPerDay,
-    DateTime? lastTaken,
-  ) async {
-    final service = ref.read(medicationServiceProvider);
+  String id,
+  String name,
+  double dose,
+  String unit,
+  int? takenTimes,
+  String frequency,
+  List<int>? customDays,
+  int timesPerDay,
+  DateTime? lastTaken,
+  DateTime? nextDueDate,
+) async {
+  final service = ref.read(medicationServiceProvider);
+  final existingMed = await service.getMedicationById(id);
 
-    final existingMedication = await service.getMedicationById(id);
-    if (existingMedication == null) {
-      throw Exception('Medication not found');
-    }
+  if (existingMed == null) return;
 
-    // Auto-set lastTaken when all doses are taken
-    DateTime? newLastTaken = lastTaken;
-    if (takenTimes != null && takenTimes >= timesPerDay) {
-      newLastTaken = DateTime.now();
-    } else if (takenTimes != null &&
-        takenTimes < timesPerDay &&
-        existingMedication.lastTaken != null) {
-      // Check if we need to reset lastTaken
-      // Only reset if lastTaken is from today and doses are now insufficient
-      final now = DateTime.now();
-      final lt = existingMedication.lastTaken!;
-      if (lt.year == now.year && lt.month == now.month && lt.day == now.day) {
-        newLastTaken =
-            null; // Reset last taken since not all doses were taken today
-      } else {
-        newLastTaken = existingMedication
-            .lastTaken; // Keep previous value if from another day
-      }
-    }
+  final updatedMed = existingMed.copyWith(
+    name: name,
+    dose: dose,
+    unit: unit,
+    takenTimes: takenTimes ?? existingMed.takenTimes,
+    frequency: frequency,
+    customDays: customDays,
+    timesPerDay: timesPerDay,
+    lastTaken: lastTaken,
+    nextDueDate: nextDueDate ?? existingMed.calculateNextDueDate(),
+    updatedAt: DateTime.now(),
+  );
 
-    final updatedMedication = existingMedication.copyWith(
-      name: name,
-      dose: dose,
-      unit: unit,
-      takenTimes: takenTimes,
-      frequency: frequency,
-      customDays: customDays,
-      timesPerDay: timesPerDay,
-      lastTaken: newLastTaken,
-      nextDueDate: newLastTaken != null
-          ? existingMedication.calculateNextDueDate()
-          : null,
-      updatedAt: DateTime.now(),
-    );
-
-    await service.updateMedication(id, updatedMedication);await ref
-    .read(medicationStateNotifierProvider(selectedDate).notifier)
-    .fetchMedications();;
-  }
+  await service.updateMedication(id, updatedMed);
+  ref.invalidate(medicationStateNotifierProvider(selectedDate));
+}
 
   Future<void> incrementMedicationTaken(String id, int increment) async {
     final service = ref.read(medicationServiceProvider);
@@ -306,8 +282,8 @@ class TrackerController {
 
     await service.updateMedication(id, updatedMed);
     await ref
-    .read(medicationStateNotifierProvider(selectedDate).notifier)
-    .fetchMedications();
+        .read(medicationStateNotifierProvider(selectedDate).notifier)
+        .fetchMedications();
   }
 
   Future<void> markMedicationTaken(String id, bool taken) async {
@@ -339,30 +315,32 @@ class TrackerController {
   }
 
   // Tasks
-  Future<void> addTask({
-    required String title,
-    required String description,
-    required String status,
-    DateTime? dueDate,
-    DateTime? completedAt,
-    String? estimatedTime,
-    required int priority,
-    required List<SubtaskModel> subtasks,
-  }) async {
+  Future<void> addTask(
+      {required String title,
+      required String description,
+      required String status,
+      DateTime? dueDate,
+      DateTime? completedAt,
+      String? estimatedTime,
+      required int priority,
+      required List<SubtaskModel> subtasks,
+      DateTime? startTime,
+      DateTime? endTime}) async {
     final service = ref.read(taskServiceProvider);
     await service.createTask(TaskModel(
-      id: service.generateId(),
-      userId: await _getUserId(),
-      title: title,
-      description: description,
-      status: status,
-      dueDate: dueDate,
-      completedAt: completedAt,
-      estimatedTime: estimatedTime,
-      priority: priority,
-      createdAt: DateTime.now(),
-      updatedAt: DateTime.now(),
-    ));
+        id: service.generateId(),
+        userId: await _getUserId(),
+        title: title,
+        description: description,
+        status: status,
+        dueDate: dueDate,
+        completedAt: completedAt,
+        estimatedTime: estimatedTime,
+        priority: priority,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        startTime: startTime,
+        endTime: endTime));
 
     ref.invalidate(taskStateNotifierProvider(selectedDate));
   }
@@ -377,6 +355,8 @@ class TrackerController {
     String? estimatedTime,
     int priority,
     List<SubtaskModel>? subtasks,
+    DateTime? startTime,
+    DateTime? endTime,
   ) async {
     final service = ref.read(taskServiceProvider);
     final existingTask = await service.getTaskById(id);
@@ -400,6 +380,8 @@ class TrackerController {
         priority: priority,
         updatedAt: DateTime.now(),
         subtasks: subtasks,
+        startTime: startTime,
+        endTime: endTime,
       );
 
       await service.updateTask(id, updatedTask);
@@ -415,6 +397,8 @@ class TrackerController {
         priority: priority,
         updatedAt: DateTime.now(),
         subtasks: subtasks,
+        startTime: startTime,
+        endTime: endTime,
       );
 
       await service.updateTask(id, updatedTask);
@@ -483,6 +467,8 @@ class TrackerController {
       existingTask.estimatedTime,
       existingTask.priority,
       updatedSubtasks,
+      existingTask.startTime,
+      existingTask.endTime,
     );
   }
 

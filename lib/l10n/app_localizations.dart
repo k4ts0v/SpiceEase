@@ -245,6 +245,12 @@ abstract class AppLocalizations {
   /// **'An unknown error happened.'**
   String get unknownError;
 
+  /// No description provided for @username.
+  ///
+  /// In en, this message translates to:
+  /// **'Username'**
+  String get username;
+
   /// No description provided for @username_required.
   ///
   /// In en, this message translates to:
@@ -1192,6 +1198,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unscheduled tasks'**
   String get unscheduledTasks;
+
+  /// No description provided for @noEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'No end time set'**
+  String get noEndTime;
+
+  /// No description provided for @setEndTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Set end time'**
+  String get setEndTime;
+
+  /// No description provided for @setStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Set start time'**
+  String get setStartTime;
+
+  /// No description provided for @startTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Start time'**
+  String get startTime;
+
+  /// No description provided for @noStartTime.
+  ///
+  /// In en, this message translates to:
+  /// **'No start time set'**
+  String get noStartTime;
+
+  /// No description provided for @endTime.
+  ///
+  /// In en, this message translates to:
+  /// **'End time'**
+  String get endTime;
+
+  /// No description provided for @clear.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear'**
+  String get clear;
+
+  /// No description provided for @selectTaskForFlowmodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a task for Flowmodoro'**
+  String get selectTaskForFlowmodoro;
+
+  /// No description provided for @flowmodoroExplanation.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus on one task at a time with timed work and break intervals'**
+  String get flowmodoroExplanation;
+
+  /// No description provided for @selectATaskToStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a task to start'**
+  String get selectATaskToStart;
+
+  /// No description provided for @configureFlowmodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure flowmodoro'**
+  String get configureFlowmodoro;
+
+  /// No description provided for @focusTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Time'**
+  String get focusTime;
+
+  /// No description provided for @breakTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Break Time'**
+  String get breakTime;
+
+  /// No description provided for @cyclesToComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycles to complete'**
+  String get cyclesToComplete;
+
+  /// No description provided for @cycles.
+  ///
+  /// In en, this message translates to:
+  /// **'cycles'**
+  String get cycles;
+
+  /// No description provided for @startFlowmodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Start flowmodoro'**
+  String get startFlowmodoro;
+
+  /// No description provided for @stopFlowmodoro.
+  ///
+  /// In en, this message translates to:
+  /// **'Stop flowmodoro'**
+  String get stopFlowmodoro;
+
+  /// No description provided for @flowmodoroCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Flowmodoro completed'**
+  String get flowmodoroCompleted;
+
+  /// No description provided for @markTaskAsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Would you like to mark this task as completed?'**
+  String get markTaskAsCompleted;
+
+  /// No description provided for @notYet.
+  ///
+  /// In en, this message translates to:
+  /// **'Not Yet'**
+  String get notYet;
+
+  /// No description provided for @markAsDone.
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as done'**
+  String get markAsDone;
+
+  /// No description provided for @taskMarkedAsCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Task marked as completed'**
+  String get taskMarkedAsCompleted;
+
+  /// No description provided for @cycleProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Cycle \$1 of \$2'**
+  String get cycleProgress;
+
+  /// No description provided for @relax.
+  ///
+  /// In en, this message translates to:
+  /// **'Relax'**
+  String get relax;
+
+  /// No description provided for @focus.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get focus;
+
+  /// No description provided for @noTasksAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No tasks available'**
+  String get noTasksAvailable;
+
+  /// No description provided for @errorMarkingTaskComplete.
+  ///
+  /// In en, this message translates to:
+  /// **'Error marking task as complete: {error}'**
+  String errorMarkingTaskComplete(Object error);
+
+  /// No description provided for @breakTimeEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Break Time Ended'**
+  String get breakTimeEnded;
+
+  /// No description provided for @focusTimeEnded.
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Time Ended'**
+  String get focusTimeEnded;
+
+  /// No description provided for @timeToFocusAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to focus on your task again!'**
+  String get timeToFocusAgain;
+
+  /// No description provided for @timeToTakeABreak.
+  ///
+  /// In en, this message translates to:
+  /// **'Great work! Time to take a short break.'**
+  String get timeToTakeABreak;
+
+  /// No description provided for @gotIt.
+  ///
+  /// In en, this message translates to:
+  /// **'Got it'**
+  String get gotIt;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

@@ -573,8 +573,6 @@ class _HabitEditorModalState
 
 // —— Task Editor —— //
 
-//TODO: task estimation is not working properly.
-
 class TaskEditorModal extends TrackingEditorModal {
   final TaskModel? existing;
   final String? initialStatus;
@@ -601,6 +599,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   late int _priority;
   List<SubtaskModel> _subtasks = [];
   bool _isLoadingSubtasks = false;
+  DateTime? _startTime;
+  DateTime? _endTime;
 
   @override
   void initState() {
@@ -622,6 +622,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     if (widget.initialStatus != null) {
       _status = widget.initialStatus!;
     }
+    _startTime = widget.existing?.startTime;
+    _endTime = widget.existing?.endTime;
   }
 
   // Helper method to get localized version of the status
@@ -667,6 +669,32 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
+  Future<void> _pickTime(BuildContext context, bool isStartTime) async {
+    final now = TimeOfDay.now();
+    final initialTime = isStartTime
+        ? (_startTime != null ? TimeOfDay.fromDateTime(_startTime!) : now)
+        : (_endTime != null ? TimeOfDay.fromDateTime(_endTime!) : now);
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (picked != null) {
+      // Convert TimeOfDay to DateTime preserving the date part
+      final today = DateTime.now();
+      final dateTime = DateTime(
+          today.year, today.month, today.day, picked.hour, picked.minute);
+
+      setState(() {
+        if (isStartTime) {
+          _startTime = dateTime;
+        } else {
+          _endTime = dateTime;
+        }
+      });
+    }
+  }
+
   Future<void> _generateSubtasks() async {
     final localizations = AppLocalizations.of(context)!;
     print('Generating subtasks...');
@@ -687,13 +715,22 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
 
       print(subtasks);
       if (subtasks.isNotEmpty) {
+        // Create a task ID if needed
+        final String taskId = widget.existing?.id ??
+            widget.ref.read(trackerControllerProvider).generateId();
+
+        // Assign parent task ID to each subtask
+        final updatedSubtasks = subtasks.map((subtask) {
+          return subtask.copyWith(taskId: taskId);
+        }).toList();
+
         setState(() {
-          _subtasks = subtasks;
+          _subtasks = updatedSubtasks;
 
           // Calculate the total estimated time from subtasks
           int totalMinutes = 0;
 
-          for (var subtask in subtasks) {
+          for (var subtask in updatedSubtasks) {
             if (subtask.rawTimeValue != null &&
                 subtask.rawTimeValue!.isNotEmpty) {
               // Parse the human-readable time string
@@ -732,7 +769,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
             completedAt: null,
             estimatedTime: _estimatedTime,
             priority: 1,
-            subtasks: subtasks,
+            subtasks: _subtasks, // Using the updated subtasks with taskId set
           );
         } else {
           // Update existing task to attach newly generated subtasks
@@ -745,7 +782,9 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
             widget.existing!.completedAt,
             _estimatedTime,
             widget.existing!.priority,
-            subtasks,
+            _subtasks, // Using the updated subtasks with taskId set
+            widget.existing!.startTime,
+            widget.existing!.endTime,
           );
         }
       } else {
@@ -835,13 +874,18 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                         : '${localizations.due}: ${DateFormat.yMd().format(_dueDate!)}',
                   ),
                 ),
+                if (_dueDate != null)
+                  TextButton(
+                    onPressed: () => setState(() => _dueDate = null),
+                    child: Text(localizations.clear),
+                  ),
                 TextButton(
                   onPressed: () => _pickDate(context, true),
                   child: Text(localizations.setDueDate),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8),
             Row(
               children: [
                 Expanded(
@@ -893,6 +937,48 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                   ),
                 ),
                 Text('$_priority'),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _startTime == null
+                        ? localizations.noStartTime
+                        : '${localizations.startTime} ${DateFormat.jm().format(_startTime!)}',
+                  ),
+                ),
+                if (_startTime != null)
+                  TextButton(
+                    onPressed: () => setState(() => _startTime = null),
+                    child: Text(localizations.clear),
+                  ),
+                TextButton(
+                  onPressed: () => _pickTime(context, true),
+                  child: Text(localizations.setStartTime),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    _endTime == null
+                        ? localizations.noEndTime
+                        : '${localizations.endTime}: ${DateFormat.jm().format(_endTime!)}',
+                  ),
+                ),
+                if (_endTime != null)
+                  TextButton(
+                    onPressed: () => setState(() => _endTime = null),
+                    child: const Text('Clear'),
+                  ),
+                TextButton(
+                  onPressed: () => _pickTime(context, false),
+                  child: const Text('Set End Time'),
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -993,6 +1079,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         estimatedTime: _estimatedTime,
         priority: _priority,
         subtasks: [],
+        startTime: _startTime,
+        endTime: _endTime,
       );
     } else {
       await ctrl.updateTask(
@@ -1005,6 +1093,8 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         _estimatedTime,
         _priority,
         _subtasks,
+        _startTime,
+        _endTime,
       );
     }
   }
@@ -1129,9 +1219,10 @@ class _SubtaskEditorModalState
       rawTimeValue: _rawTimeValue,
     );
 
-     // when *all* subtasks now have an estimate, sum them and update parent
+    // when *all* subtasks now have an estimate, sum them and update parent
     final all = widget.parentTask.subtasks;
-    if (all != null && all.isNotEmpty &&
+    if (all != null &&
+        all.isNotEmpty &&
         all.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
       int totalSeconds = 0;
       final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
@@ -1153,10 +1244,12 @@ class _SubtaskEditorModalState
       String sumEstimate;
       if (totalSeconds >= 3600) {
         final hours = totalSeconds / 3600;
-        sumEstimate = '${hours.toStringAsFixed((hours % 1 == 0) ? 0 : 1)} ${localizations.hours}';
+        sumEstimate =
+            '${hours.toStringAsFixed((hours % 1 == 0) ? 0 : 1)} ${localizations.hours}';
       } else if (totalSeconds >= 60) {
         final minutes = totalSeconds / 60;
-        sumEstimate = '${minutes.toStringAsFixed((minutes % 1 == 0) ? 0 : 1)} ${localizations.minutes}';
+        sumEstimate =
+            '${minutes.toStringAsFixed((minutes % 1 == 0) ? 0 : 1)} ${localizations.minutes}';
       } else {
         sumEstimate = '$totalSeconds ${localizations.seconds}';
       }
@@ -1171,6 +1264,8 @@ class _SubtaskEditorModalState
         sumEstimate,
         widget.parentTask.priority,
         widget.parentTask.subtasks,
+        widget.parentTask.startTime,
+        widget.parentTask.endTime,
       );
     }
   }
@@ -1775,6 +1870,13 @@ class _MedicationEditorModalState
         timesPerDay: _timesPerDay,
       );
     } else {
+      // Determine the new lastTaken based on whether we markAsTaken
+      final newLastTaken = _markAsTaken ? DateTime.now() : null;
+
+      // Create a temporary copy to compute nextDueDate
+      final updatedMed = widget.existing!.copyWith(lastTaken: newLastTaken);
+      final newNextDue = updatedMed.calculateNextDueDate();
+
       await ctrl.updateMedication(
         widget.existing!.id,
         _nameC.text.trim(),
@@ -1784,7 +1886,8 @@ class _MedicationEditorModalState
         frequency,
         customDays,
         _timesPerDay,
-        _markAsTaken ? DateTime.now() : null,
+        newLastTaken,
+        newNextDue,
       );
     }
   }
@@ -1898,7 +2001,8 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
 
                           if (parsed != null) {
                             setState(() {
-                              _rawEstimate = parsed['estimate'] + ' ' +  parsed['unit'];
+                              _rawEstimate =
+                                  parsed['estimate'] + ' ' + parsed['unit'];
                             });
                           }
 
@@ -1970,8 +2074,8 @@ class SubtaskList extends StatelessWidget {
             ),
             subtitle: Text(
               subtask.rawTimeValue != null && subtask.rawTimeValue!.isNotEmpty
-                ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
-                : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
+                  ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
+                  : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
               style: const TextStyle(fontSize: 12.0),
             ),
             // Make the entire ListTile tappable to open the edit modal

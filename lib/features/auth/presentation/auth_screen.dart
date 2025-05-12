@@ -176,8 +176,8 @@ class __AuthFormState extends State<_AuthForm> {
           if (!isLogin) ...[
             TextFormField(
               controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Username',
+              decoration: InputDecoration(
+                labelText: widget.loc.username,
                 border: OutlineInputBorder(),
               ),
             ),

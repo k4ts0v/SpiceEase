@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_page.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_page.dart';
 import 'package:spiceease/features/time_management/time_blocks/time_blocks_page.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/tracker_header.dart';
@@ -32,7 +33,10 @@ class TimeManagementPage extends ConsumerWidget {
                       icon: Icons.timelapse,
                       color: Colors.orange,
                       onTap: () {
-                        // Navigate to Flowmodoro page
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                              builder: (context) => FlowmodoroPage()),
+                        );
                       },
                     ),
                     _TimeManagementCard(
@@ -102,7 +106,7 @@ class _TimeManagementCard extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                    color: color.withAlpha(26),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(

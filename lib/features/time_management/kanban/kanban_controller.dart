@@ -36,24 +36,62 @@ class KanbanController extends ChangeNotifier {
 
     try {
       // Load date-specific tasks
-      final tasks =
+      final allTasks =
           await _ref.read(taskServiceProvider).getTasksForDate(selectedDate);
 
       // Load tasks without due date
-      final allTasks = await _ref.read(taskServiceProvider).getTasksByStatus(
-            localizations.pending,
-            sortByPriority: true,
-          );
+      final allNoDateTasks =
+          await _ref.read(taskServiceProvider).getTasksByStatus(
+                localizations.pending,
+                sortByPriority: true,
+              );
 
-      final noDateTasks =
-          allTasks.where((task) => task.dueDate == null).toList();
+      // Filter out parents with subtasks
+      final tasksWithSubtasks = allTasks
+          .where((task) => allTasks.any((subtask) => subtask.parentTaskId == task.id))
+          .map((task) => task.id)
+          .toSet();
 
-      // Group tasks by their status
+      final noDateTasksWithSubtasks = allNoDateTasks
+          .where((task) =>
+              allNoDateTasks.any((subtask) => subtask.parentTaskId == task.id))
+          .map((task) => task.id)
+          .toSet();
+
+      // Filter the tasks to exclude parents with subtasks
+      final tasks = allTasks
+          .where((task) => !tasksWithSubtasks.contains(task.id))
+          .toList();
+      final noDateTasks = allNoDateTasks
+          .where((task) =>
+              task.dueDate == null &&
+              !noDateTasksWithSubtasks.contains(task.id))
+          .toList();
+
+      // Group tasks by their status with date filtering
       final todoList = <TaskModel>[];
       final inProgressList = <TaskModel>[];
       final doneList = <TaskModel>[];
 
       for (final task in tasks) {
+        // Handle completed tasks with completion date check
+        if (task.completedAt != null) {
+          final completedDate = DateTime(
+            task.completedAt!.year,
+            task.completedAt!.month,
+            task.completedAt!.day,
+          );
+          final currentDate = DateTime(
+            selectedDate.year,
+            selectedDate.month,
+            selectedDate.day,
+          );
+
+          // Skip tasks completed before the selected date
+          if (currentDate.isAfter(completedDate)) continue;
+        }
+
+        // Categorize remaining tasks
         if (task.status == localizations.done || task.completedAt != null) {
           doneList.add(task);
         } else if (task.status == localizations.inProgress) {
@@ -69,7 +107,6 @@ class KanbanController extends ChangeNotifier {
       doneTasks = doneList;
       noDueDateTasks = noDateTasks;
     } catch (e) {
-      // Handle error
       debugPrint('Error loading tasks: $e');
     } finally {
       isLoading = false;
@@ -77,24 +114,17 @@ class KanbanController extends ChangeNotifier {
     }
   }
 
-  // Method to update task status
+  //TODO: BUG: When a task is completed through here, its checked in the dashboard,
+  // but its statusis pending.either update the status or use togglecompletion.
+  //Method to update task status
   void updateTaskStatus(
       TaskModel task, String newStatus, BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
 
-    // Create updated task with new status
-    final updatedTask = TaskModel(
-      id: task.id,
-      userId: task.userId,
-      title: task.title,
-      description: task.description,
+    // Create updated task with new status using copyWith instead of creating a new model
+    final updatedTask = task.copyWith(
       status: newStatus,
-      createdAt: task.createdAt,
-      dueDate: task.dueDate,
       completedAt: newStatus == localizations.done ? DateTime.now() : null,
-      estimatedTime: task.estimatedTime,
-      priority: task.priority,
-      subtasks: task.subtasks,
       updatedAt: DateTime.now(),
     );
 
@@ -120,7 +150,8 @@ class KanbanController extends ChangeNotifier {
     notifyListeners();
 
     // Update database in the background
-    _saveTaskToDatabase(task, newStatus, context);
+    _saveTaskToDatabase(updatedTask, newStatus,
+        context); // Pass updatedTask instead of original task
   }
 
   // Save task to database without blocking UI
@@ -128,20 +159,19 @@ class KanbanController extends ChangeNotifier {
       TaskModel task, String newStatus, BuildContext context) async {
     final localizations = AppLocalizations.of(context)!;
     try {
+      // Check if the task is marked as done
       final completedAt =
           newStatus == localizations.done ? DateTime.now() : null;
 
-      await _ref.read(trackerControllerProvider).updateTask(
-            task.id,
-            task.title,
-            task.description,
-            newStatus,
-            task.dueDate,
-            completedAt,
-            task.estimatedTime,
-            task.priority,
-            task.subtasks,
-          );
+      // Create a new task model with the correct status and completedAt
+      final updatedTask = task.copyWith(
+        status: newStatus,
+        completedAt: completedAt,
+        updatedAt: DateTime.now(),
+      );
+
+      // Use the direct task service to ensure proper update
+      await _ref.read(taskServiceProvider).updateTask(task.id, updatedTask);
     } catch (e) {
       // If saving fails, reload tasks to restore correct state
       debugPrint('Error updating task: $e');

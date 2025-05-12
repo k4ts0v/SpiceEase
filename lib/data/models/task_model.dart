@@ -143,39 +143,39 @@ class TaskModel {
     }
 
     return TaskModel(
-      id: id ?? (map['id'] as String),
-      userId: map['user_id'] as String,
-      title: map['title'] as String,
-      description: map['description'] as String? ?? '',
-      status: map['status'] as String? ?? 'pending',
-      dueDate: _parseDynamicDate(map['due_date']),
-      completedAt: _parseDynamicDate(map['completed_at']),
-      // Use the safe conversion function
-      estimatedTime: map['estimated_time'] != null
-          ? map['estimated_time']
-              .toString() // Convert int, double, or String to String
-          : null,
-      priority: map['priority'] is double
-          ? (map['priority'] as double).toInt()
-          : (map['priority'] as int? ?? 1),
-      createdAt: _parseDynamicDate(map['created_at'])!,
-      updatedAt: _parseDynamicDate(map['updated_at'])!,
-      subtasks: (map['subtasks'] as List?)
-              ?.map((s) => SubtaskModel.fromMap(s))
-              .toList() ??
-          [],
-      parentTaskId: map['parent_task_id'] as String?,
-      isSubtask: map['is_subtask'] as bool? ?? false,
-      subtaskOrder: map['subtask_order'] is double
-          ? (map['subtask_order'] as double).toInt()
-          : (map['subtask_order'] as int? ?? 0),
-      startTime: _parseDynamicDate(map['start_time']),
-      endTime: _parseDynamicDate(map['end_time']));
+        id: id ?? (map['id'] as String),
+        userId: map['user_id'] as String,
+        title: map['title'] as String,
+        description: map['description'] as String? ?? '',
+        status: map['status'] as String? ?? 'pending',
+        dueDate: _parseDynamicDate(map['due_date']),
+        completedAt: _parseDynamicDate(map['completed_at']),
+        // Use the safe conversion function
+        estimatedTime: map['estimated_time'] != null
+            ? map['estimated_time']
+                .toString() // Convert int, double, or String to String
+            : null,
+        priority: map['priority'] is double
+            ? (map['priority'] as double).toInt()
+            : (map['priority'] as int? ?? 1),
+        createdAt: _parseDynamicDate(map['created_at'])!,
+        updatedAt: _parseDynamicDate(map['updated_at'])!,
+        subtasks: (map['subtasks'] as List?)
+                ?.map((s) => SubtaskModel.fromMap(s))
+                .toList() ??
+            [],
+        parentTaskId: map['parent_task_id'] as String?,
+        isSubtask: map['is_subtask'] as bool? ?? false,
+        subtaskOrder: map['subtask_order'] is double
+            ? (map['subtask_order'] as double).toInt()
+            : (map['subtask_order'] as int? ?? 0),
+        startTime: _parseDynamicDate(map['start_time']),
+        endTime: _parseDynamicDate(map['end_time']));
   }
 
   /// Serializes this TaskModel to a Map, storing dates as ISO-8601 strings.
   Map<String, dynamic> toMap() {
-    return {
+    Map<String, dynamic> updatedTask = {
       'user_id': _userId,
       'title': _title,
       'description': _description,
@@ -194,7 +194,8 @@ class TaskModel {
       'start_time': _startTime,
       'end_time': _endTime,
     };
-  }
+    print("Model check: updatedTask.toMap() => ${updatedTask}");
+    return updatedTask;}
 
   TaskModel copyWith({
     String? id,
@@ -233,8 +234,8 @@ class TaskModel {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       isSubtask: isSubtask ?? this.isSubtask,
       subtaskOrder: subtaskOrder ?? this.subtaskOrder,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
+      startTime: startTime,
+      endTime: endTime,
     );
   }
 

@@ -1,8 +1,7 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:spiceease/components/calendar_week_selector.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_controller.dart';
@@ -37,7 +36,7 @@ class KanbanPage extends ConsumerWidget {
 
     // Get the first day of current week (Monday)
     final now = DateTime.now();
-    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    now.subtract(Duration(days: now.weekday - 1));
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +57,7 @@ class KanbanPage extends ConsumerWidget {
             child: ElevatedButton.icon(
               onPressed: () => _showTaskModal(context, ref, null),
               icon: const Icon(Icons.add, size: 18),
-              label: Text(localizations.newTask ?? "New Task"),
+              label: Text(localizations.newTask),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
@@ -77,11 +76,11 @@ class KanbanPage extends ConsumerWidget {
           ),
         ],
       ),
-      backgroundColor: const Color(0xFFF8F9FA), // Lighter gray background
+      backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: Column(
           children: [
-            // Enhanced calendar widget
+            // Replace calendar with CalendarWeekSelector
             Container(
               padding:
                   const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
@@ -89,133 +88,17 @@ class KanbanPage extends ConsumerWidget {
                 color: Colors.white,
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withAlpha(13),
                     spreadRadius: 1,
                     blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: Column(
-                children: [
-                  // Month and year header with cleaner style
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 12.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.calendar_month,
-                            color: theme.colorScheme.primary, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          DateFormat.yMMMM(locale).format(selectedDate),
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // Week day selector with improved styling
-                  SizedBox(
-                    height: 85,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: List.generate(7, (index) {
-                        final date = firstDayOfWeek.add(Duration(days: index));
-                        final isSelected = date.year == selectedDate.year &&
-                            date.month == selectedDate.month &&
-                            date.day == selectedDate.day;
-                        final isToday = date.year == now.year &&
-                            date.month == now.month &&
-                            date.day == now.day;
-
-                        return AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 45,
-                          height: 70,
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : isToday
-                                    ? theme.colorScheme.primary.withOpacity(0.1)
-                                    : Colors.transparent,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: isSelected
-                                ? [
-                                    BoxShadow(
-                                      color: theme.colorScheme.primary
-                                          .withOpacity(0.3),
-                                      blurRadius: 8,
-                                      spreadRadius: 1,
-                                      offset: const Offset(0, 2),
-                                    )
-                                  ]
-                                : null,
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                ref.read(selectedDateProvider.notifier).state =
-                                    date;
-                              },
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    DateFormat.E(locale)
-                                        .format(date)
-                                        .substring(0, 1)
-                                        .toUpperCase(),
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: isSelected
-                                          ? Colors.white
-                                          : theme.textTheme.bodyLarge?.color
-                                              ?.withOpacity(0.7),
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: isSelected
-                                          ? Colors.white.withOpacity(0.3)
-                                          : isToday
-                                              ? theme.colorScheme.primary
-                                                  .withOpacity(0.2)
-                                              : Colors.transparent,
-                                    ),
-                                    child: Text(
-                                      date.day.toString(),
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : isToday
-                                                ? theme.colorScheme.primary
-                                                : theme
-                                                    .textTheme.bodyLarge?.color,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      }),
-                    ),
-                  ),
-                ],
+              child: CalendarWeekSelector(
+                selectedDate: selectedDate,
+                locale: Locale(locale),
+                theme: theme,
               ),
             ),
 
@@ -238,7 +121,7 @@ class KanbanPage extends ConsumerWidget {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            localizations.loading ?? "Loading...",
+                            localizations.loading,
                             style: const TextStyle(
                               fontWeight: FontWeight.w500,
                               color: Colors.black54,
@@ -260,7 +143,7 @@ class KanbanPage extends ConsumerWidget {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primary
-                                      .withOpacity(0.1),
+                                      .withAlpha(26), // 0.1 opacity = ~26/255
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -296,7 +179,7 @@ class KanbanPage extends ConsumerWidget {
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.06),
+                                  color: Colors.black.withAlpha(15),
                                   blurRadius: 10,
                                   spreadRadius: 1,
                                   offset: const Offset(0, 3),
@@ -385,7 +268,7 @@ class KanbanPage extends ConsumerWidget {
                             color: const Color(0xFFF5F6F8),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
+                                color: Colors.black.withAlpha(10),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -484,7 +367,7 @@ class KanbanPage extends ConsumerWidget {
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withAlpha(10),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -513,11 +396,12 @@ class KanbanPage extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
+                      color:
+                          Colors.white.withAlpha(204), // ~0.8 opacity (204/255)
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.03),
+                          color: Colors.black.withAlpha(8),
                           blurRadius: 2,
                         ),
                       ],
@@ -544,8 +428,8 @@ class KanbanPage extends ConsumerWidget {
                   duration: const Duration(milliseconds: 200),
                   decoration: BoxDecoration(
                     color: candidateData.isNotEmpty
-                        ? color.withOpacity(0.8)
-                        : color.withOpacity(0.5),
+                        ? color.withAlpha(204) // ~0.8 opacity (204/255)
+                        : color.withAlpha(128), // ~0.5 opacity (128/255)
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(12),
                       bottomRight: Radius.circular(12),
@@ -599,7 +483,8 @@ class KanbanPage extends ConsumerWidget {
                 );
               },
               onWillAcceptWithDetails: (_) => true,
-              onAccept: (TaskModel task) {
+              onAcceptWithDetails: (details) {
+                TaskModel task = details.data;
                 String newStatus = localizations.pending;
                 if (title == localizations.todo) {
                   newStatus = localizations.pending;
@@ -726,9 +611,35 @@ class KanbanPage extends ConsumerWidget {
               // Content - use Expanded to prevent overflow
               Expanded(
                 child: Column(
-                  mainAxisSize: MainAxisSize.min, // Only use space needed
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Add subtask indicator if this is a subtask
+                    if (task.parentTaskId != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 3.0),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.subdirectory_arrow_right,
+                              size: 12,
+                              color: Colors.grey[600],
+                            ),
+                            const SizedBox(width: 3),
+                            Expanded(
+                              child: Text(
+                                localizations.subtask,
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
                     // Title - always present
                     Text(
                       task.title,
@@ -819,7 +730,7 @@ class KanbanPage extends ConsumerWidget {
       color: pastelColor,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: taskPriorityColor.withOpacity(0.6), width: 1),
+        side: BorderSide(color: taskPriorityColor.withAlpha(153), width: 1),
       ),
       // For no-due-date cards, wrap content in a fixed height container
       child:
@@ -841,7 +752,7 @@ class KanbanPage extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(5),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
+                    color: Colors.black.withAlpha(26),
                     blurRadius: 2,
                     offset: const Offset(0, 1),
                   ),

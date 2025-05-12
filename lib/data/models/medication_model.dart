@@ -61,50 +61,38 @@ class MedicationModel {
   }
 
   DateTime? calculateNextDueDate() {
-    if (lastTaken == null) return null;
+    final baseDate = lastTaken ?? createdAt;
 
-    switch (frequency) {
+    switch (frequency.toLowerCase()) {
       case 'daily':
-        return lastTaken!.add(const Duration(days: 1));
+        return baseDate.add(const Duration(days: 1));
+
       case 'weekly':
-        if (customDays != null && customDays!.isNotEmpty) {
-          final today = lastTaken!.weekday;
-          final nextDay = customDays!.firstWhere(
-            (day) => day > today,
-            orElse: () => customDays!.first,
-          );
-          return lastTaken!.add(
-            Duration(
-                days: nextDay > today ? nextDay - today : 7 - today + nextDay),
-          );
+        if (customDays == null || customDays!.isEmpty) {
+          return baseDate.add(const Duration(days: 7));
         }
-        return lastTaken!.add(const Duration(days: 7));
-      case 'monthly':
-        if (customDays != null && customDays!.isNotEmpty) {
-          final today = lastTaken!.day;
-          final nextDay = customDays!.firstWhere(
-            (day) => day > today,
-            orElse: () => customDays!.first,
-          );
-          if (nextDay <= today) {
-            // Move to next month
-            return DateTime(
-              lastTaken!.year,
-              lastTaken!.month + 1,
-              nextDay,
-            );
-          }
-          return DateTime(
-            lastTaken!.year,
-            lastTaken!.month,
-            nextDay,
-          );
-        }
-        return DateTime(
-          lastTaken!.year,
-          lastTaken!.month + 1,
-          lastTaken!.day,
+        final today = baseDate.weekday;
+        final nextDay = customDays!.firstWhere(
+          (day) => day > today,
+          orElse: () => customDays!.first,
         );
+        final offset =
+            nextDay > today ? (nextDay - today) : (7 - today + nextDay);
+        return baseDate.add(Duration(days: offset));
+
+      case 'monthly':
+        if (customDays == null || customDays!.isEmpty) {
+          return DateTime(baseDate.year, baseDate.month + 1, baseDate.day);
+        }
+        final currentDay = baseDate.day;
+        final nextDay = customDays!.firstWhere(
+          (day) => day > currentDay,
+          orElse: () => customDays!.first,
+        );
+        return nextDay > currentDay
+            ? DateTime(baseDate.year, baseDate.month, nextDay)
+            : DateTime(baseDate.year, baseDate.month + 1, nextDay);
+
       default:
         return null;
     }
@@ -139,7 +127,7 @@ class MedicationModel {
               ? (map['dose'] as int).toDouble()
               : double.tryParse(map['dose'].toString()) ?? 0.0,
       unit: map['unit'] ?? '',
-            takenTimes: (map['taken_times'] is int)
+      takenTimes: (map['taken_times'] is int)
           ? map['taken_times']
           : (map['taken_times'] is double)
               ? (map['taken_times'] as double).toInt()
