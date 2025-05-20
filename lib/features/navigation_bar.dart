@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:spiceease/features/reports/reports_page.dart';
 import 'package:spiceease/features/time_management/time_management.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_screen.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
@@ -16,7 +17,7 @@ class _NavBarState extends State<NavBar> {
   final List<Widget> _screens = const [
     TrackerScreen(),
     TimeManagementPage(),
-    PlaceholderScreen(labelKey: 'insights'),
+    ReportsPage(),
     PlaceholderScreen(labelKey: 'profile'),
   ];
 
@@ -112,6 +113,7 @@ class _NavBarState extends State<NavBar> {
     );
   }
 }
+
 
 class _NavBarItem {
   final IconData icon;

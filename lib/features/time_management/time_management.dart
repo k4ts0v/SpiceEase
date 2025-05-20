@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_page.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_page.dart';
 import 'package:spiceease/features/time_management/time_blocks/time_blocks_page.dart';
@@ -9,6 +10,7 @@ import 'package:spiceease/l10n/app_localizations.dart';
 class TimeManagementPage extends ConsumerWidget {
   const TimeManagementPage({Key? key}) : super(key: key);
 
+// TODO: In screens bigger than a phone, the cards are too big. Fix this.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context)!;
@@ -46,8 +48,7 @@ class TimeManagementPage extends ConsumerWidget {
                       color: Colors.blue,
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(
-                              builder: (context) => KanbanPage()),
+                          MaterialPageRoute(builder: (context) => KanbanPage()),
                         );
                       },
                     ),
@@ -62,6 +63,64 @@ class TimeManagementPage extends ConsumerWidget {
                               builder: (context) => TimeBlocksPage()),
                         );
                       },
+                    ),
+                    Stack(
+                      children: [
+                        _TimeManagementCard(
+                          title: localizations.speedrun,
+                          description: localizations.speedrunDescription,
+                          icon: FontAwesomeIcons.stopwatch,
+                          color: const Color.fromARGB(255, 139, 76, 175),
+                          onTap: () {}, // Disabled tap
+                        ),
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(104),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Coming soon!",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Stack(
+                      children: [
+                        _TimeManagementCard(
+                          title: localizations.diceRoller,
+                          description: localizations.diceRollerDescription,
+                          icon: FontAwesomeIcons.diceD20,
+                          color: const Color.fromARGB(255, 175, 76, 76),
+                          onTap: () {}, // Disabled tap
+                        ),
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(104),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Center(
+                              child: Text(
+                                "Coming soon!",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -106,7 +165,7 @@ class _TimeManagementCard extends StatelessWidget {
                 width: 80,
                 height: 80,
                 decoration: BoxDecoration(
-                    color: color.withAlpha(26),
+                  color: color.withAlpha(26),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Center(
