@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
+import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
@@ -14,11 +15,15 @@ final kanbanControllerProvider =
 class KanbanController extends ChangeNotifier {
   final Ref _ref;
 
-  // State variables - exactly the same as the original class
+  // flattened lists per column
   List<TaskModel> todoTasks = [];
   List<TaskModel> inProgressTasks = [];
   List<TaskModel> doneTasks = [];
   List<TaskModel> noDueDateTasks = [];
+
+  // expose parent‐task titles for subtasks
+  final Map<String, String> parentTaskTitles = {};
+
   bool isLoading = true;
   DateTime currentSelectedDate = DateTime.now();
 
@@ -26,7 +31,6 @@ class KanbanController extends ChangeNotifier {
 
   Future<void> loadTasks(BuildContext context) async {
     if (!context.mounted) return;
-
     final localizations = AppLocalizations.of(context)!;
     final selectedDate = _ref.read(selectedDateProvider);
     currentSelectedDate = selectedDate;
@@ -35,77 +39,87 @@ class KanbanController extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Load date-specific tasks
+      // 1) fetch all tasks for the date
       final allTasks =
           await _ref.read(taskServiceProvider).getTasksForDate(selectedDate);
 
-      // Load tasks without due date
-      final allNoDateTasks =
-          await _ref.read(taskServiceProvider).getTasksByStatus(
-                localizations.pending,
-                sortByPriority: true,
-              );
+      // 2) flatten: parents → their subtasks, standalone otherwise
+      final List<TaskModel> displayTasks = [];
+      parentTaskTitles.clear();
 
-      // Filter out parents with subtasks
-      final tasksWithSubtasks = allTasks
-          .where((task) => allTasks.any((subtask) => subtask.parentTaskId == task.id))
-          .map((task) => task.id)
+      for (final task in allTasks) {
+        if (task.hasSubtasks) {
+          // remember parent title
+          parentTaskTitles[task.id] = task.title;
+
+          // fetch and inline its subtasks
+          final subs =
+              await _ref.read(subtaskServiceProvider).getSubtasksForTask(task.id);
+
+          displayTasks.addAll(subs.map((st) => TaskModel(
+                id: st.id,
+                title: st.title,
+                description: task.description,
+                status: task.status,
+                dueDate: task.dueDate,
+                completedAt: st.completed ? DateTime.now() : null,
+                estimatedTime: st.rawTimeValue,
+                priority: task.priority,
+                parentTaskId: task.id,
+                userId: task.userId,
+                createdAt: task.createdAt,
+                updatedAt: task.updatedAt,
+              )));
+        } else {
+          displayTasks.add(task);
+        }
+      }
+
+      // 3) drop any vestigial “parent” entries now represented by subtasks
+      final tasksWithSubtasks = displayTasks
+          .where((t) => t.parentTaskId != null)
+          .map((t) => t.parentTaskId!)
           .toSet();
-
-      final noDateTasksWithSubtasks = allNoDateTasks
-          .where((task) =>
-              allNoDateTasks.any((subtask) => subtask.parentTaskId == task.id))
-          .map((task) => task.id)
-          .toSet();
-
-      // Filter the tasks to exclude parents with subtasks
-      final tasks = allTasks
-          .where((task) => !tasksWithSubtasks.contains(task.id))
-          .toList();
-      final noDateTasks = allNoDateTasks
-          .where((task) =>
-              task.dueDate == null &&
-              !noDateTasksWithSubtasks.contains(task.id))
+      final tasks = displayTasks
+          .where((t) => !tasksWithSubtasks.contains(t.id))
           .toList();
 
-      // Group tasks by their status with date filtering
+      // 4) categorize by status (and skip ones completed before the selected date)
       final todoList = <TaskModel>[];
-      final inProgressList = <TaskModel>[];
+      final inProgList = <TaskModel>[];
       final doneList = <TaskModel>[];
 
       for (final task in tasks) {
-        // Handle completed tasks with completion date check
+        // skip if completed earlier than selected
         if (task.completedAt != null) {
           final completedDate = DateTime(
             task.completedAt!.year,
             task.completedAt!.month,
             task.completedAt!.day,
           );
-          final currentDate = DateTime(
+          final curDate = DateTime(
             selectedDate.year,
             selectedDate.month,
             selectedDate.day,
           );
-
-          // Skip tasks completed before the selected date
-          if (currentDate.isAfter(completedDate)) continue;
+          if (curDate.isAfter(completedDate)) continue;
         }
 
-        // Categorize remaining tasks
+        // bucket
         if (task.status == localizations.done || task.completedAt != null) {
           doneList.add(task);
         } else if (task.status == localizations.inProgress) {
-          inProgressList.add(task);
+          inProgList.add(task);
         } else {
           todoList.add(task);
         }
       }
 
-      // Update the state variables
+      // 5) commit
       todoTasks = todoList;
-      inProgressTasks = inProgressList;
+      inProgressTasks = inProgList;
       doneTasks = doneList;
-      noDueDateTasks = noDateTasks;
+      noDueDateTasks = tasks.where((t) => t.dueDate == null).toList();
     } catch (e) {
       debugPrint('Error loading tasks: $e');
     } finally {
@@ -114,66 +128,52 @@ class KanbanController extends ChangeNotifier {
     }
   }
 
-  //TODO: BUG: When a task is completed through here, its checked in the dashboard,
-  // but its statusis pending.either update the status or use togglecompletion.
-  //Method to update task status
+  /// Change status and persist
   void updateTaskStatus(
       TaskModel task, String newStatus, BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
-
-    // Create updated task with new status using copyWith instead of creating a new model
-    final updatedTask = task.copyWith(
+    final updated = task.copyWith(
       status: newStatus,
-      completedAt: newStatus == localizations.done ? DateTime.now() : null,
+      completedAt:
+          newStatus == localizations.done ? DateTime.now() : null,
       updatedAt: DateTime.now(),
     );
 
-    // Remove from all lists (it will be in one of them)
+    // remove old
     todoTasks.removeWhere((t) => t.id == task.id);
     inProgressTasks.removeWhere((t) => t.id == task.id);
     doneTasks.removeWhere((t) => t.id == task.id);
-
-    // If task was in noDueDateTasks and now has a due date, remove it from there too
-    if (task.dueDate == null && updatedTask.dueDate != null) {
+    if (task.dueDate == null && updated.dueDate != null) {
       noDueDateTasks.removeWhere((t) => t.id == task.id);
     }
 
-    // Add to appropriate list
+    // re-add
     if (newStatus == localizations.done) {
-      doneTasks.add(updatedTask);
+      doneTasks.add(updated);
     } else if (newStatus == localizations.inProgress) {
-      inProgressTasks.add(updatedTask);
+      inProgressTasks.add(updated);
     } else {
-      todoTasks.add(updatedTask);
+      todoTasks.add(updated);
     }
-
     notifyListeners();
 
-    // Update database in the background
-    _saveTaskToDatabase(updatedTask, newStatus,
-        context); // Pass updatedTask instead of original task
+    // persist in background
+    _saveTaskToDatabase(updated, newStatus, context);
   }
 
-  // Save task to database without blocking UI
   Future<void> _saveTaskToDatabase(
       TaskModel task, String newStatus, BuildContext context) async {
     final localizations = AppLocalizations.of(context)!;
     try {
-      // Check if the task is marked as done
-      final completedAt =
+      final completed =
           newStatus == localizations.done ? DateTime.now() : null;
-
-      // Create a new task model with the correct status and completedAt
-      final updatedTask = task.copyWith(
+      final updated = task.copyWith(
         status: newStatus,
-        completedAt: completedAt,
+        completedAt: completed,
         updatedAt: DateTime.now(),
       );
-
-      // Use the direct task service to ensure proper update
-      await _ref.read(taskServiceProvider).updateTask(task.id, updatedTask);
+      await _ref.read(taskServiceProvider).updateTask(task.id, updated);
     } catch (e) {
-      // If saving fails, reload tasks to restore correct state
       debugPrint('Error updating task: $e');
       loadTasks(context);
       if (context.mounted) {
