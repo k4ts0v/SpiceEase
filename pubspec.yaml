@@ -21,7 +21,6 @@ dependencies:
   path_provider: ^2.1.1
   dio: ^5.4.0
   flutter_secure_storage: ^10.0.0-beta.4
-  fl_chart: ^0.71.0
   analyzer: ^7.4.1
   flutter_riverpod: ^2.6.1
   flutter_localizations:
@@ -30,12 +29,15 @@ dependencies:
   flutter_localization: ^0.3.2
   table_calendar: ^3.0.9
   collection: ^1.17.0
+  font_awesome_flutter: ^10.4.0
+  syncfusion_flutter_charts: ^29.2.4
 
 dev_dependencies:
   flutter_dotenv: ^5.2.1
   build_runner: ^2.4.15
   mocktail: any
   uuid: ^4.5.1
+  flutter_launcher_icons: ^0.13.1
 
 flutter:
   uses-material-design: true
@@ -43,3 +45,10 @@ flutter:
   assets:
     - .env
     - assets/images/
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/spiceease_logo.png"
+  adaptive_icon_foreground: "assets/icons/spiceease_logo.png"
+  adaptive_icon_background: "#ffffff"
