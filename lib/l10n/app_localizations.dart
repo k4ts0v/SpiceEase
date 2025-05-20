@@ -1390,6 +1390,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Got it'**
   String get gotIt;
+
+  /// No description provided for @errorLoadingSubtasks.
+  ///
+  /// In en, this message translates to:
+  /// **'Error loading subtasks: '**
+  String get errorLoadingSubtasks;
+
+  /// No description provided for @noSubtasks.
+  ///
+  /// In en, this message translates to:
+  /// **'No subtasks'**
+  String get noSubtasks;
+
+  /// No description provided for @thisSubtask.
+  ///
+  /// In en, this message translates to:
+  /// **'this subtask'**
+  String get thisSubtask;
+
+  /// No description provided for @subtaskTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Subtask title'**
+  String get subtaskTitle;
+
+  /// No description provided for @addNewSubtask.
+  ///
+  /// In en, this message translates to:
+  /// **'Add new subtask'**
+  String get addNewSubtask;
+
+  /// No description provided for @speedrun.
+  ///
+  /// In en, this message translates to:
+  /// **'Speedrun'**
+  String get speedrun;
+
+  /// No description provided for @speedrunDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Prove yourself by completing tasks in a limited time. The faster you finish, the more points you earn.'**
+  String get speedrunDescription;
+
+  /// No description provided for @diceRoller.
+  ///
+  /// In en, this message translates to:
+  /// **'Dice Roller'**
+  String get diceRoller;
+
+  /// No description provided for @diceRollerDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Roll dice to generate random numbers for your tasks. Use it to know how many items you have to complete.'**
+  String get diceRollerDescription;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

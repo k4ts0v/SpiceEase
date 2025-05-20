@@ -689,4 +689,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get gotIt => 'Entendido';
+
+  @override
+  String get errorLoadingSubtasks => 'Error cargando las subtareas: ';
+
+  @override
+  String get noSubtasks => 'No hay subtareas';
+
+  @override
+  String get thisSubtask => 'esta subtarea';
+
+  @override
+  String get subtaskTitle => 'Título de la subtarea';
+
+  @override
+  String get addNewSubtask => 'Agregar una subtarea';
+
+  @override
+  String get speedrun => 'Speedrun';
+
+  @override
+  String get speedrunDescription => 'Ponte a prueba completando tareas en un tiempo limitado. Cuanto más rápido termines, más puntos ganarás.';
+
+  @override
+  String get diceRoller => 'Lanzador de dados';
+
+  @override
+  String get diceRollerDescription => 'Tira un dado para generar números aleatorios para tus tareas. Úsalo para saber cuántos elementos tienes que completar.';
 }

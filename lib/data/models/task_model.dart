@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:spiceease/data/models/subtask_model.dart';
 
 class TaskModel {
   // Private fields
@@ -15,7 +14,7 @@ class TaskModel {
   final DateTime _createdAt; // Immutable field
   DateTime _updatedAt; // Mutable field
   bool _hasDueDate;
-  final List<SubtaskModel>? _subtasks;
+  bool _hasSubtasks; // Flag to indicate if task has subtasks
   final String? _parentTaskId; // null for root tasks, populated for subtasks
   final bool _isSubtask; // flag to easily identify subtasks
   final int _subtaskOrder; // position within parent's subtasks
@@ -36,7 +35,7 @@ class TaskModel {
     required DateTime createdAt,
     required DateTime updatedAt,
     bool? hasDueDate,
-    List<SubtaskModel>? subtasks,
+    bool hasSubtasks = false,
     final String? parentTaskId,
     final bool isSubtask = false,
     final int subtaskOrder = 0,
@@ -54,7 +53,7 @@ class TaskModel {
         _createdAt = createdAt,
         _updatedAt = updatedAt,
         _hasDueDate = dueDate != null,
-        _subtasks = subtasks ?? [],
+        _hasSubtasks = hasSubtasks,
         _parentTaskId = parentTaskId,
         _isSubtask = isSubtask,
         _subtaskOrder = subtaskOrder,
@@ -74,7 +73,7 @@ class TaskModel {
   DateTime get createdAt => _createdAt;
   DateTime get updatedAt => _updatedAt;
   bool get hasDueDate => _hasDueDate;
-  List<SubtaskModel>? get subtasks => _subtasks;
+  bool get hasSubtasks => _hasSubtasks;
   String? get parentTaskId => _parentTaskId;
   bool get isSubtask => _isSubtask;
   int get subtaskOrder => _subtaskOrder;
@@ -100,6 +99,7 @@ class TaskModel {
 
   set dueDate(DateTime? newDueDate) {
     _dueDate = newDueDate;
+    _hasDueDate = newDueDate != null;
   }
 
   set completedAt(DateTime? newCompletedAt) {
@@ -118,6 +118,10 @@ class TaskModel {
     _updatedAt = newUpdatedAt;
   }
 
+  set hasSubtasks(bool value) {
+    _hasSubtasks = value;
+  }
+
   set hasDueDate(bool value) {
     if (value && _dueDate == null) {
       throw ArgumentError('Cannot set hasDueDate to true without a dueDate');
@@ -126,10 +130,7 @@ class TaskModel {
     if (!value) {
       _dueDate = null;
     }
-    ;
   }
-
-  // Update the fromMap method to safely convert double to int:
 
   factory TaskModel.fromMap(Map<String, dynamic> map, {String? id}) {
     DateTime? _parseDynamicDate(dynamic v) {
@@ -150,20 +151,15 @@ class TaskModel {
         status: map['status'] as String? ?? 'pending',
         dueDate: _parseDynamicDate(map['due_date']),
         completedAt: _parseDynamicDate(map['completed_at']),
-        // Use the safe conversion function
         estimatedTime: map['estimated_time'] != null
-            ? map['estimated_time']
-                .toString() // Convert int, double, or String to String
+            ? map['estimated_time'].toString()
             : null,
         priority: map['priority'] is double
             ? (map['priority'] as double).toInt()
             : (map['priority'] as int? ?? 1),
         createdAt: _parseDynamicDate(map['created_at'])!,
         updatedAt: _parseDynamicDate(map['updated_at'])!,
-        subtasks: (map['subtasks'] as List?)
-                ?.map((s) => SubtaskModel.fromMap(s))
-                .toList() ??
-            [],
+        hasSubtasks: map['has_subtasks'] as bool? ?? false,
         parentTaskId: map['parent_task_id'] as String?,
         isSubtask: map['is_subtask'] as bool? ?? false,
         subtaskOrder: map['subtask_order'] is double
@@ -173,7 +169,7 @@ class TaskModel {
         endTime: _parseDynamicDate(map['end_time']));
   }
 
-  /// Serializes this TaskModel to a Map, storing dates as ISO-8601 strings.
+  /// Serializes this TaskModel to a Map
   Map<String, dynamic> toMap() {
     Map<String, dynamic> updatedTask = {
       'user_id': _userId,
@@ -186,16 +182,16 @@ class TaskModel {
       'priority': _priority,
       'created_at': _createdAt,
       'updated_at': _updatedAt,
-      'has_due_date': dueDate != null,
-      'subtasks': subtasks?.map((s) => s.toMap()).toList(),
+      'has_due_date': _hasDueDate,
+      'has_subtasks': _hasSubtasks,
       'parent_task_id': _parentTaskId,
       'is_subtask': _isSubtask,
       'subtask_order': _subtaskOrder,
       'start_time': _startTime,
       'end_time': _endTime,
     };
-    print("Model check: updatedTask.toMap() => ${updatedTask}");
-    return updatedTask;}
+    return updatedTask;
+  }
 
   TaskModel copyWith({
     String? id,
@@ -210,7 +206,7 @@ class TaskModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     bool? hasDueDate,
-    List<SubtaskModel>? subtasks,
+    bool? hasSubtasks,
     String? parentTaskId,
     bool? isSubtask,
     int? subtaskOrder,
@@ -230,12 +226,12 @@ class TaskModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       hasDueDate: hasDueDate ?? this.hasDueDate,
-      subtasks: subtasks ?? this.subtasks,
+      hasSubtasks: hasSubtasks ?? this.hasSubtasks,
       parentTaskId: parentTaskId ?? this.parentTaskId,
       isSubtask: isSubtask ?? this.isSubtask,
       subtaskOrder: subtaskOrder ?? this.subtaskOrder,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
     );
   }
 
@@ -243,48 +239,16 @@ class TaskModel {
     final bool isCurrentlyCompleted = status == 'Done' || completedAt != null;
 
     if (!isCurrentlyCompleted) {
-      // If not completed, mark as completed
-      return TaskModel(
-        id: id,
-        userId: userId,
-        title: title,
-        description: description,
-        status: 'Done', // Set status to Done
-        dueDate: dueDate,
-        completedAt: DateTime.now(), // Set completedAt to now
-        estimatedTime: estimatedTime,
-        priority: priority,
-        createdAt: createdAt,
+      return copyWith(
+        status: 'Done',
+        completedAt: DateTime.now(),
         updatedAt: DateTime.now(),
-        hasDueDate: hasDueDate,
-        subtasks: subtasks,
-        parentTaskId: parentTaskId,
-        isSubtask: isSubtask,
-        subtaskOrder: subtaskOrder,
-        startTime: startTime,
-        endTime: endTime,
       );
     } else {
-      // If completed, mark as not completed
-      return TaskModel(
-        id: id,
-        userId: userId,
-        title: title,
-        description: description,
-        status: 'In Progress', // Set status to In Progress
-        dueDate: dueDate,
-        completedAt: null, // Clear completedAt
-        estimatedTime: estimatedTime,
-        priority: priority,
-        createdAt: createdAt,
+      return copyWith(
+        status: 'In Progress',
+        completedAt: null,
         updatedAt: DateTime.now(),
-        hasDueDate: hasDueDate,
-        subtasks: subtasks,
-        parentTaskId: parentTaskId,
-        isSubtask: isSubtask,
-        subtaskOrder: subtaskOrder,
-        startTime: startTime,
-        endTime: endTime,
       );
     }
   }

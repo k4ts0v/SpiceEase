@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
+import 'package:spiceease/data/providers/current_user_provider.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 
 final magicTodoServiceProvider = Provider((ref) => MagicTodoService(ref));
@@ -52,6 +53,7 @@ class MagicTodoService {
             id: DateTime.now()
                 .millisecondsSinceEpoch
                 .toString(), // temporary ID
+            userId: ref.watch(currentUserProvider).value?.uid ?? '',
             taskId: '', // will be set when main task is created
             title: subtaskTitle.toString(),
             order: response.data.indexOf(subtaskTitle),
@@ -69,6 +71,7 @@ class MagicTodoService {
         return subtasks.map((subtaskTitle) {
           return SubtaskModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
+            userId: ref.watch(currentUserProvider).value?.uid ?? '',
             taskId: '',
             title: subtaskTitle.trim(),
             order: subtasks.toList().indexOf(subtaskTitle),

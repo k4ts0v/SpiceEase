@@ -40,8 +40,10 @@ class TaskService {
 
     final start = FirestoreDateAdapter.toTimestamp(
         DateTime(date.year, date.month, date.day));
+    print("Start date: $start"); //For debugging
     final end = FirestoreDateAdapter.toTimestamp(
         DateTime(date.year, date.month, date.day).add(Duration(days: 1)));
+    print("End date: $end");
 
     final tasksWithDueDate = await _db.query(
       collection: DatabaseService.tasks,
@@ -60,6 +62,9 @@ class TaskService {
         QueryFilter.basic('has_due_date', QueryOperator.equal, false),
       ],
     );
+
+  print("Tasks with due date: $tasksWithDueDate"); //For debugging
+  print("Tasks without due date: $tasksWithoutDueDate"); //For debugging
 
     // Combine tasks with and without due dates
     final allTasks = [...tasksWithDueDate, ...tasksWithoutDueDate];

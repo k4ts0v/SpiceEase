@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/data/models/medication_model.dart';
+import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/services/medication_service.dart';
 import 'package:spiceease/data/repositories/medication_repository.dart';
 import 'package:spiceease/core/database/database_provider.dart';
@@ -14,7 +15,8 @@ import 'package:spiceease/data/state_notifiers/medication_state_notifier.dart';
 final medicationRepositoryProvider = Provider<MedicationRepository>((ref) {
   final db = ref.watch(
       databaseServiceProvider); // Watching the database service provider.
-  return MedicationRepository(db); // Creating and returning a MedicationRepository.
+  return MedicationRepository(
+      db); // Creating and returning a MedicationRepository.
 });
 
 /// Provides the [MedicationService] instance.
@@ -23,17 +25,29 @@ final medicationRepositoryProvider = Provider<MedicationRepository>((ref) {
 /// the application service for medication-related operations. It ensures the
 /// service layer always has an up-to-date repository instance.
 final medicationServiceProvider = Provider<MedicationService>((ref) {
-  final repo = ref
-      .watch(medicationRepositoryProvider); // Watching the medication repository provider.
+  final repo = ref.watch(
+      medicationRepositoryProvider); // Watching the medication repository provider.
   final auth = ref.watch(authServiceProvider);
   final db = ref.watch(databaseServiceProvider);
-  return MedicationService(repo, auth, db); // Creating and returning a MedicationService instance.
+  return MedicationService(
+      repo, auth, db); // Creating and returning a MedicationService instance.
 });
-
 
 /// Provides a state notifier to manage medications.
 final medicationStateNotifierProvider = StateNotifierProvider.autoDispose
-    .family<MedicationStateNotifier, List<MedicationModel>, DateTime>((ref, date) {
+    .family<MedicationStateNotifier, List<MedicationModel>, DateTime>(
+        (ref, date) {
   final service = ref.read(medicationServiceProvider);
   return MedicationStateNotifier(service, date);
+});
+
+final singleMedicationProvider =
+    Provider.family<MedicationModel?, String>((ref, id) {
+  final medications = ref
+      .watch(medicationStateNotifierProvider(ref.watch(selectedDateProvider)));
+  try {
+    return medications.firstWhere((med) => med.id == id);
+  } catch (e) {
+    return null;
+  }
 });

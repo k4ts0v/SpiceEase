@@ -53,50 +53,50 @@ class MedicationModel {
       frequency: frequency ?? this.frequency,
       customDays: customDays ?? this.customDays,
       timesPerDay: timesPerDay ?? this.timesPerDay,
-      lastTaken: lastTaken ?? this.lastTaken,
-      nextDueDate: nextDueDate ?? this.nextDueDate,
+      lastTaken: lastTaken,
+      nextDueDate: nextDueDate,
       createdAt: createdAt,
       updatedAt: updatedAt ?? DateTime.now(),
     );
   }
 
-  DateTime? calculateNextDueDate() {
-    final baseDate = lastTaken ?? createdAt;
+  // DateTime? calculateNextDueDate() {
+  //   final baseDate = lastTaken ?? createdAt;
 
-    switch (frequency.toLowerCase()) {
-      case 'daily':
-        return baseDate.add(const Duration(days: 1));
+  //   switch (frequency.toLowerCase()) {
+  //     case 'daily':
+  //       return baseDate.add(const Duration(days: 1));
 
-      case 'weekly':
-        if (customDays == null || customDays!.isEmpty) {
-          return baseDate.add(const Duration(days: 7));
-        }
-        final today = baseDate.weekday;
-        final nextDay = customDays!.firstWhere(
-          (day) => day > today,
-          orElse: () => customDays!.first,
-        );
-        final offset =
-            nextDay > today ? (nextDay - today) : (7 - today + nextDay);
-        return baseDate.add(Duration(days: offset));
+  //     case 'weekly':
+  //       if (customDays == null || customDays!.isEmpty) {
+  //         return baseDate.add(const Duration(days: 7));
+  //       }
+  //       final today = baseDate.weekday;
+  //       final nextDay = customDays!.firstWhere(
+  //         (day) => day > today,
+  //         orElse: () => customDays!.first,
+  //       );
+  //       final offset =
+  //           nextDay > today ? (nextDay - today) : (7 - today + nextDay);
+  //       return baseDate.add(Duration(days: offset));
 
-      case 'monthly':
-        if (customDays == null || customDays!.isEmpty) {
-          return DateTime(baseDate.year, baseDate.month + 1, baseDate.day);
-        }
-        final currentDay = baseDate.day;
-        final nextDay = customDays!.firstWhere(
-          (day) => day > currentDay,
-          orElse: () => customDays!.first,
-        );
-        return nextDay > currentDay
-            ? DateTime(baseDate.year, baseDate.month, nextDay)
-            : DateTime(baseDate.year, baseDate.month + 1, nextDay);
+  //     case 'monthly':
+  //       if (customDays == null || customDays!.isEmpty) {
+  //         return DateTime(baseDate.year, baseDate.month + 1, baseDate.day);
+  //       }
+  //       final currentDay = baseDate.day;
+  //       final nextDay = customDays!.firstWhere(
+  //         (day) => day > currentDay,
+  //         orElse: () => customDays!.first,
+  //       );
+  //       return nextDay > currentDay
+  //           ? DateTime(baseDate.year, baseDate.month, nextDay)
+  //           : DateTime(baseDate.year, baseDate.month + 1, nextDay);
 
-      default:
-        return null;
-    }
-  }
+  //     default:
+  //       return null;
+  //   }
+  // }
 
   Map<String, dynamic> toMap() {
     return {
@@ -143,5 +143,31 @@ class MedicationModel {
       createdAt: FirestoreDateAdapter.fromFirestore(map['created_at']),
       updatedAt: FirestoreDateAdapter.fromFirestore(map['updated_at']),
     );
+  }
+
+  bool isTakenOnDate(DateTime date) {
+    return lastTaken != null &&
+        lastTaken!.year == date.year &&
+        lastTaken!.month == date.month &&
+        lastTaken!.day == date.day;
+  }
+
+  DateTime? calculateNextDueDate() {
+    if (lastTaken == null) return null;
+
+    switch (frequency.toLowerCase()) {
+      case 'daily':
+        return lastTaken!.add(const Duration(days: 1));
+
+      case 'weekly':
+        final nextDate = lastTaken!.add(const Duration(days: 7));
+        return DateTime(nextDate.year, nextDate.month, nextDate.day);
+
+      case 'monthly':
+        return DateTime(lastTaken!.year, lastTaken!.month + 1, lastTaken!.day);
+
+      default:
+        return null;
+    }
   }
 }

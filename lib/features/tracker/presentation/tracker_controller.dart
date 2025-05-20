@@ -12,6 +12,7 @@ import 'package:spiceease/data/providers/habit_provider.dart';
 import 'package:spiceease/data/providers/medication_provider.dart';
 import 'package:spiceease/data/providers/mood_provider.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
+import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 
@@ -210,38 +211,38 @@ class TrackerController {
   }
 
   Future<void> updateMedication(
-  String id,
-  String name,
-  double dose,
-  String unit,
-  int? takenTimes,
-  String frequency,
-  List<int>? customDays,
-  int timesPerDay,
-  DateTime? lastTaken,
-  DateTime? nextDueDate,
-) async {
-  final service = ref.read(medicationServiceProvider);
-  final existingMed = await service.getMedicationById(id);
+    String id,
+    String name,
+    double dose,
+    String unit,
+    int? takenTimes,
+    String frequency,
+    List<int>? customDays,
+    int timesPerDay,
+    DateTime? lastTaken,
+    DateTime? nextDueDate,
+  ) async {
+    final service = ref.read(medicationServiceProvider);
+    final existingMed = await service.getMedicationById(id);
 
-  if (existingMed == null) return;
+    if (existingMed == null) return;
 
-  final updatedMed = existingMed.copyWith(
-    name: name,
-    dose: dose,
-    unit: unit,
-    takenTimes: takenTimes ?? existingMed.takenTimes,
-    frequency: frequency,
-    customDays: customDays,
-    timesPerDay: timesPerDay,
-    lastTaken: lastTaken,
-    nextDueDate: nextDueDate ?? existingMed.calculateNextDueDate(),
-    updatedAt: DateTime.now(),
-  );
+    final updatedMed = existingMed.copyWith(
+      name: name,
+      dose: dose,
+      unit: unit,
+      takenTimes: takenTimes ?? existingMed.takenTimes,
+      frequency: frequency,
+      customDays: customDays,
+      timesPerDay: timesPerDay,
+      lastTaken: lastTaken,
+      nextDueDate: nextDueDate ?? existingMed.calculateNextDueDate(),
+      updatedAt: DateTime.now(),
+    );
 
-  await service.updateMedication(id, updatedMed);
-  ref.invalidate(medicationStateNotifierProvider(selectedDate));
-}
+    await service.updateMedication(id, updatedMed);
+    ref.invalidate(medicationStateNotifierProvider(selectedDate));
+  }
 
   Future<void> incrementMedicationTaken(String id, int increment) async {
     final service = ref.read(medicationServiceProvider);
@@ -379,7 +380,6 @@ class TrackerController {
         estimatedTime: estimatedTime,
         priority: priority,
         updatedAt: DateTime.now(),
-        subtasks: subtasks,
         startTime: startTime,
         endTime: endTime,
       );
@@ -396,11 +396,9 @@ class TrackerController {
         estimatedTime: estimatedTime,
         priority: priority,
         updatedAt: DateTime.now(),
-        subtasks: subtasks,
         startTime: startTime,
         endTime: endTime,
       );
-
       await service.updateTask(id, updatedTask);
     }
 
@@ -429,47 +427,68 @@ class TrackerController {
     return await _getUserId();
   }
 
-// Update a single subtask within a parent task
   Future<void> updateSubtask(
-      String parentTaskId, SubtaskModel subtask, String title, bool completed,
+      String taskId, SubtaskModel subtask, String title, bool completed,
       {required String rawTimeValue}) async {
-    final service = ref.read(taskServiceProvider);
-    final existingTask = await service.getTaskById(parentTaskId);
+    final taskService = ref.read(taskServiceProvider);
+    final subtaskService = ref.read(subtaskServiceProvider);
+    final userId = await taskService.getCurrentUserId();
 
-    if (existingTask == null || existingTask.subtasks == null) {
-      throw Exception('Parent task or subtasks not found');
-    }
-
-    // Find and update the subtask in the array
-    final updatedSubtasks = [...existingTask.subtasks!];
-    final index = updatedSubtasks
-        .indexWhere((s) => s.id == subtask.id && s.order == subtask.order);
-
-    if (index == -1) {
-      throw Exception('Subtask not found');
-    }
-
-    updatedSubtasks[index] = subtask.copyWith(
+    // Create updated subtask
+    final updatedSubtask = subtask.copyWith(
       title: title,
-      taskId: parentTaskId,
       completed: completed,
       rawTimeValue: rawTimeValue,
+      userId: userId,
+      updatedAt: DateTime.now(),
     );
 
-    // Update the parent task with modified subtasks
-    await updateTask(
-      parentTaskId,
-      existingTask.title,
-      existingTask.description,
-      existingTask.status,
-      existingTask.dueDate,
-      existingTask.completedAt,
-      existingTask.estimatedTime,
-      existingTask.priority,
-      updatedSubtasks,
-      existingTask.startTime,
-      existingTask.endTime,
+    // Save it directly to database
+    await subtaskService.updateSubtask(subtask.id, updatedSubtask);
+
+    // Refresh the task state after updating subtask
+    ref.invalidate(taskStateNotifierProvider(selectedDate));
+  }
+
+  // New method to create a subtask
+  Future<void> createSubtask(String taskId, String title,
+      {String? rawTimeValue}) async {
+    final taskService = ref.read(taskServiceProvider);
+    final subtaskService = ref.read(subtaskServiceProvider);
+    final userId = await taskService.getCurrentUserId();
+
+    // Get existing subtasks to determine order
+    final existingSubtasks = await subtaskService.getSubtasksForTask(taskId);
+    final newOrder = existingSubtasks.length;
+
+    // Create new subtask
+    final subtask = SubtaskModel(
+      id: taskService.generateId(),
+      taskId: taskId,
+      userId: userId,
+      title: title,
+      order: newOrder,
+      completed: false,
+      rawTimeValue: rawTimeValue,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
     );
+
+    // Save to database
+    await subtaskService.createSubtask(subtask);
+
+    // Refresh the task state
+    ref.invalidate(taskStateNotifierProvider(selectedDate));
+  }
+
+  // New method to delete a subtask
+  Future<void> deleteSubtask(String subtaskId, String parentTaskId) async {
+    final service = ref.read(subtaskServiceProvider);
+    await service.deleteSubtaskAndUpdateParent(subtaskId);
+
+    // Refresh both task and subtask states
+    ref.invalidate(taskStateNotifierProvider(selectedDate));
+    ref.invalidate(subtaskStateNotifierProvider(parentTaskId));
   }
 
   // Habits
@@ -628,6 +647,37 @@ class TrackerController {
       default: // 'as needed'
         return lastTaken.add(const Duration(days: 1));
     }
+  }
+
+  Future<void> toggleMedicationCompletion(
+      MedicationModel medication, bool isCompleted) async {
+    final service = ref.read(medicationServiceProvider);
+    final selectedDate = ref.read(selectedDateProvider);
+
+    // Calculate new values
+    final newTakenTimes = isCompleted ? medication.timesPerDay : 0;
+    final newLastTaken = isCompleted ? selectedDate : null;
+
+    // Calculate next due date if completed
+    DateTime? nextDueDate;
+    if (isCompleted) {
+      // Use the medication model's calculation logic
+      final updatedMed = medication.copyWith(
+        lastTaken: selectedDate,
+      );
+      nextDueDate = updatedMed.calculateNextDueDate();
+    }
+
+    // Update the medication
+    final updatedMed = medication.copyWith(
+      takenTimes: newTakenTimes,
+      lastTaken: newLastTaken,
+      nextDueDate: nextDueDate,
+      updatedAt: DateTime.now(),
+    );
+
+    await service.updateMedication(medication.id, updatedMed);
+    ref.invalidate(medicationStateNotifierProvider(selectedDate));
   }
 
   Future<void> updateTaskStatus(

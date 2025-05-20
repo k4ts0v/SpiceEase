@@ -9,6 +9,7 @@ import 'package:spiceease/data/models/mood_model.dart';
 import 'package:spiceease/data/models/energy_model.dart';
 import 'package:spiceease/data/models/medication_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
+import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/services/estimator_service.dart';
 import 'package:spiceease/data/services/magic_todo_service.dart';
@@ -119,7 +120,9 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     );
   }
 
+  // TODO: Delete label is not getting picked up on modals. The default (this one) appears.
   String getDeleteLabel() => 'this item'; // Override this in each modal
+// TODO: Title label is not getting picked up on modals. The default (this one) appears.
   String getTitle() => 'Item';
 }
 
@@ -707,94 +710,118 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
 
     setState(() => _isLoadingSubtasks = true);
     try {
+      // First, create the parent task if it doesn't exist yet
+      final ctrl = widget.ref.read(trackerControllerProvider);
+      String taskId;
+
+      if (widget.existing == null) {
+        // Create a new task first, so we can attach subtasks to it
+        taskId = ctrl.generateId();
+        await ctrl.addTask(
+          title: _titleC.text.trim(),
+          description: _descC.text.trim(),
+          status: 'Pending',
+          dueDate: _dueDate,
+          completedAt: _completedAt,
+          estimatedTime: _estimatedTime,
+          priority: _priority,
+          subtasks: [], // No subtasks in the task model anymore
+          startTime: _startTime,
+          endTime: _endTime,
+        );
+      } else {
+        // Update the existing task
+        taskId = widget.existing!.id;
+        await ctrl.updateTask(
+          taskId,
+          _titleC.text.trim(),
+          _descC.text.trim(),
+          _status,
+          _dueDate,
+          _completedAt,
+          _estimatedTime,
+          _priority,
+          null, // No subtasks in the task model anymore
+          _startTime,
+          _endTime,
+        );
+      }
+
+      // Now generate and add subtasks
       final magicTodo = widget.ref.read(magicTodoServiceProvider);
-      final subtasks = await magicTodo.divideTask(
+      final subtaskSuggestions = await magicTodo.divideTask(
         title: _titleC.text.trim(),
         description: _descC.text.trim(),
       );
 
-      print(subtasks);
-      if (subtasks.isNotEmpty) {
-        // Create a task ID if needed
-        final String taskId = widget.existing?.id ??
-            widget.ref.read(trackerControllerProvider).generateId();
+      if (subtaskSuggestions.isNotEmpty) {
+        // Mark the parent task as having subtasks
+        final taskService = widget.ref.read(taskServiceProvider);
+        final parentTask = await taskService.getTaskById(taskId);
+        if (parentTask != null) {
+          await taskService.updateTask(
+              taskId, parentTask.copyWith(hasSubtasks: true));
+        }
 
-        // Assign parent task ID to each subtask
-        final updatedSubtasks = subtasks.map((subtask) {
-          return subtask.copyWith(taskId: taskId);
-        }).toList();
+        // Create each subtask using the createSubtask method
+        int totalMinutes = 0;
+        for (int i = 0; i < subtaskSuggestions.length; i++) {
+          final suggestion = subtaskSuggestions[i];
 
-        setState(() {
-          _subtasks = updatedSubtasks;
+          // Create the subtask using the new service
+          await ctrl.createSubtask(
+            taskId,
+            suggestion.title,
+            rawTimeValue: suggestion.rawTimeValue,
+          );
 
-          // Calculate the total estimated time from subtasks
-          int totalMinutes = 0;
-
-          for (var subtask in updatedSubtasks) {
-            if (subtask.rawTimeValue != null &&
-                subtask.rawTimeValue!.isNotEmpty) {
-              // Parse the human-readable time string
-              final String timeStr = subtask.rawTimeValue!.toLowerCase();
-
-              // Extract the numeric value using a regex
-              final RegExp numRegex = RegExp(r'(\d+)');
-              final match = numRegex.firstMatch(timeStr);
-              if (match != null) {
-                int value = int.parse(match.group(1)!);
-
-                // Convert to minutes based on the unit
-                if (timeStr.contains('second')) {
-                  value = (value / 60).ceil(); // Convert seconds to minutes
-                } else if (timeStr.contains('hour')) {
-                  value *= 60; // Convert hours to minutes
-                }
-
-                totalMinutes += value;
+          // Calculate time estimate if available
+          if (suggestion.rawTimeValue != null &&
+              suggestion.rawTimeValue!.isNotEmpty) {
+            final String timeStr = suggestion.rawTimeValue!.toLowerCase();
+            final RegExp numRegex = RegExp(r'(\d+)');
+            final match = numRegex.firstMatch(timeStr);
+            if (match != null) {
+              int value = int.parse(match.group(1)!);
+              if (timeStr.contains('second')) {
+                value = (value / 60).ceil();
+              } else if (timeStr.contains('hour')) {
+                value *= 60;
               }
+              totalMinutes += value;
             }
           }
+        }
 
-          // Update main task estimated time in minutes
+        // Refresh the subtask list for the parent task
+        widget.ref.refresh(subtaskStateNotifierProvider(taskId));
+
+        // Update the parent task with the calculated total time
+        if (totalMinutes > 0) {
           _estimatedTime = totalMinutes.toString();
-        });
-
-        final ctrl = widget.ref.read(trackerControllerProvider);
-        if (widget.existing == null) {
-          // Create a new task (with subtasks)
-          await ctrl.addTask(
-            title: _titleC.text.trim(),
-            description: _descC.text.trim(),
-            status: 'Pending',
-            dueDate: null,
-            completedAt: null,
-            estimatedTime: _estimatedTime,
-            priority: 1,
-            subtasks: _subtasks, // Using the updated subtasks with taskId set
-          );
-        } else {
-          // Update existing task to attach newly generated subtasks
           await ctrl.updateTask(
-            widget.existing!.id,
+            taskId,
             _titleC.text.trim(),
             _descC.text.trim(),
-            widget.existing!.status,
-            widget.existing!.dueDate,
-            widget.existing!.completedAt,
+            _status,
+            _dueDate,
+            _completedAt,
             _estimatedTime,
-            widget.existing!.priority,
-            _subtasks, // Using the updated subtasks with taskId set
-            widget.existing!.startTime,
-            widget.existing!.endTime,
+            _priority,
+            null,
+            _startTime,
+            _endTime,
           );
         }
+
+        // Close the modal
+        Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(localizations.noSubtasksGenerated)),
         );
         return;
       }
-
-      Navigator.pop(context);
     } catch (e) {
       print('Error generating subtasks: $e');
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1114,16 +1141,21 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   }
 }
 
-class SubtaskEditorModal extends TrackingEditorModal {
+// —— Subtask Editor —— //
+class SubtaskEditorModal extends TrackingEditorModal<SubtaskModel> {
+  // Specify SubtaskModel as the generic type
   final TaskModel parentTask;
-  final SubtaskModel subtask;
+  final SubtaskModel subtask; // This is the 'existing' item
 
   const SubtaskEditorModal({
     Key? key,
     required WidgetRef ref,
     required this.parentTask,
     required this.subtask,
-  }) : super(key: key, ref: ref);
+  }) : super(
+            key: key,
+            ref: ref,
+            existing: subtask); // Pass the subtask to 'existing'
 
   @override
   _SubtaskEditorModalState createState() => _SubtaskEditorModalState();
@@ -1140,15 +1172,14 @@ class _SubtaskEditorModalState
   @override
   void initState() {
     super.initState();
+    // 'widget.existing' from the base class is now populated with widget.subtask
+    // So you could use widget.existing?.title, but widget.subtask.title is also fine.
     _titleC = TextEditingController(text: widget.subtask.title);
-    _descC = TextEditingController(); // Empty description for subtasks
+    _descC = TextEditingController();
     _completed = widget.subtask.completed;
-
-    // Initialize raw time values if available
     _rawTimeValue = widget.subtask.rawTimeValue ?? '';
   }
 
-  // In _SubtaskEditorModalState class, replace the problematic estimated time display:
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
@@ -1207,26 +1238,30 @@ class _SubtaskEditorModalState
       return;
     }
 
-    Navigator.of(context).pop();
+    Navigator.of(context).pop(); // Pop the SubtaskEditorModal
     final ctrl = widget.ref.read(trackerControllerProvider);
 
-    // update this subtask
     await ctrl.updateSubtask(
-      widget.parentTask.id,
+      widget.subtask.taskId,
       widget.subtask,
       _titleC.text.trim(),
       _completed,
       rawTimeValue: _rawTimeValue,
     );
 
-    // when *all* subtasks now have an estimate, sum them and update parent
-    final all = widget.parentTask.subtasks;
-    if (all != null &&
-        all.isNotEmpty &&
-        all.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
+    widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
+
+    // ... (rest of your onSave logic for updating parent task estimate) ...
+    final subtaskService = widget.ref.read(subtaskServiceProvider);
+    final allSubtasks =
+        await subtaskService.getSubtasksForTask(widget.subtask.taskId);
+
+    if (allSubtasks.isNotEmpty &&
+        allSubtasks.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
       int totalSeconds = 0;
       final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
-      for (final st in all) {
+
+      for (final st in allSubtasks) {
         final raw = st.rawTimeValue!.trim();
         final match = regex.firstMatch(raw);
         if (match != null) {
@@ -1241,6 +1276,7 @@ class _SubtaskEditorModalState
           }
         }
       }
+
       String sumEstimate;
       if (totalSeconds >= 3600) {
         final hours = totalSeconds / 3600;
@@ -1254,20 +1290,34 @@ class _SubtaskEditorModalState
         sumEstimate = '$totalSeconds ${localizations.seconds}';
       }
 
-      await ctrl.updateTask(
-        widget.parentTask.id,
-        widget.parentTask.title,
-        widget.parentTask.description,
-        widget.parentTask.status,
-        widget.parentTask.dueDate,
-        widget.parentTask.completedAt,
-        sumEstimate,
-        widget.parentTask.priority,
-        widget.parentTask.subtasks,
-        widget.parentTask.startTime,
-        widget.parentTask.endTime,
-      );
+      final taskService = widget.ref.read(taskServiceProvider);
+      final parentTaskData = await taskService
+          .getTaskById(widget.subtask.taskId); // Renamed to avoid conflict
+
+      if (parentTaskData != null) {
+        await ctrl.updateTask(
+          parentTaskData.id,
+          parentTaskData.title,
+          parentTaskData.description,
+          parentTaskData.status,
+          parentTaskData.dueDate,
+          parentTaskData.completedAt,
+          sumEstimate,
+          parentTaskData.priority,
+          null,
+          parentTaskData.startTime,
+          parentTaskData.endTime,
+        );
+      }
     }
+  }
+
+  @override
+  void onDelete() async {
+    Navigator.of(context).pop();
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    await ctrl.deleteSubtask(widget.subtask.id, widget.subtask.taskId);
+    widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
   }
 
   @override
@@ -1865,6 +1915,7 @@ class _MedicationEditorModalState
         name: _nameC.text.trim(),
         dose: double.parse(_doseC.text),
         unit: unitToSave,
+takenTimes: _takenTimes,
         frequency: frequency,
         customDays: customDays,
         timesPerDay: _timesPerDay,
@@ -2034,72 +2085,170 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
   }
 }
 
-class SubtaskList extends StatelessWidget {
-  final List<SubtaskModel> subtasks;
-  final Function(SubtaskModel) onToggle;
+class SubtaskList extends ConsumerWidget {
+  final String parentTaskId;
   final TaskModel parentTask;
-  final WidgetRef ref; // Add this parameter
+  final WidgetRef ref;
 
   const SubtaskList({
     Key? key,
-    required this.subtasks,
-    required this.onToggle,
+    required this.parentTaskId,
     required this.parentTask,
-    required this.ref, // Add this required parameter
+    required this.ref,
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context)!;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: subtasks.map((subtask) {
-        return Container(
-          margin: const EdgeInsets.only(left: 15.0),
-          child: ListTile(
-            contentPadding: const EdgeInsets.only(left: 0, right: 16.0),
-            leading: const Padding(
-              padding: EdgeInsets.only(left: 8.0),
-              child: Icon(Icons.task_alt, size: 20),
-            ),
-            title: Text(
-              subtask.title,
-              style: TextStyle(
-                decoration:
-                    subtask.completed ? TextDecoration.lineThrough : null,
-                color: subtask.completed ? Colors.grey : Colors.black,
-                fontSize: 14.0, // Slightly smaller than parent task
+    final subtasksAsync = ref.watch(subtaskStateNotifierProvider(parentTaskId));
+
+    return subtasksAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) =>
+          Text('${localizations.errorLoadingSubtasks}: $error'),
+      data: (subtasks) {
+        print(
+            'SubtaskList: Found ${subtasks.length} subtasks for task $parentTaskId');
+
+        final sortedSubtasks = List<SubtaskModel>.from(subtasks)
+          ..sort((a, b) => a.order.compareTo(b.order));
+
+        List<Widget> subtaskWidgets = sortedSubtasks.map<Widget>((subtask) {
+          print(
+              'Rendering subtask: ${subtask.id}, order: ${subtask.order}, title: ${subtask.title}, rawTimeValue: ${subtask.rawTimeValue}');
+
+          return Container(
+            margin: const EdgeInsets.only(left: 15.0),
+            child: ListTile(
+              contentPadding: const EdgeInsets.only(
+                  left: 0, right: 0), // Adjusted for new trailing
+              leading: const Padding(
+                padding: EdgeInsets.only(left: 8.0),
+                child: Icon(Icons.task_alt, size: 20),
               ),
-            ),
-            subtitle: Text(
-              subtask.rawTimeValue != null && subtask.rawTimeValue!.isNotEmpty
-                  ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
-                  : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
-              style: const TextStyle(fontSize: 12.0),
-            ),
-            // Make the entire ListTile tappable to open the edit modal
-            onTap: () {
-              showDialog(
-                context: context,
-                builder: (context) => SubtaskEditorModal(
-                  ref: ref, // Use the passed ref
-                  parentTask: parentTask,
-                  subtask: subtask,
+              title: Text(
+                subtask.title,
+                style: TextStyle(
+                  decoration:
+                      subtask.completed ? TextDecoration.lineThrough : null,
+                  color: subtask.completed ? Colors.grey : Colors.black,
+                  fontSize: 14.0,
                 ),
-              );
-            },
-            // Align the checkbox with the parent task's checkbox
-            trailing: SizedBox(
-              width: 24, // Same width as parent task's checkbox
-              child: Checkbox(
-                value: subtask.completed,
-                onChanged: (_) => onToggle(subtask),
               ),
+              subtitle: Text(
+                subtask.rawTimeValue != null && subtask.rawTimeValue!.isNotEmpty
+                    ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
+                    : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
+                style: const TextStyle(fontSize: 12.0),
+              ),
+              onTap: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => SubtaskEditorModal(
+                    ref: ref,
+                    parentTask: parentTask,
+                    subtask: subtask,
+                  ),
+                );
+              },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 24,
+                    child: Checkbox(
+                      value: subtask.completed,
+                      onChanged: (_) async {
+                        final ctrl = ref.read(trackerControllerProvider);
+                        await ctrl.updateSubtask(
+                          parentTaskId, // Use parentTaskId for consistency
+                          subtask,
+                          subtask.title,
+                          !subtask.completed,
+                          rawTimeValue: subtask.rawTimeValue ?? '',
+                        );
+                        ref.refresh(subtaskStateNotifierProvider(parentTaskId));
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList();
+
+        if (subtasks.isEmpty) {
+          subtaskWidgets.add(Padding(
+            padding: const EdgeInsets.only(left: 15.0, top: 8.0, bottom: 8.0),
+            child: Text(localizations.noSubtasks),
+          ));
+        }
+
+        subtaskWidgets.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 24.0, top: 8.0, bottom: 8.0),
+            child: TextButton.icon(
+              icon: const Icon(Icons.add, size: 14),
+              label: Text(localizations.addNew),
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (BuildContext dialogContext) {
+                    final titleController = TextEditingController();
+                    return AlertDialog(
+                      backgroundColor: Colors.white,
+                      title: Text(
+                        localizations.addNewSubtask,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      content: TextField(
+                        controller: titleController,
+                        decoration: InputDecoration(
+                          labelText: localizations.subtaskTitle,
+                        ),
+                        autofocus: true,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(dialogContext),
+                          child: Text(localizations.cancel),
+                        ),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).primaryColor,
+                            foregroundColor: Colors.white,
+                          ),
+                          onPressed: () async {
+                            if (titleController.text.trim().isNotEmpty) {
+                              final ctrl = ref.read(trackerControllerProvider);
+                              await ctrl.createSubtask(
+                                parentTaskId,
+                                titleController.text.trim(),
+                              );
+                              ref.refresh(
+                                  subtaskStateNotifierProvider(parentTaskId));
+                              Navigator.pop(dialogContext);
+                            }
+                          },
+                          child: Text(localizations.addNew),
+                        ),
+                      ],
+                    );
+                  },
+                );
+              },
             ),
           ),
         );
-      }).toList(),
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: subtaskWidgets,
+        );
+      },
     );
   }
 }

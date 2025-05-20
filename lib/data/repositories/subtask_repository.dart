@@ -1,5 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
+import 'package:spiceease/data/providers/current_user_provider.dart';
 
 /// A repository layer that abstracts subtask-related database operations.
 ///
@@ -9,16 +11,22 @@ import 'package:spiceease/core/database/database_service.dart';
 class SubtaskRepository {
   final DatabaseService
       _db; // The database service for performing CRUD operations.
+  final Ref
+      _ref; // The reference to the provider for accessing other providers.
 
-  const SubtaskRepository(this._db);
+  const SubtaskRepository(this._db, this._ref);
 
   /// Fetches all subtask documents from the database.
   ///
   /// Queries the database for all documents in the subtasks collection.
   /// Each document is converted from a map to a [SubtaskModel] instance.
   Future<List<SubtaskModel>> getAllSubtasks() async {
+    final user = await _ref.read(currentUserProvider.future);
+    if (user == null) return [];
+
     final results = await _db.query(
-        collection: DatabaseService.subtasks); // Querying the subtasks collection.
+        collection:
+            DatabaseService.subtasks); // Querying the subtasks collection.
     return results
         .map((e) => SubtaskModel.fromMap(e))
         .toList(); // Converting maps to SubtaskModel instances.
@@ -66,5 +74,22 @@ class SubtaskRepository {
   Future<void> deleteSubtask(String id) async {
     await _db.deleteDocument(
         '${DatabaseService.subtasks}/$id'); // Deleting the document by ID.
+  }
+
+  /// Get subtasks for a specific task
+  Future<List<SubtaskModel>> getSubtasksForTask(String taskId) async {
+    final user = await _ref.read(currentUserProvider.future);
+    if (user == null) return [];
+
+    final subtasks = await _db.query(
+      collection: DatabaseService.subtasks,
+      filters: [
+        QueryFilter.basic('task_id', QueryOperator.equal, taskId),
+        QueryFilter.basic('user_id', QueryOperator.equal, user.uid),
+      ],
+      orderBy: [QueryOrder('order')],
+    );
+
+    return subtasks.map((e) => SubtaskModel.fromMap(e)).toList();
   }
 }

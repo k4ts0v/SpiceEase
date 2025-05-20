@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:spiceease/data/models/energy_model.dart';
 import 'package:spiceease/data/models/habit_model.dart';
@@ -79,7 +80,7 @@ class IconGrid extends ConsumerWidget {
           ),
           IconListLauncher<MoodModel>(
             title: localizations.mood,
-            icon: const Icon(Icons.face),
+            icon: const Icon(FontAwesomeIcons.faceSmile),
             items: moods,
             onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
             onTap: (mood) => showModal(

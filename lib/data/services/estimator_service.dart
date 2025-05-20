@@ -4,16 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
+///Provides an instance of [EstimatorService] to the app.
 final estimatorServiceProvider = Provider((ref) => EstimatorService(ref));
 
+/// A service responsible for estimating task durations based on task details,
+/// user energy levels, and external API responses.
 class EstimatorService {
-  final Ref ref;
-  final Dio _dio = Dio();
+  final Ref
+      ref; // Reference to the provider container for accessing other providers.
+  final Dio _dio = Dio(); // Dio instance for making HTTP requests.
 
-  /// Tip: to average 10 minutes and 1 hour, convert both to minutes:
-  /// 10 → 10, 60 → 60, sum=70, avg=35 → 35 minutes.
+  /// Constructor for the `EstimatorService`.
+  /// Accepts a `Ref` object to access other providers.
   EstimatorService(this.ref);
 
+  /// Determines the "spiciness" level based on the user's energy level.
+  /// Spiciness is a value between 1 and 5, where higher values indicate higher energy.
   int _spicinessFromEnergy(int energy) {
     if (energy <= 2) return 1;
     if (energy <= 4) return 2;
@@ -22,6 +28,18 @@ class EstimatorService {
     return 5;
   }
 
+  /// Estimates the time required for a task based on its title, description,
+  /// and an optional condition. The estimation is influenced by the user's
+  /// current energy level.
+  ///
+  /// Makes a POST request to an external API to fetch the estimation.
+  ///
+  /// - Parameters:
+  ///   - `title`: The title of the task.
+  ///   - `description`: A detailed description of the task.
+  ///   - `condition`: An optional condition or context for the task.
+  ///
+  /// - Returns: The API response containing the estimated time.
   Future<dynamic> estimateTask(
     String title,
     String description,
@@ -30,25 +48,36 @@ class EstimatorService {
     final energyService = ref.read(energyServiceProvider);
     final lastEntry = await energyService.getLastEnergyEntry();
     final int spiciness = _spicinessFromEnergy(lastEntry?.energyLevel ?? 0);
+    final String gt = "goblin" + "." + "tools" + "/";
+    final String ep = "api/estimator";
 
+    // API endpoint and request body
     final body = {
       "text": "$title $description $condition",
       "spiciness": spiciness,
       "Ancestors": [],
     };
+
+    // Make the POST request to the API.
     final response = await _dio.post(
-      "https://goblin.tools/api/estimator",
+      "https://$gt$ep",
       data: body,
       options: Options(headers: {"Content-Type": "application/json"}),
     );
 
-    print(body);
-    print(response.data);
+    print(body); // Debug: Print the request body
+    print(response.data); // Debug: Print the response data
     return response.data;
   }
 
-  /// Parses an API response like “10 minutes” or “10 to 30 minutes”
-  /// into a numeric estimate + a final unit chosen by the numeric average.
+  /// Parses the API response to extract a numeric estimate and its unit.
+  /// Supports multiple languages and formats, such as "10 minutes" or "10 to 30 minutes".
+  ///
+  /// - Parameters:
+  ///   - `response`: The raw response string from the API.
+  ///   - `context`: The current `BuildContext` for accessing localization.
+  ///
+  /// - Returns: A map containing the numeric estimate and its unit, or `null` if parsing fails.
   Future<Map<String, dynamic>?> parseResponseWithLocale(
     String response,
     BuildContext context,
@@ -63,10 +92,9 @@ class EstimatorService {
         return {"estimate": "5", "unit": "seconds"};
       }
 
-      // “X u (to|a) Y v”
+      // Handle ranges like "10 to 30 minutes"
       final multiRegex = RegExp(
-        r'(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)\s+(?:to|a)\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)'
-      );
+          r'(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)\s+(?:to|a)\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
       final mm = multiRegex.firstMatch(response);
       if (mm != null) {
         final a = int.parse(mm.group(1)!);
@@ -84,7 +112,7 @@ class EstimatorService {
         return _formatAverage(avgMin, unitMappings, unitsToMinutes);
       }
 
-      // English range: “X to Y unit”
+      // Handle English ranges like "10 to 30 minutes"
       final enRange = RegExp(r'(\d+)\s+to\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
       final matchEnRange = enRange.firstMatch(response);
       if (matchEnRange != null) {
@@ -98,7 +126,7 @@ class EstimatorService {
         return _formatAverage(avgMin, unitMappings, unitsToMinutes);
       }
 
-      // Spanish range: “X a Y unidad”
+      // Handle Spanish ranges like "10 a 30 minutos"
       final esRange = RegExp(r'(\d+)\s+a\s+(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
       final matchEsRange = esRange.firstMatch(response);
       if (matchEsRange != null) {
@@ -112,7 +140,7 @@ class EstimatorService {
         return _formatAverage(avgMin, unitMappings, unitsToMinutes);
       }
 
-      // Single value: “X unit”
+      // Handle single values like "10 minutes"
       final singleExp = RegExp(r'(\d+)\s+([A-Za-záéíóúÁÉÍÓÚñÑ]+)');
       final matchSingle = singleExp.firstMatch(response);
       if (matchSingle != null) {
@@ -125,7 +153,7 @@ class EstimatorService {
         return _formatAverage(avgMin, unitMappings, unitsToMinutes);
       }
 
-      // Fallback: any first number
+      // Fallback: Extract the first number
       final onlyNum = RegExp(r'(\d+)').firstMatch(response);
       if (onlyNum != null) {
         return {"estimate": onlyNum.group(1)!, "unit": ""};
@@ -161,9 +189,8 @@ class EstimatorService {
     }
 
     // Round to int if no fraction, else 2 decimals
-    final numericValue = (value % 1 == 0)
-      ? value.toInt().toString()
-      : value.toStringAsFixed(2);
+    final numericValue =
+        (value % 1 == 0) ? value.toInt().toString() : value.toStringAsFixed(2);
 
     // Some simple singular/plural logic for English
     // If we only have a float of exactly 1.0, it’s singular; otherwise plural.
@@ -173,12 +200,12 @@ class EstimatorService {
     // Basic map of English singular + plural forms
     // This is used solely when displaying "35 minutes," "2 hours," etc.
     final singularPlural = <String, List<String>>{
-      'month':  ['month', 'months'],
-      'week':   ['week', 'weeks'],
-      'day':    ['day', 'days'],
-      'hour':   ['hour', 'hours'],
+      'month': ['month', 'months'],
+      'week': ['week', 'weeks'],
+      'day': ['day', 'days'],
+      'hour': ['hour', 'hours'],
       'minute': ['minute', 'minutes'],
-      'second': ['second','seconds'],
+      'second': ['second', 'seconds'],
     };
     final forms = singularPlural[chosen] ?? ['?', '?'];
     final displayUnit = isSingular ? forms[0] : forms[1];
@@ -193,29 +220,25 @@ class EstimatorService {
   Map<String, List<String>> _getUnitMappings(AppLocalizations l10n) {
     return {
       'second': [
-        'second','seconds','segundo','segundos',
-        l10n.second, l10n.seconds
+        'second',
+        'seconds',
+        'segundo',
+        'segundos',
+        l10n.second,
+        l10n.seconds
       ],
       'minute': [
-        'minute','minutes','minuto','minutos',
-        l10n.minute, l10n.minutes
+        'minute',
+        'minutes',
+        'minuto',
+        'minutos',
+        l10n.minute,
+        l10n.minutes
       ],
-      'hour': [
-        'hour','hours','hora','horas',
-        l10n.hour, l10n.hours
-      ],
-      'day': [
-        'day','days','día','dias','dia',
-        l10n.day, l10n.days
-      ],
-      'week': [
-        'week','weeks','semana','semanas',
-        l10n.week, l10n.weeks
-      ],
-      'month': [
-        'month','months','mes','meses',
-        l10n.month, l10n.months
-      ],
+      'hour': ['hour', 'hours', 'hora', 'horas', l10n.hour, l10n.hours],
+      'day': ['day', 'days', 'día', 'dias', 'dia', l10n.day, l10n.days],
+      'week': ['week', 'weeks', 'semana', 'semanas', l10n.week, l10n.weeks],
+      'month': ['month', 'months', 'mes', 'meses', l10n.month, l10n.months],
     };
   }
 
@@ -224,13 +247,20 @@ class EstimatorService {
     return {
       'second': 1 / 60,
       'minute': 1,
-      'hour':   60,
-      'day':    60 * 24,
-      'week':   60 * 24 * 7,
-      'month':  60 * 24 * 30,
+      'hour': 60,
+      'day': 60 * 24,
+      'week': 60 * 24 * 7,
+      'month': 60 * 24 * 30,
     };
   }
 
+  /// Checks if the text contains "0 seconds" in any recognized form.
+  /// This is a special case where we want to return a default value of 5 seconds.
+  /// This is used to handle cases where the API might return "0 seconds" as a valid response.
+  /// - Parameters:
+  ///   - `text`: The text to check.
+  ///   - `seconds`: A list of recognized forms of "seconds."
+  /// - Returns: `true` if "0 seconds" is found in any form, `false` otherwise.
   bool _hasZeroSeconds(String text, List<String> seconds) {
     final t = text.toLowerCase();
     return seconds.any((x) => t.contains("0 $x"));

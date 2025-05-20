@@ -689,4 +689,31 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get gotIt => 'Got it';
+
+  @override
+  String get errorLoadingSubtasks => 'Error loading subtasks: ';
+
+  @override
+  String get noSubtasks => 'No subtasks';
+
+  @override
+  String get thisSubtask => 'this subtask';
+
+  @override
+  String get subtaskTitle => 'Subtask title';
+
+  @override
+  String get addNewSubtask => 'Add new subtask';
+
+  @override
+  String get speedrun => 'Speedrun';
+
+  @override
+  String get speedrunDescription => 'Prove yourself by completing tasks in a limited time. The faster you finish, the more points you earn.';
+
+  @override
+  String get diceRoller => 'Dice Roller';
+
+  @override
+  String get diceRollerDescription => 'Roll dice to generate random numbers for your tasks. Use it to know how many items you have to complete.';
 }

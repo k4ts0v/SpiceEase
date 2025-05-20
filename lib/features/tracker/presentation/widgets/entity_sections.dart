@@ -79,156 +79,128 @@ class EntitySections extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         EntitySection<MedicationModel>(
-          title: localizations.medication,
-          items: medicationsList,
-          isLoading: medicationsLoading,
-          error: medicationsError,
-          onTap: (medication) => showModal(
-            context,
-            MedicationEditorModal(ref: ref, existing: medication),
-          ),
-          onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
-          itemBuilder: (medication) {
-            // For all medications, use a consistent ListTile
-            return ListTile(
-              title: Text(medication.name),
-              subtitle: Text(
+            title: localizations.medication,
+            items: medicationsList,
+            isLoading: medicationsLoading,
+            error: medicationsError,
+            onTap: (medication) => showModal(
+                  context,
+                  MedicationEditorModal(ref: ref, existing: medication),
+                ),
+            onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+            itemBuilder: (medication) {
+              final isToday = selectedDate.year == DateTime.now().year &&
+                  selectedDate.month == DateTime.now().month &&
+                  selectedDate.day == DateTime.now().day;
+
+              final isTakenToday = medication.isTakenOnDate(selectedDate);
+              final displayTakenTimes =
+                  isTakenToday ? medication.takenTimes : 0;
+
+              return ListTile(
+                title: Text(medication.name),
+                subtitle: Text(
                   '${localizations.dose}: ${medication.dose} ${medication.unit}' +
                       (medication.timesPerDay <= 1
-                          ? ' | ${medication.takenTimes > 0 ? localizations.takenS : localizations.notTaken}'
-                          : ' | ${medication.takenTimes}/${medication.timesPerDay} ${localizations.taken}')),
-              trailing: medication.timesPerDay <= 1
-                  ? // Simple checkbox for once-daily medications
-                  Checkbox(
-                      value: medication.takenTimes >= medication.timesPerDay,
-                      onChanged: (value) async {
-                        final selectedDate = ref.read(selectedDateProvider);
-                        final newTakenTimes =
-                            value == true ? medication.timesPerDay : 0;
-                        final newLastTaken =
-                            value == true ? selectedDate : null;
+                          ? ' | ${displayTakenTimes > 0 ? localizations.takenS : localizations.notTaken}'
+                          : ' | $displayTakenTimes/${medication.timesPerDay} ${localizations.taken}'),
+                ),
+                trailing: medication.timesPerDay <= 1
+                    ? Checkbox(
+                        value: displayTakenTimes >= medication.timesPerDay,
+                        onChanged: (bool? value) async {
+                          final service = ref.read(medicationServiceProvider);
+                          MedicationModel updatedMedication;
 
-                        final updatedMed = medication.copyWith(
-                          takenTimes: newTakenTimes,
-                          lastTaken: newLastTaken,
-                        );
-
-                        await ref
-                            .read(trackerControllerProvider)
-                            .updateMedication(
-                              medication.id,
-                              medication.name,
-                              medication.dose,
-                              medication.unit,
-                              newTakenTimes,
-                              medication.frequency,
-                              medication.customDays,
-                              medication.timesPerDay,
-                              newLastTaken,
-                              updatedMed.calculateNextDueDate(),
+                          if (value == true) {
+                            updatedMedication = medication.copyWith(
+                              takenTimes: medication.timesPerDay,
+                              lastTaken: selectedDate,
+                              nextDueDate: medication.calculateNextDueDate(),
+                              updatedAt: DateTime.now(),
                             );
-                      },
-                    )
-                  : // For multi-dose medications, show +/- buttons
-                  Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.remove_circle_outline),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          iconSize: 20,
-                          onPressed: medication.takenTimes > 0
-                              ? () async {
-                                  final newTimes = medication.takenTimes - 1;
-                                  final selectedDate =
-                                      ref.read(selectedDateProvider);
-                                  final newLastTaken =
-                                      newTimes > 0 ? selectedDate : null;
+                          } else {
+                            updatedMedication = medication.copyWith(
+                              takenTimes: 0,
+                              lastTaken: isToday ? null : medication.lastTaken,
+                              nextDueDate:
+                                  isToday ? null : medication.nextDueDate,
+                              updatedAt: DateTime.now(),
+                            );
+                          }
 
-                                  final updatedMed = medication.copyWith(
-                                    takenTimes: newTimes,
-                                    lastTaken: newLastTaken,
-                                  );
+                          await service.updateMedication(
+                              medication.id, updatedMedication);
+                          ref.invalidate(
+                              medicationStateNotifierProvider(selectedDate));
+                        },
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.remove_circle_outline),
+                            onPressed: displayTakenTimes > 0
+                                ? () async {
+                                    final service =
+                                        ref.read(medicationServiceProvider);
+                                    int newTimes = displayTakenTimes - 1;
 
-                                  await ref
-                                      .read(trackerControllerProvider)
-                                      .updateMedication(
-                                        medication.id,
-                                        medication.name,
-                                        medication.dose,
-                                        medication.unit,
-                                        newTimes,
-                                        medication.frequency,
-                                        medication.customDays,
-                                        medication.timesPerDay,
-                                        newLastTaken,
-                                        updatedMed.calculateNextDueDate(),
-                                      );
-                                }
-                              : null,
-                          color: Colors.red,
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color:
-                                medication.takenTimes >= medication.timesPerDay
-                                    ? Colors.green
-                                    : Colors.blue,
-                            shape: BoxShape.circle,
+                                    MedicationModel updatedMedication =
+                                        medication.copyWith(
+                                      takenTimes: newTimes,
+                                      lastTaken:
+                                          newTimes > 0 ? selectedDate : null,
+                                      nextDueDate: newTimes >=
+                                              medication.timesPerDay
+                                          ? medication.calculateNextDueDate()
+                                          : null,
+                                      updatedAt: DateTime.now(),
+                                    );
+
+                                    await service.updateMedication(
+                                        medication.id, updatedMedication);
+                                    ref.invalidate(
+                                        medicationStateNotifierProvider(
+                                            selectedDate));
+                                  }
+                                : null,
                           ),
-                          padding: const EdgeInsets.all(8),
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            '${medication.takenTimes}',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          Text('$displayTakenTimes/${medication.timesPerDay}'),
+                          IconButton(
+                            icon: const Icon(Icons.add_circle_outline),
+                            onPressed: displayTakenTimes <
+                                    medication.timesPerDay
+                                ? () async {
+                                    final service =
+                                        ref.read(medicationServiceProvider);
+                                    int newTimes = displayTakenTimes + 1;
+
+                                    MedicationModel updatedMedication =
+                                        medication.copyWith(
+                                      takenTimes: newTimes,
+                                      lastTaken: selectedDate,
+                                      nextDueDate: newTimes >=
+                                              medication.timesPerDay
+                                          ? medication.calculateNextDueDate()
+                                          : null,
+                                      updatedAt: DateTime.now(),
+                                    );
+
+                                    await service.updateMedication(
+                                        medication.id, updatedMedication);
+                                    ref.invalidate(
+                                        medicationStateNotifierProvider(
+                                            selectedDate));
+                                  }
+                                : null,
                           ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.add_circle_outline),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          iconSize: 20,
-                          onPressed: medication.takenTimes <
-                                  medication.timesPerDay
-                              ? () async {
-                                  final newTimes = medication.takenTimes + 1;
-                                  final selectedDate =
-                                      ref.read(selectedDateProvider);
-                                  final newLastTaken = selectedDate;
-
-                                  final updatedMed = medication.copyWith(
-                                    takenTimes: newTimes,
-                                    lastTaken: newLastTaken,
-                                  );
-
-                                  await ref
-                                      .read(trackerControllerProvider)
-                                      .updateMedication(
-                                        medication.id,
-                                        medication.name,
-                                        medication.dose,
-                                        medication.unit,
-                                        newTimes,
-                                        medication.frequency,
-                                        medication.customDays,
-                                        medication.timesPerDay,
-                                        newLastTaken,
-                                        updatedMed.calculateNextDueDate(),
-                                      );
-                                }
-                              : null,
-                          color: Colors.green,
-                        ),
-                      ],
-                    ),
-            );
-          },
-        ),
+                        ],
+                      ),
+              );
+            }),
         const SizedBox(height: 20),
+        //TODO: Bug: Tasks are not being displayed in the REST implementation. Error: flutter: TaskStateNotifier - Error: type 'Null' is not a subtype of type 'List<dynamic>' in type cast
         EntitySection<TaskModel>(
             title: localizations.tasks,
             items: tasksList,
@@ -275,11 +247,10 @@ class EntitySections extends ConsumerWidget {
                     ),
                   ),
 
-                  // Display subtasks if present
-                  if (task.subtasks != null && task.subtasks!.isNotEmpty)
+                  // Display subtasks if parent has them flagged
+                  if (task.hasSubtasks)
                     Padding(
-                      padding: const EdgeInsets.only(
-                          left: 0.0), // No extra padding needed
+                      padding: const EdgeInsets.only(left: 0.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -287,7 +258,7 @@ class EntitySections extends ConsumerWidget {
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 16.0, vertical: 8.0),
                             child: Text(
-                              "${localizations.subtasks} (${task.subtasks!.length})",
+                              localizations.subtasks,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
@@ -295,21 +266,10 @@ class EntitySections extends ConsumerWidget {
                               ),
                             ),
                           ),
+                          // Use the updated SubtaskList widget
                           SubtaskList(
-                            subtasks: task.subtasks!,
-                            parentTask: task, // Pass the parent task
-                            onToggle: (subtask) async {
-                              final ctrl = ref.read(trackerControllerProvider);
-                              final updated = subtask.copyWith(
-                                  completed: !subtask.completed);
-                              await ctrl.updateSubtask(
-                                task.id,
-                                subtask,
-                                updated.title,
-                                updated.completed,
-                                rawTimeValue: updated.rawTimeValue ?? '',
-                              );
-                            },
+                            parentTaskId: task.id,
+                            parentTask: task,
                             ref: ref,
                           ),
                         ],
