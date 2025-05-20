@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spiceease/features/navigation_bar.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_screen.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/l10n/l10n.dart';
@@ -22,7 +23,7 @@ class AuthScreen extends ConsumerWidget {
       if (prev?.user == null && next.user != null) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const TrackerScreen()),
+          MaterialPageRoute(builder: (_) => const NavBar()),
         );
       }
     });

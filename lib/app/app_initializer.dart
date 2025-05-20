@@ -32,6 +32,7 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
     print('Database service initialized successfully');
 
     print('Core services initialized successfully');
+
     return;
   } catch (e, stack) {
     print('Error during initialization: $e');
