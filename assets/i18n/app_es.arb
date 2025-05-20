@@ -213,8 +213,17 @@
   "noTasksAvailable": "No hay tareas disponibles",
   "errorMarkingTaskComplete": "Error marcando la tarea como completada: {error}",
   "breakTimeEnded": "Tiempo de Descanso Terminado",
-"focusTimeEnded": "Tiempo de Enfoque Terminado",
-"timeToFocusAgain": "¡Es hora de volver a concentrarse en su tarea!",
-"timeToTakeABreak": "¡Buen trabajo! Es hora de tomar un breve descanso.",
-"gotIt": "Entendido"
+  "focusTimeEnded": "Tiempo de Enfoque Terminado",
+  "timeToFocusAgain": "¡Es hora de volver a concentrarse en su tarea!",
+  "timeToTakeABreak": "¡Buen trabajo! Es hora de tomar un breve descanso.",
+  "gotIt": "Entendido",
+  "errorLoadingSubtasks": "Error cargando las subtareas: ",
+  "noSubtasks": "No hay subtareas",
+  "thisSubtask": "esta subtarea",
+  "subtaskTitle": "Título de la subtarea",
+  "addNewSubtask": "Agregar una subtarea",
+"speedrun": "Speedrun",
+  "speedrunDescription": "Ponte a prueba completando tareas en un tiempo limitado. Cuanto más rápido termines, más puntos ganarás.",
+  "diceRoller": "Lanzador de dados",
+  "diceRollerDescription": "Tira un dado para generar números aleatorios para tus tareas. Úsalo para saber cuántos elementos tienes que completar."
 }

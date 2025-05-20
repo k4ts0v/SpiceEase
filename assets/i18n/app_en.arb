@@ -215,5 +215,14 @@
   "focusTimeEnded": "Focus Time Ended",
   "timeToFocusAgain": "Time to focus on your task again!",
   "timeToTakeABreak": "Great work! Time to take a short break.",
-  "gotIt": "Got it"
+  "gotIt": "Got it",
+  "errorLoadingSubtasks": "Error loading subtasks: ",
+  "noSubtasks": "No subtasks",
+  "thisSubtask": "this subtask",
+  "subtaskTitle": "Subtask title",
+  "addNewSubtask": "Add new subtask",
+  "speedrun": "Speedrun",
+  "speedrunDescription": "Prove yourself by completing tasks in a limited time. The faster you finish, the more points you earn.",
+  "diceRoller": "Dice Roller",
+  "diceRollerDescription": "Roll dice to generate random numbers for your tasks. Use it to know how many items you have to complete."
 }
