@@ -262,7 +262,7 @@ class KanbanPage extends ConsumerWidget {
                         Container(
                           margin:
                               const EdgeInsets.fromLTRB(12.0, 0.0, 12.0, 16.0),
-                          height: 120,
+                          height: 140,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16.0),
                             color: const Color(0xFFF5F6F8),
@@ -734,7 +734,7 @@ class KanbanPage extends ConsumerWidget {
       ),
       // For no-due-date cards, wrap content in a fixed height container
       child:
-          isNoDueDate ? SizedBox(height: 100, child: cardContent) : cardContent,
+          isNoDueDate ? SizedBox(height: 120, child: cardContent) : cardContent,
     );
 
     // Add no-due-date badge if needed
