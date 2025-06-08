@@ -13,6 +13,7 @@ import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/services/estimator_service.dart';
 import 'package:spiceease/data/services/magic_todo_service.dart';
+import 'package:spiceease/features/time_management/time_blocks/time_block_controller.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'tracker_controller.dart';
 
@@ -31,14 +32,18 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     extends State<T> {
   Widget buildForm();
   void onSave();
-  void onDelete() {}
+  // onDelete is now responsible for its own error handling and popping
+  void
+      onDelete(); // Remove default empty implementation if all children implement it
 
+  // Base editor modal build method
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.colorScheme.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -50,16 +55,11 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                widget.existing != null
-                    ? localizations.editTitle(getTitle())
-                    : localizations.newTitle(getTitle()),
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: -0.5,
-                ),
+                getTitle(), // Use the overridden title
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 20),
               buildForm(),
               const SizedBox(height: 24),
               Row(
@@ -68,28 +68,30 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                   if (widget.existing != null)
                     TextButton(
                       onPressed: () {
+                        // Show confirmation dialog before calling onDelete
                         showDialog(
                           context: context,
-                          builder: (context) => AlertDialog(
-                            title: Text(localizations
-                                .deleteConfirmationTitle(getTitle())),
+                          builder: (alertDialogContext) => AlertDialog(
+                            title: Text(localizations.confirmDelete),
                             content: Text(localizations
                                 .deleteConfirmationMessage(getDeleteLabel())),
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: Text(localizations.cancel,
-                                    style: TextStyle(color: Colors.blueAccent)),
+                                child: Text(localizations.cancel),
+                                onPressed: () =>
+                                    Navigator.of(alertDialogContext).pop(),
                               ),
                               TextButton(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  onDelete();
-                                },
                                 child: Text(
                                   localizations.delete,
-                                  style: TextStyle(color: Colors.red),
+                                  style:
+                                      TextStyle(color: theme.colorScheme.error),
                                 ),
+                                onPressed: () {
+                                  Navigator.of(alertDialogContext)
+                                      .pop(); // Pop alert
+                                  onDelete(); // Call the modal's specific onDelete
+                                },
                               ),
                             ],
                           ),
@@ -97,16 +99,15 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                       },
                       child: Text(
                         localizations.delete,
-                        style: TextStyle(color: Colors.red),
+                        style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ),
                   const Spacer(),
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text(localizations.cancel,
-                        style: TextStyle(color: Colors.blueAccent)),
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: Text(localizations.cancel),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: onSave,
                     child: Text(localizations.save),
@@ -120,10 +121,8 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     );
   }
 
-  // TODO: Delete label is not getting picked up on modals. The default (this one) appears.
-  String getDeleteLabel() => 'this item'; // Override this in each modal
-// TODO: Title label is not getting picked up on modals. The default (this one) appears.
-  String getTitle() => 'Item';
+  String getDeleteLabel() => AppLocalizations.of(context)!.thisItem('item');
+  String getTitle() => AppLocalizations.of(context)!.item('item');
 }
 
 // —— Symptom Editor —— //
@@ -332,6 +331,12 @@ class _HabitEditorModalState
         ? _mapFrequencyToLabel(widget.existing!.frequency)
         : 'Daily';
     _selectedDays = widget.existing?.customDays ?? [];
+
+    // // Initialize reminder fields
+    // _hasReminder = widget.existing?.hasReminder ?? false;
+    // _reminderTime = widget.existing?.reminderTime;
+    // _reminderDaysOfWeek = widget.existing?.reminderDaysOfWeek ?? [];
+
     if (widget.existing?.lastCompleted != null) {
       final today = DateTime.now();
       _markAsCompleted = widget.existing!.lastCompleted!.year == today.year &&
@@ -356,6 +361,8 @@ class _HabitEditorModalState
     return 1; // Default to Daily
   }
 
+
+  // Fix 1: Missing closing bracket in buildForm method around line 410
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
@@ -479,38 +486,40 @@ class _HabitEditorModalState
                 ))
             .toList(),
       ),
+      // Fix 2: Add the missing code for existing habits
       if (widget.existing != null) ...[
         const SizedBox(height: 12),
         CheckboxListTile(
           title: Text(localizations.markAsCompleted),
           value: _markAsCompleted,
-          onChanged: (value) async {
-            setState(() {
-              _markAsCompleted = value ?? false;
-              print('Habit completion changed to: $_markAsCompleted');
-            });
+          onChanged: (value) {
+            // Only update the UI state immediately
+            setState(() => _markAsCompleted = value ?? false);
 
-            // Update the habit immediately when toggled
+            // Capture controller reference before async operation
             final ctrl = widget.ref.read(trackerControllerProvider);
-            final habit = widget.existing!;
 
-            // Toggle completion and recalculate nextDueDate
-            habit.toggleCompletion(isCompleted: _markAsCompleted);
-
-            // Update the habit in Firestore
-            await ctrl.updateHabit(
-              habit.id,
-              habit.title,
-              habit.description,
-              habit.frequency,
-              habit.customDays,
-              markAsCompleted: _markAsCompleted,
-            );
-
-            print("Habit after recalculating nextDueDate:");
-            print(habit.toMap());
+            // Then trigger the save operation asynchronously
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              try {
+                await ctrl.updateHabit(
+                  widget.existing!.id,
+                  widget.existing!.title,
+                  widget.existing!.description,
+                  widget.existing!.frequency,
+                  widget.existing!.customDays,
+                  value ?? false,
+                );
+              } catch (e) {
+                print('Error updating habit completion: $e');
+                // Revert the UI state if the operation failed
+                if (mounted) {
+                  setState(() => _markAsCompleted = !_markAsCompleted);
+                }
+              }
+            });
           },
-        ),
+        )
       ],
     ]);
   }
@@ -561,7 +570,7 @@ class _HabitEditorModalState
         _descC.text.trim(),
         frequency,
         customDays,
-        markAsCompleted: _markAsCompleted,
+        _markAsCompleted,
       );
     }
   }
@@ -600,7 +609,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   DateTime? _completedAt;
   String? _estimatedTime;
   late int _priority;
-  List<SubtaskModel> _subtasks = [];
+  final List<SubtaskModel> _subtasks = [];
   bool _isLoadingSubtasks = false;
   DateTime? _startTime;
   DateTime? _endTime;
@@ -608,13 +617,6 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      widget.ref
-          .read(
-              taskStateNotifierProvider(widget.ref.watch(selectedDateProvider))
-                  .notifier)
-          .fetchTasks();
-    });
     _titleC = TextEditingController(text: widget.existing?.title ?? '');
     _descC = TextEditingController(text: widget.existing?.description ?? '');
     _status = widget.existing?.status ?? 'Pending';
@@ -667,10 +669,16 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           _dueDate = picked;
         } else {
           _completedAt = picked;
+          // When setting a completion date, also update status to Done
+          if (_status != 'Done') {
+            _status = 'Done';
+          }
         }
       });
     }
   }
+
+  // ...existing code...
 
   Future<void> _pickTime(BuildContext context, bool isStartTime) async {
     final now = TimeOfDay.now();
@@ -794,7 +802,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         }
 
         // Refresh the subtask list for the parent task
-        widget.ref.refresh(subtaskStateNotifierProvider(taskId));
+        // widget.ref.refresh(subtaskStateNotifierProvider(taskId));
 
         // Update the parent task with the calculated total time
         if (totalMinutes > 0) {
@@ -913,35 +921,44 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             SizedBox(height: 8),
-            Row(
+            // Replace the existing completion status Row with this Column
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    _completedAt == null
-                        ? localizations.notCompleted
-                        : '${localizations.completed}: ${DateFormat.yMd().format(_completedAt!)}',
-                  ),
+                // First show the completion status text
+                Text(
+                  _completedAt == null
+                      ? localizations.notCompleted
+                      : '${localizations.completed}: ${DateFormat.yMd().format(_completedAt!)}',
                 ),
+                const SizedBox(
+                    height: 8), // Add spacing between text and buttons
+
+                // Then show the buttons underneath
                 Row(
                   children: [
                     if (_completedAt != null)
-                      // Add a clear button when completed
-                      TextButton(
-                        onPressed: () => setState(() {
-                          _completedAt = null;
-                          // Also update status if it's "Done"
-                          if (_status == 'Done') {
-                            _status = 'In Progress';
-                          }
-                        }),
-                        child: Text(localizations.clearCompletion),
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                      // Clear button when completed
+                      Expanded(
+                        child: TextButton(
+                          onPressed: () => setState(() {
+                            _completedAt = null;
+                            // Also update status if it's "Done"
+                            if (_status == 'Done') {
+                              _status = 'In Progress';
+                            }
+                          }),
+                          child: Text(localizations.clearCompletion),
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
                         ),
                       ),
-                    TextButton(
-                      onPressed: () => _pickDate(context, false),
-                      child: Text(localizations.setCompleted),
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () => _pickDate(context, false),
+                        child: Text(localizations.setCompleted),
+                      ),
                     ),
                   ],
                 ),
@@ -1000,11 +1017,11 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                 if (_endTime != null)
                   TextButton(
                     onPressed: () => setState(() => _endTime = null),
-                    child: const Text('Clear'),
+                    child: Text(localizations.clear),
                   ),
                 TextButton(
                   onPressed: () => _pickTime(context, false),
-                  child: const Text('Set End Time'),
+                  child: Text(localizations.setEndTime),
                 ),
               ],
             ),
@@ -1084,45 +1101,67 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
       return;
     }
 
-    // Fix completion logic: Set completedAt based on status
-    if (_status == 'Done') {
-      // If status is "Done" but no completion date is set, use current time
-      _completedAt ??= DateTime.now();
-    } else {
-      // If status is not "Done", clear the completion date
-      _completedAt = null;
-    }
-
-    Navigator.of(context).pop();
+    // Capture all needed references before async operations
     final ctrl = widget.ref.read(trackerControllerProvider);
 
-    if (widget.existing == null) {
-      await ctrl.addTask(
-        title: _titleC.text.trim(),
-        description: _descC.text.trim(),
-        status: _status,
-        dueDate: _dueDate,
-        completedAt: _completedAt, // This will be null if not completed
-        estimatedTime: _estimatedTime,
-        priority: _priority,
-        subtasks: [],
-        startTime: _startTime,
-        endTime: _endTime,
-      );
+    // Fix completion logic: Ensure status and completedAt are synchronized
+    DateTime? finalCompletedAt = _completedAt;
+    String finalStatus = _status;
+
+    if (_status == 'Done') {
+      finalCompletedAt ??= DateTime.now();
     } else {
-      await ctrl.updateTask(
-        widget.existing!.id,
-        _titleC.text.trim(),
-        _descC.text.trim(),
-        _status,
-        _dueDate,
-        _completedAt, // This will be null if not completed
-        _estimatedTime,
-        _priority,
-        _subtasks,
-        _startTime,
-        _endTime,
-      );
+      finalCompletedAt = null;
+    }
+
+    if (finalCompletedAt != null && _status != 'Done') {
+      finalStatus = 'Done';
+    }
+
+    try {
+      // Pop the modal first to avoid disposal issues
+      Navigator.of(context).pop();
+
+      if (widget.existing == null) {
+        await ctrl.addTask(
+          title: _titleC.text.trim(),
+          description: _descC.text.trim(),
+          status: finalStatus,
+          dueDate: _dueDate,
+          completedAt: finalCompletedAt,
+          estimatedTime: _estimatedTime,
+          priority: _priority,
+          subtasks: [],
+          startTime: _startTime,
+          endTime: _endTime,
+        );
+      } else {
+        await ctrl.updateTask(
+          widget.existing!.id,
+          _titleC.text.trim(),
+          _descC.text.trim(),
+          finalStatus,
+          _dueDate,
+          finalCompletedAt,
+          _estimatedTime,
+          _priority,
+          _subtasks,
+          _startTime,
+          _endTime,
+        );
+
+        // Schedule task if it has a start time
+        if (_startTime != null && context.mounted) {
+          await _scheduleTaskWithTimes(context);
+        }
+      }
+    } catch (e) {
+      print('Error saving task: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save task: $e')),
+        );
+      }
     }
   }
 
@@ -1138,6 +1177,29 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteTask(widget.existing!.id);
+  }
+
+  Future<void> _scheduleTaskWithTimes(BuildContext context) async {
+    if (_startTime != null) {
+      final TimeOfDay startTimeOfDay = TimeOfDay(
+        hour: _startTime!.hour,
+        minute: _startTime!.minute,
+      );
+
+      // End time is optional now
+      TimeOfDay? endTimeOfDay;
+      if (_endTime != null) {
+        endTimeOfDay = TimeOfDay(
+          hour: _endTime!.hour,
+          minute: _endTime!.minute,
+        );
+      }
+
+      // Use the new method signature with optional end time and await it
+      await widget.ref
+          .read(timeBlockControllerProvider.notifier)
+          .scheduleTask(widget.existing!, startTimeOfDay, endTimeOfDay);
+    }
   }
 }
 
@@ -1166,23 +1228,57 @@ class _SubtaskEditorModalState
   late TextEditingController _titleC;
   late TextEditingController _descC;
   late bool _completed;
+  late String _status; // Add status field
+  DateTime? _startTime;
+  DateTime? _endTime;
   String _rawTimeUnit = '';
   String _rawTimeValue = '';
 
   @override
   void initState() {
     super.initState();
-    // 'widget.existing' from the base class is now populated with widget.subtask
-    // So you could use widget.existing?.title, but widget.subtask.title is also fine.
     _titleC = TextEditingController(text: widget.subtask.title);
     _descC = TextEditingController();
     _completed = widget.subtask.completed;
+    _status = widget.subtask.status ?? 'todo'; // Initialize status
     _rawTimeValue = widget.subtask.rawTimeValue ?? '';
+  }
+
+  // Helper method to get localized version of the status
+  String _getLocalizedStatus(String status, AppLocalizations localizations) {
+    switch (status.toLowerCase()) {
+      case 'done':
+        return localizations.done;
+      case 'in_progress':
+        return localizations.inProgress;
+      case 'todo':
+      default:
+        return localizations.todo;
+    }
+  }
+
+  // Helper method to convert localized status back to internal format
+  String _getInternalStatus(
+      String localizedStatus, AppLocalizations localizations) {
+    if (localizedStatus == localizations.done) return 'done';
+    if (localizedStatus == localizations.inProgress) return 'in_progress';
+    if (localizedStatus == localizations.todo) return 'todo';
+    return 'todo';
   }
 
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
+
+    // Get localized status options
+    final List<String> localizedStatusOptions = [
+      localizations.todo,
+      localizations.inProgress,
+      localizations.done
+    ];
+
+    // Get localized version of current status
+    final String localizedStatus = _getLocalizedStatus(_status, localizations);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -1198,6 +1294,78 @@ class _SubtaskEditorModalState
         ),
         const SizedBox(height: 12),
 
+        // Add status dropdown with simplified logic
+        DropdownButtonFormField<String>(
+          value: localizedStatus,
+          decoration: InputDecoration(labelText: localizations.status),
+          items: localizedStatusOptions
+              .map((status) => DropdownMenuItem(
+                    value: status,
+                    child: Text(status),
+                  ))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) {
+              setState(() {
+                // Convert back to internal status representation
+                _status = _getInternalStatus(value, localizations);
+
+                // Simplified sync logic: only sync completion when status is done
+                if (_status == 'done') {
+                  _completed = true;
+                } else if (_status == 'todo') {
+                  _completed = false;
+                }
+                // For 'in_progress', leave completion state as is
+              });
+            }
+          },
+        ),
+
+        const SizedBox(height: 12),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _startTime == null
+                    ? localizations.noStartTime
+                    : '${localizations.startTime} ${DateFormat.jm().format(_startTime!)}',
+              ),
+            ),
+            if (_startTime != null)
+              TextButton(
+                onPressed: () => setState(() => _startTime = null),
+                child: Text(localizations.clear),
+              ),
+            TextButton(
+              onPressed: () => _pickTime(context, true),
+              child: Text(localizations.setStartTime),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                _endTime == null
+                    ? localizations.noEndTime
+                    : '${localizations.endTime}: ${DateFormat.jm().format(_endTime!)}',
+              ),
+            ),
+            if (_endTime != null)
+              TextButton(
+                onPressed: () => setState(() => _endTime = null),
+                child: Text(localizations.clear),
+              ),
+            TextButton(
+              onPressed: () => _pickTime(context, false),
+              child: Text(localizations.setEndTime),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
         // EstimatorWidget with updated callback - no conversion
         Row(
           children: [
@@ -1223,7 +1391,17 @@ class _SubtaskEditorModalState
         CheckboxListTile(
           title: Text(localizations.completed),
           value: _completed,
-          onChanged: (value) => setState(() => _completed = value ?? false),
+          onChanged: (value) => setState(() {
+            _completed = value ?? false;
+
+            // Simplified sync logic for checkbox
+            if (_completed) {
+              _status = 'done';
+            } else if (_status == 'done') {
+              _status = 'todo';
+            }
+            // If status is 'in_progress', leave it as is when unchecking
+          }),
         ),
       ],
     );
@@ -1238,75 +1416,88 @@ class _SubtaskEditorModalState
       return;
     }
 
-    Navigator.of(context).pop(); // Pop the SubtaskEditorModal
+    // Capture all needed references before async operations
     final ctrl = widget.ref.read(trackerControllerProvider);
-
-    await ctrl.updateSubtask(
-      widget.subtask.taskId,
-      widget.subtask,
-      _titleC.text.trim(),
-      _completed,
-      rawTimeValue: _rawTimeValue,
-    );
-
-    widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
-
-    // ... (rest of your onSave logic for updating parent task estimate) ...
     final subtaskService = widget.ref.read(subtaskServiceProvider);
-    final allSubtasks =
-        await subtaskService.getSubtasksForTask(widget.subtask.taskId);
+    final taskService = widget.ref.read(taskServiceProvider);
 
-    if (allSubtasks.isNotEmpty &&
-        allSubtasks.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
-      int totalSeconds = 0;
-      final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
+    try {
+      // Pop the modal first
+      Navigator.of(context).pop();
 
-      for (final st in allSubtasks) {
-        final raw = st.rawTimeValue!.trim();
-        final match = regex.firstMatch(raw);
-        if (match != null) {
-          final value = double.parse(match.group(1)!);
-          final unit = match.group(2)!.toLowerCase();
-          if (unit.startsWith('h')) {
-            totalSeconds += (value * 3600).round();
-          } else if (unit.startsWith('min')) {
-            totalSeconds += (value * 60).round();
-          } else {
-            totalSeconds += value.round();
+      await ctrl.updateSubtask(
+        widget.subtask.taskId,
+        widget.subtask,
+        _titleC.text.trim(),
+        _completed,
+        _status,
+        _rawTimeValue,
+        _startTime,
+        _endTime,
+      );
+
+      // Update parent task estimate calculation
+      final allSubtasks =
+          await subtaskService.getSubtasksForTask(widget.subtask.taskId);
+
+      if (allSubtasks.isNotEmpty &&
+          allSubtasks.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
+        int totalSeconds = 0;
+        final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
+
+        for (final st in allSubtasks) {
+          final raw = st.rawTimeValue!.trim();
+          final match = regex.firstMatch(raw);
+          if (match != null) {
+            final value = double.parse(match.group(1)!);
+            final unit = match.group(2)!.toLowerCase();
+            if (unit.startsWith('h')) {
+              totalSeconds += (value * 3600).round();
+            } else if (unit.startsWith('min')) {
+              totalSeconds += (value * 60).round();
+            } else {
+              totalSeconds += value.round();
+            }
           }
         }
+
+        String sumEstimate;
+        if (totalSeconds >= 3600) {
+          final hours = totalSeconds / 3600;
+          sumEstimate =
+              '${hours.toStringAsFixed((hours % 1 == 0) ? 0 : 1)} ${localizations.hours}';
+        } else if (totalSeconds >= 60) {
+          final minutes = totalSeconds / 60;
+          sumEstimate =
+              '${minutes.toStringAsFixed((minutes % 1 == 0) ? 0 : 1)} ${localizations.minutes}';
+        } else {
+          sumEstimate = '$totalSeconds ${localizations.seconds}';
+        }
+
+        final parentTaskData =
+            await taskService.getTaskById(widget.subtask.taskId);
+
+        if (parentTaskData != null) {
+          await ctrl.updateTask(
+            parentTaskData.id,
+            parentTaskData.title,
+            parentTaskData.description,
+            parentTaskData.status,
+            parentTaskData.dueDate,
+            parentTaskData.completedAt,
+            sumEstimate,
+            parentTaskData.priority,
+            null,
+            parentTaskData.startTime,
+            parentTaskData.endTime,
+          );
+        }
       }
-
-      String sumEstimate;
-      if (totalSeconds >= 3600) {
-        final hours = totalSeconds / 3600;
-        sumEstimate =
-            '${hours.toStringAsFixed((hours % 1 == 0) ? 0 : 1)} ${localizations.hours}';
-      } else if (totalSeconds >= 60) {
-        final minutes = totalSeconds / 60;
-        sumEstimate =
-            '${minutes.toStringAsFixed((minutes % 1 == 0) ? 0 : 1)} ${localizations.minutes}';
-      } else {
-        sumEstimate = '$totalSeconds ${localizations.seconds}';
-      }
-
-      final taskService = widget.ref.read(taskServiceProvider);
-      final parentTaskData = await taskService
-          .getTaskById(widget.subtask.taskId); // Renamed to avoid conflict
-
-      if (parentTaskData != null) {
-        await ctrl.updateTask(
-          parentTaskData.id,
-          parentTaskData.title,
-          parentTaskData.description,
-          parentTaskData.status,
-          parentTaskData.dueDate,
-          parentTaskData.completedAt,
-          sumEstimate,
-          parentTaskData.priority,
-          null,
-          parentTaskData.startTime,
-          parentTaskData.endTime,
+    } catch (e) {
+      print('Error saving subtask: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save subtask: $e')),
         );
       }
     }
@@ -1317,7 +1508,7 @@ class _SubtaskEditorModalState
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteSubtask(widget.subtask.id, widget.subtask.taskId);
-    widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
+    // widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
   }
 
   @override
@@ -1325,6 +1516,32 @@ class _SubtaskEditorModalState
 
   @override
   String getTitle() => AppLocalizations.of(context)!.subtask;
+
+  Future<void> _pickTime(BuildContext context, bool isStartTime) async {
+    final now = TimeOfDay.now();
+    final initialTime = isStartTime
+        ? (_startTime != null ? TimeOfDay.fromDateTime(_startTime!) : now)
+        : (_endTime != null ? TimeOfDay.fromDateTime(_endTime!) : now);
+
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initialTime,
+    );
+    if (picked != null) {
+      // Convert TimeOfDay to DateTime preserving the date part
+      final today = DateTime.now();
+      final dateTime = DateTime(
+          today.year, today.month, today.day, picked.hour, picked.minute);
+
+      setState(() {
+        if (isStartTime) {
+          _startTime = dateTime;
+        } else {
+          _endTime = dateTime;
+        }
+      });
+    }
+  }
 }
 
 // —— Mood Editor —— //
@@ -1369,10 +1586,28 @@ class _MoodLevelEditorModalState
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: _value == v ? Colors.blue[200] : Colors.grey[200],
+                color: _value == v
+                    ? (Theme.of(context).brightness == Brightness.dark
+                        ? Color.alphaBlend(
+                            Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(204),
+                            Colors.transparent)
+                        : Color.alphaBlend(
+                            Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(77),
+                            Colors.transparent))
+                    : (Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[700]
+                        : Colors.grey[200]),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Center(child: Text('$v')),
+              child: Center(
+                  child: Text('$v',
+                      key: ValueKey('moodValue_$v'))), // Add Key here
             ),
           );
         }),
@@ -1391,17 +1626,56 @@ class _MoodLevelEditorModalState
 
   @override
   void onSave() async {
-    final ctrl = widget.ref.read(trackerControllerProvider);
-    Navigator.of(context).pop();
-    if (widget.existing == null) {
-      await ctrl.addMood(_value ?? 1, _notesC.text.trim());
-    } else {
-      await ctrl.updateMood(
-        widget.existing!.id,
-        _value ?? 1,
-        _notesC.text.trim(),
+    final localizations = AppLocalizations.of(context)!;
+    debugPrint(
+        "[MoodLevelEditorModal.onSave] Entered onSave. Value: $_value. Existing: ${widget.existing != null}");
+
+    if (_value == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(localizations.pleaseSelectA(localizations.mood))),
       );
+      debugPrint("[MoodLevelEditorModal.onSave] Value is null, returning.");
+      return;
     }
+
+    // Capture the controller reference before any async operations
+    final ctrl = widget.ref.read(trackerControllerProvider);
+    debugPrint(
+        "[MoodLevelEditorModal.onSave] Controller obtained. Attempting DB operation.");
+
+    try {
+      // Pop the modal first to avoid disposal issues
+      Navigator.of(context).pop();
+
+      if (widget.existing == null) {
+        debugPrint("[MoodLevelEditorModal.onSave] Adding new mood.");
+        await ctrl.addMood(_value!, _notesC.text.trim());
+        debugPrint("[MoodLevelEditorModal.onSave] addMood completed.");
+      } else {
+        debugPrint(
+            "[MoodLevelEditorModal.onSave] Updating existing mood ID: ${widget.existing!.id}.");
+        await ctrl.updateMood(
+          widget.existing!.id,
+          _value!,
+          _notesC.text.trim(),
+        );
+        debugPrint(
+            "[MoodLevelEditorModal.onSave] updateMood completed for ID: ${widget.existing!.id}.");
+      }
+    } catch (e, s) {
+      debugPrint(
+          "[MoodLevelEditorModal.onSave] Caught error during DB operation: $e. Stack: $s");
+      // Show error in a different context since modal is already popped
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(localizations.failedToSaveItem(localizations.mood))),
+        );
+      }
+    }
+    debugPrint("[MoodLevelEditorModal.onSave] Exiting onSave method.");
   }
 
   @override
@@ -1420,9 +1694,27 @@ class _MoodLevelEditorModalState
 
   @override
   void onDelete() async {
-    Navigator.of(context).pop();
+    // This onDelete is called from the base TrackingEditorModal's delete button.
+    // It should handle its own try-catch for the delete operation and pop.
+    final localizations = AppLocalizations.of(context)!;
     final ctrl = widget.ref.read(trackerControllerProvider);
-    await ctrl.deleteMood(widget.existing!.id, widget.ref);
+    try {
+      if (widget.existing != null) {
+        await ctrl.deleteMood(widget.existing!.id, widget.ref);
+        if (mounted) {
+          Navigator.of(context)
+              .pop(); // Pop editor modal after successful delete
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(localizations.failedToDeleteItem(localizations.mood))),
+        );
+      }
+    }
   }
 }
 
@@ -1468,7 +1760,23 @@ class _EnergyLevelEditorModalState
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: _value == v ? Colors.blue[200] : Colors.grey[200],
+                color: _value == v
+                    ? (Theme.of(context).brightness == Brightness.dark
+                        ? Color.alphaBlend(
+                            Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(204),
+                            Colors.transparent)
+                        : Color.alphaBlend(
+                            Theme.of(context)
+                                .colorScheme
+                                .secondary
+                                .withAlpha(77),
+                            Colors.transparent))
+                    : (Theme.of(context).brightness == Brightness.dark
+                        ? Colors.grey[700]
+                        : Colors.grey[200]),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Center(child: Text('$v')),
@@ -1490,16 +1798,37 @@ class _EnergyLevelEditorModalState
 
   @override
   void onSave() async {
-    final ctrl = widget.ref.read(trackerControllerProvider);
-    Navigator.of(context).pop();
-    if (widget.existing == null) {
-      await ctrl.addEnergy(_value ?? 1, _notesC.text.trim());
-    } else {
-      await ctrl.updateEnergy(
-        widget.existing!.id,
-        _value ?? 1,
-        _notesC.text.trim(),
+    if (_value == null) {
+      final localizations = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(localizations.pleaseSelectA(localizations.energy))),
       );
+      return;
+    }
+
+    // Capture the controller reference before any async operations
+    final ctrl = widget.ref.read(trackerControllerProvider);
+
+    try {
+      // Pop the modal first
+      Navigator.of(context).pop();
+
+      if (widget.existing == null) {
+        await ctrl.addEnergy(_value ?? 1, _notesC.text.trim());
+      } else {
+        await ctrl.updateEnergy(
+          widget.existing!.id,
+          _value ?? 1,
+          _notesC.text.trim(),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save energy: $e')),
+        );
+      }
     }
   }
 
@@ -1551,23 +1880,19 @@ class _MedicationEditorModalState
   @override
   void initState() {
     super.initState();
+    final selectedDate = widget.ref.read(selectedDateProvider);
     if (widget.existing != null) {
       _nameC.text = widget.existing!.name;
       _doseC.text = widget.existing!.dose.toString();
-      _takenTimes = widget.existing!.takenTimes;
+      // Update taken status initialization
+      final selectedDate =
+          widget.ref.read(selectedDateProvider) ?? DateTime.now();
+      _takenTimes = widget.existing!.getTakenCountForDate(selectedDate);
+      _markAsTaken = _takenTimes > 0;
 
       // Check if the medication was taken today
-      if (widget.existing!.lastTaken != null) {
-        final now = DateTime.now();
-        final lastTaken = widget.existing!.lastTaken!;
-
-        // Compare year, month, and day to see if it was taken today
-        _markAsTaken = lastTaken.year == now.year &&
-            lastTaken.month == now.month &&
-            lastTaken.day == now.day;
-      } else {
-        _markAsTaken = false;
-      }
+      // Use getTakenCountForDate method instead of lastTaken
+      _markAsTaken = widget.existing!.getTakenCountForDate(selectedDate) > 0;
 
       // Check if the unit is one of the predefined ones
       final predefinedUnits = ['ml', 'mg', 'g', 'tablets'];
@@ -1630,13 +1955,23 @@ class _MedicationEditorModalState
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
-    final predefinedUnits = [
-      'ml',
-      'mg',
-      'g',
-      localizations.tablets,
-      localizations.custom
-    ];
+    final predefinedUnits = ['ml', 'mg', 'g', 'tablets', 'custom'];
+    String _getLocalizedUnit(String unit, AppLocalizations loc) {
+      switch (unit) {
+        case 'ml':
+          return 'ml';
+        case 'mg':
+          return 'mg';
+        case 'g':
+          return 'g';
+        case 'tablets':
+          return loc.tablets;
+        case 'custom':
+          return loc.custom;
+        default:
+          return unit;
+      }
+    }
 
     // Fix: Get the correctly localized frequency value
     final localizedFreq = _getLocalizedFrequency();
@@ -1679,10 +2014,13 @@ class _MedicationEditorModalState
             DropdownButton<String>(
               value: _unit,
               items: predefinedUnits
-                  .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                  .map((e) => DropdownMenuItem(
+                        value: e,
+                        child: Text(_getLocalizedUnit(e, localizations)),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() {
-                if (v == localizations.custom) {
+                if (v == 'custom') {
                   _isCustomUnit = true;
                   _customUnitC.text = _unit == 'custom' ? '' : _unit;
                 } else {
@@ -1915,30 +2253,15 @@ class _MedicationEditorModalState
         name: _nameC.text.trim(),
         dose: double.parse(_doseC.text),
         unit: unitToSave,
-takenTimes: _takenTimes,
         frequency: frequency,
         customDays: customDays,
         timesPerDay: _timesPerDay,
       );
     } else {
-      // Determine the new lastTaken based on whether we markAsTaken
-      final newLastTaken = _markAsTaken ? DateTime.now() : null;
-
-      // Create a temporary copy to compute nextDueDate
-      final updatedMed = widget.existing!.copyWith(lastTaken: newLastTaken);
-      final newNextDue = updatedMed.calculateNextDueDate();
-
       await ctrl.updateMedication(
-        widget.existing!.id,
-        _nameC.text.trim(),
-        double.parse(_doseC.text),
-        unitToSave,
-        _takenTimes,
-        frequency,
-        customDays,
-        _timesPerDay,
-        newLastTaken,
-        newNextDue,
+        id: widget.existing!.id,
+        newCount: _timesPerDay > 1 ? _takenTimes : (_markAsTaken ? 1 : 0),
+        forDate: widget.ref.read(selectedDateProvider) ?? DateTime.now(),
       );
     }
   }
@@ -1954,7 +2277,7 @@ takenTimes: _takenTimes,
   void onDelete() async {
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
-    await ctrl.deleteMedication(widget.existing!.id, widget.ref);
+    await ctrl.deleteMedication(widget.existing!.id);
   }
 }
 
@@ -2085,6 +2408,8 @@ class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
   }
 }
 
+// ...existing code...
+
 class SubtaskList extends ConsumerWidget {
   final String parentTaskId;
   final TaskModel parentTask;
@@ -2096,6 +2421,21 @@ class SubtaskList extends ConsumerWidget {
     required this.parentTask,
     required this.ref,
   }) : super(key: key);
+
+  // Helper method to get localized version of the status
+  String _getLocalizedStatus(String? status, AppLocalizations localizations) {
+    if (status == null) return localizations.todo;
+
+    switch (status.toLowerCase()) {
+      case 'done':
+        return localizations.done;
+      case 'in_progress':
+        return localizations.inProgress;
+      case 'todo':
+      default:
+        return localizations.todo;
+    }
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -2132,15 +2472,35 @@ class SubtaskList extends ConsumerWidget {
                 style: TextStyle(
                   decoration:
                       subtask.completed ? TextDecoration.lineThrough : null,
-                  color: subtask.completed ? Colors.grey : Colors.black,
+                  color: subtask.completed
+                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                      : Theme.of(context).colorScheme.onSurface,
                   fontSize: 14.0,
                 ),
               ),
-              subtitle: Text(
-                subtask.rawTimeValue != null && subtask.rawTimeValue!.isNotEmpty
-                    ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
-                    : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
-                style: const TextStyle(fontSize: 12.0),
+              subtitle: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Status indicator
+                  Text(
+                    '${localizations.status}: ${_getLocalizedStatus(subtask.status, localizations)}',
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  // Time estimate
+                  Text(
+                    subtask.rawTimeValue != null &&
+                            subtask.rawTimeValue!.isNotEmpty
+                        ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
+                        : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
+                    style: TextStyle(
+                      fontSize: 12.0,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ),
               onTap: () {
                 showDialog(
@@ -2152,6 +2512,7 @@ class SubtaskList extends ConsumerWidget {
                   ),
                 );
               },
+              // In the SubtaskList widget's checkbox onChanged method
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -2160,15 +2521,34 @@ class SubtaskList extends ConsumerWidget {
                     child: Checkbox(
                       value: subtask.completed,
                       onChanged: (_) async {
+                        // Capture controller reference before async operation
                         final ctrl = ref.read(trackerControllerProvider);
-                        await ctrl.updateSubtask(
-                          parentTaskId, // Use parentTaskId for consistency
-                          subtask,
-                          subtask.title,
-                          !subtask.completed,
-                          rawTimeValue: subtask.rawTimeValue ?? '',
-                        );
-                        ref.refresh(subtaskStateNotifierProvider(parentTaskId));
+
+                        try {
+                          // Calculate the new status based on completion
+                          final newCompleted = !subtask.completed;
+                          final newStatus = newCompleted ? 'done' : 'todo';
+
+                          await ctrl.updateSubtask(
+                            parentTaskId,
+                            subtask,
+                            subtask.title,
+                            newCompleted,
+                            newStatus,
+                            subtask.rawTimeValue ?? '',
+                            subtask.startTime,
+                            subtask.endTime,
+                          );
+                        } catch (e) {
+                          print('Error updating subtask completion: $e');
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                  content:
+                                      Text('Failed to update subtask: $e')),
+                            );
+                          }
+                        }
                       },
                     ),
                   ),
@@ -2207,33 +2587,27 @@ class SubtaskList extends ConsumerWidget {
                       content: TextField(
                         controller: titleController,
                         decoration: InputDecoration(
-                          labelText: localizations.subtaskTitle,
+                          labelText: localizations.title,
                         ),
                         autofocus: true,
                       ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(dialogContext),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
                           child: Text(localizations.cancel),
                         ),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Theme.of(context).primaryColor,
-                            foregroundColor: Colors.white,
-                          ),
+                        TextButton(
                           onPressed: () async {
                             if (titleController.text.trim().isNotEmpty) {
+                              Navigator.of(dialogContext).pop();
                               final ctrl = ref.read(trackerControllerProvider);
                               await ctrl.createSubtask(
                                 parentTaskId,
                                 titleController.text.trim(),
                               );
-                              ref.refresh(
-                                  subtaskStateNotifierProvider(parentTaskId));
-                              Navigator.pop(dialogContext);
                             }
                           },
-                          child: Text(localizations.addNew),
+                          child: Text(localizations.addNewSubtask),
                         ),
                       ],
                     );
@@ -2244,10 +2618,7 @@ class SubtaskList extends ConsumerWidget {
           ),
         );
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: subtaskWidgets,
-        );
+        return Column(children: subtaskWidgets);
       },
     );
   }

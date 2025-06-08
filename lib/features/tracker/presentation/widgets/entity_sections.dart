@@ -32,6 +32,7 @@ class EntitySections extends ConsumerWidget {
         ref.watch(medicationStateNotifierProvider(selectedDate));
     final tasks = ref.watch(taskStateNotifierProvider(selectedDate));
     final habits = ref.watch(habitStateNotifierProvider(selectedDate));
+    final theme = Theme.of(context);
 
     // Extract data, loading status, and errors manually
     List<SymptomModel> symptomsList =
@@ -73,134 +74,114 @@ class EntitySections extends ConsumerWidget {
                 '${localizations.category}: ${symptom.category} | ${localizations.severity}: ${symptom.severity}'),
             trailing: Text(
               DateFormat('HH:mm').format(symptom.createdAt.toLocal()),
-              style: const TextStyle(color: Colors.grey),
+              style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
             ),
           ),
         ),
         const SizedBox(height: 20),
         EntitySection<MedicationModel>(
-            title: localizations.medication,
-            items: medicationsList,
-            isLoading: medicationsLoading,
-            error: medicationsError,
-            onTap: (medication) => showModal(
-                  context,
-                  MedicationEditorModal(ref: ref, existing: medication),
-                ),
-            onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
-            itemBuilder: (medication) {
-              final isToday = selectedDate.year == DateTime.now().year &&
-                  selectedDate.month == DateTime.now().month &&
-                  selectedDate.day == DateTime.now().day;
+          title: localizations.medication,
+          items: medicationsList,
+          isLoading: medicationsLoading,
+          error: medicationsError,
+          onTap: (medication) => showModal(
+            context,
+            MedicationEditorModal(ref: ref, existing: medication),
+          ),
+          onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+          itemBuilder: (medication) {
+            final selectedDate =
+                ref.watch(selectedDateProvider) ?? DateTime.now();
+            final takenCount = medication.getTakenCountForDate(selectedDate);
+            final timesPerDay = medication.timesPerDay;
 
-              final isTakenToday = medication.isTakenOnDate(selectedDate);
-              final displayTakenTimes =
-                  isTakenToday ? medication.takenTimes : 0;
-
-              return ListTile(
-                title: Text(medication.name),
-                subtitle: Text(
-                  '${localizations.dose}: ${medication.dose} ${medication.unit}' +
-                      (medication.timesPerDay <= 1
-                          ? ' | ${displayTakenTimes > 0 ? localizations.takenS : localizations.notTaken}'
-                          : ' | $displayTakenTimes/${medication.timesPerDay} ${localizations.taken}'),
-                ),
-                trailing: medication.timesPerDay <= 1
-                    ? Checkbox(
-                        value: displayTakenTimes >= medication.timesPerDay,
-                        onChanged: (bool? value) async {
-                          final service = ref.read(medicationServiceProvider);
-                          MedicationModel updatedMedication;
-
-                          if (value == true) {
-                            updatedMedication = medication.copyWith(
-                              takenTimes: medication.timesPerDay,
-                              lastTaken: selectedDate,
-                              nextDueDate: medication.calculateNextDueDate(),
-                              updatedAt: DateTime.now(),
-                            );
-                          } else {
-                            updatedMedication = medication.copyWith(
-                              takenTimes: 0,
-                              lastTaken: isToday ? null : medication.lastTaken,
-                              nextDueDate:
-                                  isToday ? null : medication.nextDueDate,
-                              updatedAt: DateTime.now(),
-                            );
-                          }
-
-                          await service.updateMedication(
-                              medication.id, updatedMedication);
-                          ref.invalidate(
-                              medicationStateNotifierProvider(selectedDate));
-                        },
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.remove_circle_outline),
-                            onPressed: displayTakenTimes > 0
-                                ? () async {
-                                    final service =
-                                        ref.read(medicationServiceProvider);
-                                    int newTimes = displayTakenTimes - 1;
-
-                                    MedicationModel updatedMedication =
-                                        medication.copyWith(
-                                      takenTimes: newTimes,
-                                      lastTaken:
-                                          newTimes > 0 ? selectedDate : null,
-                                      nextDueDate: newTimes >=
-                                              medication.timesPerDay
-                                          ? medication.calculateNextDueDate()
-                                          : null,
-                                      updatedAt: DateTime.now(),
-                                    );
-
-                                    await service.updateMedication(
-                                        medication.id, updatedMedication);
-                                    ref.invalidate(
-                                        medicationStateNotifierProvider(
-                                            selectedDate));
-                                  }
-                                : null,
+            return ListTile(
+              title: Text(medication.name),
+              subtitle: Text(
+                  '${localizations.dose}: ${medication.dose} ${medication.unit}'),
+              trailing: timesPerDay <= 1
+                  ? StatefulBuilder(
+                      builder: (context, setState) {
+                        return Checkbox(
+                          value: takenCount >= 1,
+                          onChanged: (bool? value) async {
+                            setState(() {});
+                            try {
+                              final newCount = (value == true) ? 1 : 0;
+                              final controller =
+                                  ref.read(trackerControllerProvider);
+                              await controller.updateMedication(
+                                id: medication.id,
+                                newCount: newCount,
+                                forDate: selectedDate,
+                              );
+                            } catch (e) {
+                              setState(() {});
+                              debugPrint('Failed to update: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update: $e')),
+                              );
+                            }
+                          },
+                        );
+                      },
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: Icon(
+                            Icons.remove_circle_outline,
+                            color: takenCount > 0
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withOpacity(0.3),
                           ),
-                          Text('$displayTakenTimes/${medication.timesPerDay}'),
-                          IconButton(
-                            icon: const Icon(Icons.add_circle_outline),
-                            onPressed: displayTakenTimes <
-                                    medication.timesPerDay
-                                ? () async {
-                                    final service =
-                                        ref.read(medicationServiceProvider);
-                                    int newTimes = displayTakenTimes + 1;
-
-                                    MedicationModel updatedMedication =
-                                        medication.copyWith(
-                                      takenTimes: newTimes,
-                                      lastTaken: selectedDate,
-                                      nextDueDate: newTimes >=
-                                              medication.timesPerDay
-                                          ? medication.calculateNextDueDate()
-                                          : null,
-                                      updatedAt: DateTime.now(),
-                                    );
-
-                                    await service.updateMedication(
-                                        medication.id, updatedMedication);
-                                    ref.invalidate(
-                                        medicationStateNotifierProvider(
-                                            selectedDate));
-                                  }
-                                : null,
+                          onPressed: takenCount > 0
+                              ? () async {
+                                  final newCount = takenCount - 1;
+                                  final controller =
+                                      ref.read(trackerControllerProvider);
+                                  await controller.updateMedication(
+                                    id: medication.id,
+                                    newCount: newCount,
+                                    forDate: selectedDate,
+                                  );
+                                }
+                              : null,
+                        ),
+                        Text(
+                          '$takenCount/$timesPerDay',
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface,
+                            fontWeight: FontWeight.w600,
                           ),
-                        ],
-                      ),
-              );
-            }),
+                        ),
+                        IconButton(
+                          icon: Icon(
+                            Icons.add_circle_outline,
+                            color: takenCount < timesPerDay
+                                ? theme.colorScheme.primary
+                                : theme.colorScheme.onSurface.withOpacity(0.3),
+                          ),
+                          onPressed: takenCount < timesPerDay
+                              ? () async {
+                                  final newCount = takenCount + 1;
+                                  final controller =
+                                      ref.read(trackerControllerProvider);
+                                  await controller.updateMedication(
+                                    id: medication.id,
+                                    newCount: newCount,
+                                    forDate: selectedDate,
+                                  );
+                                }
+                              : null,
+                        ),
+                      ],
+                    ),
+            );
+          },
+        ),
         const SizedBox(height: 20),
-        //TODO: Bug: Tasks are not being displayed in the REST implementation. Error: flutter: TaskStateNotifier - Error: type 'Null' is not a subtype of type 'List<dynamic>' in type cast
         EntitySection<TaskModel>(
             title: localizations.tasks,
             items: tasksList,
@@ -210,41 +191,91 @@ class EntitySections extends ConsumerWidget {
                 showModal(context, TaskEditorModal(ref: ref, existing: task)),
             onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
             itemBuilder: (task) {
-              final isCompleted = task.completedAt != null &&
-                  task.completedAt!.year == today.year &&
-                  task.completedAt!.month == today.month &&
-                  task.completedAt!.day == today.day;
-
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ListTile(
-                    leading: const Icon(Icons.task_alt),
-                    title: Text(
-                      task.title,
-                      style: TextStyle(
-                        decoration:
-                            isCompleted ? TextDecoration.lineThrough : null,
-                        color: isCompleted ? Colors.grey : Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${task.status}',
-                    ),
-                    trailing: Checkbox(
-                      value: task.status == 'Done' || task.completedAt != null,
-                      onChanged: (value) async {
-                        final service = ref.read(taskServiceProvider);
-                        final currentTask = await service.getTaskById(task.id);
+                  StatefulBuilder(
+                    builder: (context, setState) {
+                      // Move the completion calculation inside StatefulBuilder
+                      bool localIsCompleted =
+                          task.status == 'Done' || task.completedAt != null;
 
-                        if (currentTask != null) {
-                          final updatedTask = currentTask.toggleCompletion();
-                          await service.updateTask(currentTask.id, updatedTask);
-                          ref.refresh(taskStateNotifierProvider(selectedDate));
-                        }
-                      },
-                    ),
+                      // Also calculate visual completion state for styling
+                      final isCompleted = localIsCompleted;
+
+                      return ListTile(
+                        leading: Icon(
+                          Icons.task_alt,
+                          color: isCompleted
+                              ? theme.colorScheme.primary.withOpacity(0.7)
+                              : theme.colorScheme.primary,
+                        ),
+                        title: Text(
+                          task.title,
+                          style: TextStyle(
+                            decoration:
+                                isCompleted ? TextDecoration.lineThrough : null,
+                            color: isCompleted
+                                ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        subtitle: Text(
+                          '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${_getLocalizedStatus(task.status, localizations)}',
+                          style: TextStyle(
+                            color: isCompleted
+                                ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                : theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        trailing: Checkbox(
+                          value: localIsCompleted,
+                          onChanged: (value) async {
+                            // Store previous state for potential revert
+                            final previousState = localIsCompleted;
+
+                            // Optimistic UI update - update immediately
+                            setState(() {
+                              localIsCompleted = value ?? false;
+                            });
+
+                            try {
+                              final controller =
+                                  ref.read(trackerControllerProvider);
+
+                              // Use the controller's updateTask method with proper status and completedAt handling
+                              await controller.updateTask(
+                                task.id,
+                                task.title,
+                                task.description,
+                                (value ?? false)
+                                    ? 'Done'
+                                    : 'In Progress', // Match the model's logic
+                                task.dueDate,
+                                (value ?? false)
+                                    ? selectedDate
+                                    : null, // completedAt
+                                task.estimatedTime,
+                                task.priority,
+                                null,
+                                task.startTime,
+                                task.endTime,
+                              );
+                            } catch (e) {
+                              // Revert to previous state on error
+                              setState(() {
+                                localIsCompleted = previousState;
+                              });
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to update: $e')),
+                              );
+                            }
+                          },
+                        ),
+                      );
+                    },
                   ),
 
                   // Display subtasks if parent has them flagged
@@ -259,14 +290,13 @@ class EntitySections extends ConsumerWidget {
                                 horizontal: 16.0, vertical: 8.0),
                             child: Text(
                               localizations.subtasks,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
-                                color: Colors.blueGrey,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                           ),
-                          // Use the updated SubtaskList widget
                           SubtaskList(
                             parentTaskId: task.id,
                             parentTask: task,
@@ -290,11 +320,15 @@ class EntitySections extends ConsumerWidget {
           ),
           onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
           itemBuilder: (habit) {
-            // Original habit builder code
-            final isCompleted = habit.lastCompleted != null &&
-                habit.lastCompleted!.year == today.year &&
-                habit.lastCompleted!.month == today.month &&
-                habit.lastCompleted!.day == today.day;
+            final selectedDate = ref.watch(selectedDateProvider);
+            final today = DateTime.now();
+            final displayDate = selectedDate ?? today;
+
+            // Check if habit is completed for the display date
+            final isCompleted = habit.completedDates.any((d) =>
+                d.year == displayDate.year &&
+                d.month == displayDate.month &&
+                d.day == displayDate.day);
 
             // Frequency text function
             String getFrequencyText() {
@@ -312,28 +346,51 @@ class EntitySections extends ConsumerWidget {
             }
 
             return ListTile(
-              leading: const Icon(Icons.sync_rounded),
+              leading: Icon(
+                Icons.sync_rounded,
+                color: isCompleted
+                    ? theme.colorScheme.primary.withOpacity(0.7)
+                    : theme.colorScheme.primary,
+              ),
               title: Text(
                 habit.title,
                 style: TextStyle(
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  color: isCompleted ? Colors.grey : Colors.black,
+                  color: isCompleted
+                      ? theme.colorScheme.onSurface.withOpacity(0.6)
+                      : theme.colorScheme.onSurface,
                 ),
               ),
               subtitle: Text(
                 '${habit.description.isNotEmpty ? habit.description : localizations.noDescription} | ${localizations.frequency}: ${getFrequencyText()}',
               ),
-              trailing: Checkbox(
-                value: isCompleted,
-                onChanged: (value) async {
-                  await ref.read(trackerControllerProvider).updateHabit(
-                        habit.id,
-                        habit.title,
-                        habit.description,
-                        habit.frequency,
-                        habit.customDays,
-                        markAsCompleted: value ?? false,
-                      );
+              trailing: StatefulBuilder(
+                builder: (context, setState) {
+                  return Checkbox(
+                    value: isCompleted,
+                    onChanged: (value) async {
+                      // Optimistic UI update
+                      setState(() {});
+
+                      final controller = ref.read(trackerControllerProvider);
+                      try {
+                        await controller.updateHabit(
+                          habit.id,
+                          habit.title,
+                          habit.description,
+                          habit.frequency,
+                          habit.customDays,
+                          value ?? false,
+                        );
+                      } catch (e) {
+                        // Revert on error
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to update: $e')),
+                        );
+                      }
+                    },
+                  );
                 },
               ),
             );
@@ -341,5 +398,17 @@ class EntitySections extends ConsumerWidget {
         ),
       ],
     );
+  }
+
+  String _getLocalizedStatus(String status, AppLocalizations localizations) {
+    switch (status.toLowerCase()) {
+      case 'done':
+        return localizations.done;
+      case 'in_progress':
+        return localizations.inProgress;
+      case 'todo':
+      default:
+        return localizations.todo;
+    }
   }
 }

@@ -39,17 +39,17 @@ class IconGrid extends ConsumerWidget {
     final tasks = ref.watch(taskStateNotifierProvider(selectedDate));
     final habits = ref.watch(habitStateNotifierProvider(selectedDate));
     final medication = ref.watch(medicationStateNotifierProvider(selectedDate));
-
+    final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withOpacity(0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 2),
@@ -63,7 +63,7 @@ class IconGrid extends ConsumerWidget {
         children: [
           IconListLauncher<EnergyModel>(
             title: localizations.energy,
-            icon: const Icon(Icons.bolt),
+            icon: Icon(Icons.bolt, color: theme.colorScheme.primary),
             items: energy,
             onAdd: () => showModal(context, EnergyLevelEditorModal(ref: ref)),
             onTap: (e) => showModal(
@@ -79,13 +79,15 @@ class IconGrid extends ConsumerWidget {
                 energy.isEmpty ? '—' : '${energy.last.energyLevel}/10',
           ),
           IconListLauncher<MoodModel>(
-            title: localizations.mood,
-            icon: const Icon(FontAwesomeIcons.faceSmile),
-            items: moods,
-            onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
-            onTap: (mood) => showModal(
-                context, MoodLevelEditorModal(ref: ref, existing: mood)),
-            itemBuilder: (e) => '${e.moodLevel}',
+          title: localizations.mood,
+          icon: Icon(FontAwesomeIcons.faceSmile,
+              color: theme.colorScheme.primary),
+          items: moods,
+          onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
+          // onAddEmpty: () => showModal(context, MoodLevelEditorModal(ref: ref)), // Consider if you need a specific onAddEmpty for mood
+          onTap: (mood) => showModal(
+              context, MoodLevelEditorModal(ref: ref, existing: mood)),
+          itemBuilder: (e) => '${e.moodLevel}',
             additionalTextBuilder: (e) =>
                 '${localizations.additionalNotes}: ${e.notes}',
             onDelete: (e) =>
@@ -96,34 +98,49 @@ class IconGrid extends ConsumerWidget {
                 moods.isEmpty ? '—' : '${moods.last.moodLevel}/10',
           ),
           IconListLauncher<MedicationModel>(
-            title: localizations.medication,
-            icon: const Icon(Icons.medication),
-            items: medication,
-            onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
-            onTap: (med) => showModal(
-                context, MedicationEditorModal(ref: ref, existing: med)),
-            itemBuilder: (m) => m.name,
-            additionalTextBuilder: (m) =>
-                '${localizations.dose}: ${m.dose} ${m.unit}',
-            onDelete: (m) =>
-                ref.read(trackerControllerProvider).deleteMedication(m.id, ref),
-            onEdit: (m) => showModal(
-                context, MedicationEditorModal(ref: ref, existing: m)),
-            statsLabelBuilder: () {
-              if (medication.isEmpty) return '—';
-              final takenToday = medication.where((m) {
-                final today = DateTime.now();
-                return m.lastTaken != null &&
-                    m.lastTaken!.year == today.year &&
-                    m.lastTaken!.month == today.month &&
-                    m.lastTaken!.day == today.day;
-              }).length;
-              return '$takenToday/${medication.length}';
-            },
-          ),
+  title: localizations.medication,
+  icon: Icon(Icons.medication, color: theme.colorScheme.primary),
+  items: medication,
+  onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+  onTap: (med) => showModal(
+      context, MedicationEditorModal(ref: ref, existing: med)),
+  itemBuilder: (m) => m.name,
+  additionalTextBuilder: (m) =>
+      '${localizations.dose}: ${m.dose} ${m.unit}',
+  onDelete: (m) =>
+      ref.read(trackerControllerProvider).deleteMedication(m.id),
+  onEdit: (m) => showModal(
+      context, MedicationEditorModal(ref: ref, existing: m)),
+  statsLabelBuilder: () {
+    if (medication.isEmpty) return '—';
+
+    final today = DateTime.now();
+    int takenCount = 0;
+
+    for (final med in medication) {
+      // Count how many times this medication was taken today
+      final countToday = med.getTakenCountForDate(today);
+
+      bool isCounted = false;
+      if (med.timesPerDay == 1) {
+        // For single-dose meds, count if taken at least once today
+        isCounted = countToday > 0;
+      } else {
+        // For multi-dose meds, count if all doses are taken today
+        isCounted = countToday >= med.timesPerDay;
+      }
+
+      if (isCounted) {
+        takenCount++;
+      }
+    }
+
+    return '$takenCount/${medication.length}';
+  },
+),
           IconListLauncher<SymptomModel>(
             title: localizations.symptoms,
-            icon: const Icon(Icons.healing),
+            icon: Icon(Icons.healing, color: theme.colorScheme.primary),
             items: symptoms,
             onAdd: () => showModal(context, SymptomEditorModal(ref: ref)),
             onTap: (symptom) => showModal(
@@ -139,7 +156,7 @@ class IconGrid extends ConsumerWidget {
           ),
           IconListLauncher<TaskModel>(
             title: localizations.tasks,
-            icon: const Icon(Icons.task_alt),
+            icon: Icon(Icons.task_alt, color: theme.colorScheme.primary),
             items: tasks,
             onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
             onTap: (task) =>
@@ -165,7 +182,7 @@ class IconGrid extends ConsumerWidget {
           ),
           IconListLauncher<HabitModel>(
             title: localizations.habits,
-            icon: const Icon(Icons.sync_rounded),
+            icon: Icon(Icons.sync_rounded, color: theme.colorScheme.primary),
             items: habits,
             onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
             onTap: (habit) =>

@@ -4,8 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spiceease/components/calendar_week_selector.dart';
+import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
+import 'package:spiceease/data/providers/task_provider.dart'; // Keep for getTaskById
 
 import 'package:spiceease/features/time_management/time_blocks/time_block_controller.dart';
 import 'package:spiceease/features/tracker/presentation/modals.dart';
@@ -14,7 +16,7 @@ import 'package:spiceease/l10n/app_localizations.dart';
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
 
 class TimeBlocksPage extends ConsumerWidget {
-  const TimeBlocksPage({Key? key}) : super(key: key);
+  const TimeBlocksPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -23,59 +25,58 @@ class TimeBlocksPage extends ConsumerWidget {
     final timeBlockState = ref.watch(timeBlockControllerProvider);
     final theme = Theme.of(context);
 
-    // Add this line to access the week offset
     final weekOffset = ref.watch(weekOffsetProvider);
 
-    final selectedDay = DateTime(
-      selectedDate.year,
-      selectedDate.month,
-      selectedDate.day,
-    );
-    final currentDay = timeBlockState.currentSelectedDate == null
+    final selectedDayOnly =
+        DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    final currentLoadedDayOnly = timeBlockState.currentSelectedDate == null
         ? null
         : DateTime(
             timeBlockState.currentSelectedDate!.year,
             timeBlockState.currentSelectedDate!.month,
-            timeBlockState.currentSelectedDate!.day,
-          );
+            timeBlockState.currentSelectedDate!.day);
 
-    // Automatically load tasks if date changed
-    if (selectedDay != currentDay && !timeBlockState.isLoading) {
+    if (selectedDayOnly != currentLoadedDayOnly && !timeBlockState.isLoading) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         ref.read(timeBlockControllerProvider.notifier).loadTasks(context);
       });
     }
 
+    if (timeBlockState.error != null && context.mounted) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error: ${timeBlockState.error}")),
+        );
+        // Clear error after showing
+        // ref.read(timeBlockControllerProvider.notifier).state = ref.read(timeBlockControllerProvider.notifier).state.copyWith(error: null);
+      });
+    }
+
     final locale = Localizations.localeOf(context).languageCode;
     final now = DateTime.now();
-
-    // To account for week offset
     final firstDayOfWeek = now
         .subtract(Duration(days: now.weekday - 1))
         .add(Duration(days: weekOffset * 7));
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          localizations.timeBlocks ?? 'Time Blocks',
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
-          ),
-        ),
+        title: Text(localizations.timeBlocks,
+            style: const TextStyle(
+                fontWeight: FontWeight.w600, letterSpacing: 0.5)),
         elevation: 0,
-        backgroundColor: Colors.white,
-        foregroundColor: Colors.black87,
+        backgroundColor: theme.colorScheme.surface,
+        foregroundColor: theme.colorScheme.onSurface,
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 8.0),
             child: ElevatedButton.icon(
-              onPressed: () => _showTaskModal(context, ref, null),
+              onPressed: () =>
+                  _showItemModal(context, ref, null), // null for new Task
               icon: const Icon(Icons.add, size: 18),
-              label: Text(localizations.newTask ?? 'New Task'),
+              label: Text(localizations.newTask),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 elevation: 2,
                 textStyle: const TextStyle(fontWeight: FontWeight.w600),
                 padding:
@@ -92,32 +93,29 @@ class TimeBlocksPage extends ConsumerWidget {
           ),
         ],
       ),
-      backgroundColor: const Color(0xFFF8F9FA),
-    body: SafeArea(
-      child: Column(
-        children: [
-          // Calendar Week Selector
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  spreadRadius: 1,
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+      backgroundColor: theme.colorScheme.surface,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                boxShadow: [
+                  BoxShadow(
+                    color: theme.shadowColor.withOpacity(0.1),
+                    spreadRadius: 1,
+                    blurRadius: 5,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: CalendarWeekSelector(
+                selectedDate: selectedDate,
+                locale: Localizations.localeOf(context),
+              ),
             ),
-            child: CalendarWeekSelector(
-              selectedDate: selectedDate,
-              locale: Localizations.localeOf(context),
-              theme: theme,
-            ),
-          ),
-
-            // —— Main content ——
             Expanded(
               child: timeBlockState.isLoading
                   ? Center(
@@ -134,20 +132,16 @@ class TimeBlocksPage extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Text(
-                            localizations.loading ?? 'Loading...',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black54,
-                            ),
-                          ),
+                          Text(localizations.loading,
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: theme.colorScheme.onSurfaceVariant)),
                         ],
                       ),
                     )
                   : Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // —— Display for the selected date ——
                         Padding(
                           padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                           child: Row(
@@ -159,11 +153,8 @@ class TimeBlocksPage extends ConsumerWidget {
                                       .withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Icon(
-                                  Icons.event,
-                                  size: 20,
-                                  color: theme.colorScheme.primary,
-                                ),
+                                child: Icon(Icons.event,
+                                    size: 20, color: theme.colorScheme.primary),
                               ),
                               const SizedBox(width: 12),
                               Expanded(
@@ -171,27 +162,25 @@ class TimeBlocksPage extends ConsumerWidget {
                                   DateFormat.yMMMMd(locale)
                                       .format(selectedDate),
                                   style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 18,
-                                    color: theme.colorScheme.onSurface,
-                                  ),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 18,
+                                      color: theme.colorScheme.onSurface),
                                 ),
                               ),
                             ],
                           ),
                         ),
-
-                        // —— The schedule area ——
                         Expanded(
                           flex: 5,
                           child: Container(
                             margin: const EdgeInsets.symmetric(horizontal: 12),
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(16),
-                              color: Colors.white,
+                              color: theme
+                                  .colorScheme.surface, // Was surfaceVariant
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.06),
+                                  color: theme.shadowColor.withOpacity(0.1),
                                   blurRadius: 10,
                                   spreadRadius: 1,
                                   offset: const Offset(0, 3),
@@ -203,7 +192,8 @@ class TimeBlocksPage extends ConsumerWidget {
                               child: SingleChildScrollView(
                                 physics: const AlwaysScrollableScrollPhysics(),
                                 child: SizedBox(
-                                  height: 60.0 * 24 + 36,
+                                  height: 60.0 * 24 +
+                                      36, // Hour height * 24 hours + header
                                   child: Row(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
@@ -211,11 +201,8 @@ class TimeBlocksPage extends ConsumerWidget {
                                       _buildTimeColumn(context),
                                       const SizedBox(width: 12),
                                       Expanded(
-                                        child: _buildScheduleArea(
-                                          context,
-                                          ref,
-                                          timeBlockState.scheduledTasks,
-                                        ),
+                                        child: _buildScheduleArea(context, ref,
+                                            timeBlockState.scheduledItems),
                                       ),
                                     ],
                                   ),
@@ -224,90 +211,16 @@ class TimeBlocksPage extends ConsumerWidget {
                             ),
                           ),
                         ),
-
-                        // —— Unscheduled tasks (no dragging) ——
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(6),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[200],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.list_alt,
-                                  size: 16,
-                                  color: Colors.grey[700],
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                localizations.unscheduledTasks ??
-                                    'Unscheduled Tasks',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 13,
-                                  color: Colors.grey[800],
-                                  letterSpacing: 0.3,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                         Container(
-                          margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
-                          height: 100,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(16),
-                            color: const Color(0xFFF5F6F8),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
+                          margin: const EdgeInsets.fromLTRB(
+                              12, 0, 12, 16), // Adjusted margin
+                          child: _buildUnscheduledItemsSection(
+                            context,
+                            ref,
+                            theme,
+                            localizations,
+                            timeBlockState.unscheduledItems,
                           ),
-                          // Just show a list of unscheduled tasks (no Draggable)
-                          child: timeBlockState.unscheduledTasks.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Icons.inbox,
-                                        color: Colors.grey[400],
-                                        size: 24,
-                                      ),
-                                      Text(
-                                        localizations.noTasks ?? 'No tasks',
-                                        style: TextStyle(
-                                          color: Colors.grey[500],
-                                          fontStyle: FontStyle.italic,
-                                          fontSize: 13,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : ListView.builder(
-                                  scrollDirection: Axis.horizontal,
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 8),
-                                  itemCount:
-                                      timeBlockState.unscheduledTasks.length,
-                                  itemBuilder: (context, index) {
-                                    final task =
-                                        timeBlockState.unscheduledTasks[index];
-                                    return SizedBox(
-                                      width: 180,
-                                      height: 100,
-                                      child: _buildTaskCard(context, ref, task),
-                                    );
-                                  },
-                                ),
                         ),
                       ],
                     ),
@@ -318,36 +231,20 @@ class TimeBlocksPage extends ConsumerWidget {
     );
   }
 
-  // Add this helper method to format the week range display
-  String _formatWeekRange(DateTime firstDay, String locale) {
-    final lastDay = firstDay.add(const Duration(days: 6));
-
-    // If first and last day are in the same month
-    if (firstDay.month == lastDay.month) {
-      return '${DateFormat.MMMd(locale).format(firstDay)} - ${DateFormat.d(locale).format(lastDay)}, ${lastDay.year}';
-    }
-
-    // If first and last day are in different months but same year
-    if (firstDay.year == lastDay.year) {
-      return '${DateFormat.MMMd(locale).format(firstDay)} - ${DateFormat.MMMd(locale).format(lastDay)}';
-    }
-
-    // If first and last day are in different years
-    return '${DateFormat.MMMd(locale).format(firstDay)}, ${firstDay.year} - ${DateFormat.MMMd(locale).format(lastDay)}, ${lastDay.year}';
-  }
-
   Widget _buildTimeColumn(BuildContext context) {
     final theme = Theme.of(context);
     const startHour = 0;
     const endHour = 23;
-    final hourHeight = 60.0;
+    const hourHeight = 60.0;
 
     return SizedBox(
-      width: 55,
+      width: 55, // Adjusted width for better AM/PM display
       child: Column(
         children: [
           Container(
+            // Header for the time column
             width: double.infinity,
+            height: 35, // Match schedule area header spacer
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
               color: theme.colorScheme.primary.withOpacity(0.1),
@@ -355,17 +252,14 @@ class TimeBlocksPage extends ConsumerWidget {
                   const BorderRadius.vertical(top: Radius.circular(12)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: theme.shadowColor.withOpacity(0.1),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 )
               ],
             ),
-            child: Icon(
-              Icons.access_time,
-              size: 18,
-              color: theme.colorScheme.primary,
-            ),
+            child: Icon(Icons.access_time,
+                size: 18, color: theme.colorScheme.primary),
           ),
           Column(
             children: List.generate(endHour - startHour + 1, (i) {
@@ -373,22 +267,21 @@ class TimeBlocksPage extends ConsumerWidget {
               return Container(
                 height: hourHeight,
                 width: double.infinity,
-                padding: const EdgeInsets.only(left: 6, top: 10),
+                padding:
+                    const EdgeInsets.only(left: 6, top: 10), // Adjusted padding
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(
-                      color: Colors.black.withOpacity(0.05),
-                      width: 1,
-                    ),
-                  ),
+                      top: BorderSide(
+                          color: theme.dividerColor.withOpacity(0.5),
+                          width: 1)),
                 ),
                 child: Text(
-                  '${hour % 12 == 0 ? 12 : hour % 12}${hour < 12 ? 'AM' : 'PM'}',
+                  DateFormat.j().format(DateTime(
+                      2000, 1, 1, hour)), // Using DateFormat for localization
                   style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[700],
-                    fontWeight: FontWeight.bold,
-                  ),
+                      fontSize: 10,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.bold),
                 ),
               );
             }),
@@ -398,60 +291,57 @@ class TimeBlocksPage extends ConsumerWidget {
     );
   }
 
-  int _calculateMaxConcurrentTasks(List<TaskModel> tasks) {
-    if (tasks.isEmpty) return 1;
+  int _calculateMaxConcurrentItems(List<dynamic> items) {
+    if (items.isEmpty) return 1;
 
-    // Filter valid tasks
-    final validTasks =
-        tasks.where((t) => t.startTime != null && t.endTime != null).toList();
-    if (validTasks.isEmpty) return 1;
+    final validItems = items.where((item) {
+      if (item is TaskModel)
+        return item.startTime != null && item.endTime != null;
+      if (item is SubtaskModel)
+        return item.startTime != null && item.endTime != null;
+      return false;
+    }).toList();
 
-    // Sort by start time
-    validTasks.sort((a, b) => a.startTime!.compareTo(b.startTime!));
+    if (validItems.isEmpty) return 1;
 
-    // Calculate max concurrent tasks
+    validItems.sort((a, b) {
+      DateTime aStart =
+          (a is TaskModel) ? a.startTime! : (a as SubtaskModel).startTime!;
+      DateTime bStart =
+          (b is TaskModel) ? b.startTime! : (b as SubtaskModel).startTime!;
+      return aStart.compareTo(bStart);
+    });
+
     int maxConcurrent = 0;
     List<DateTime> endTimes = [];
 
-    for (final task in validTasks) {
-      // Remove ended tasks
-      endTimes.removeWhere((end) => !end.isAfter(task.startTime!));
-      // Add this task's end time
-      endTimes.add(task.endTime!);
-      // Update max
+    for (final item in validItems) {
+      DateTime currentItemStartTime = (item is TaskModel)
+          ? item.startTime!
+          : (item as SubtaskModel).startTime!;
+      DateTime currentItemEndTime =
+          (item is TaskModel) ? item.endTime! : (item as SubtaskModel).endTime!;
+
+      endTimes.removeWhere((end) => !end.isAfter(currentItemStartTime));
+      endTimes.add(currentItemEndTime);
       if (endTimes.length > maxConcurrent) {
         maxConcurrent = endTimes.length;
       }
     }
-
     return maxConcurrent > 0 ? maxConcurrent : 1;
   }
 
   Widget _buildScheduleArea(
-    BuildContext context,
-    WidgetRef ref,
-    List<TaskModel> tasks,
-  ) {
-    final hourHeight = 60.0;
-
-    // Debug - print tasks with times to check if they're being received
-    print('Scheduled tasks: ${tasks.length}');
-    for (final task in tasks) {
-      print(
-          'Task: ${task.title}, Start: ${task.startTime}, End: ${task.endTime}');
-    }
+      BuildContext context, WidgetRef ref, List<dynamic> items) {
+    const hourHeight = 60.0;
+    final theme = Theme.of(context);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        // Calculate maximum concurrent tasks
-        final maxConcurrent = _calculateMaxConcurrentTasks(tasks);
-        print("Max concurrent tasks: $maxConcurrent");
-
-        // Calculate the total width needed based on max concurrency
+        final maxConcurrent = _calculateMaxConcurrentItems(items);
         final double totalWidth = maxConcurrent <= 1
-            ? constraints.maxWidth // Use full width if only one concurrent task
-            : constraints.maxWidth *
-                1.5; // Use more than screen width if multiple tasks
+            ? constraints.maxWidth
+            : constraints.maxWidth * 1.5; // Allow horizontal scroll if needed
 
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -462,26 +352,24 @@ class TimeBlocksPage extends ConsumerWidget {
             width: totalWidth,
             child: Stack(
               children: [
-                Column(
-                  children: List.generate(24, (i) {
+                Column(children: [
+                  Container(height: 35, width: totalWidth), // Header spacer
+                  ...List.generate(24, (i) {
                     return Container(
                       height: hourHeight,
                       width: totalWidth,
                       decoration: BoxDecoration(
                         border: Border(
-                          top: BorderSide(
-                            color: Colors.black.withOpacity(0.08),
-                            width: 1,
-                          ),
-                        ),
+                            top: BorderSide(
+                                color: theme.dividerColor.withOpacity(0.5),
+                                width: 1)),
                       ),
                     );
                   }),
-                ),
-                _buildCurrentTimeIndicator(hourHeight),
-                // Instead of drag/drop, simply lay out tasks by calculating top offset
-                ..._buildSideBySideTaskWidgets(
-                    tasks, hourHeight, totalWidth, maxConcurrent, ref),
+                ]),
+                _buildCurrentTimeIndicator(hourHeight, ref),
+                ..._buildSideBySideItemWidgets(
+                    items, hourHeight, totalWidth, maxConcurrent, ref, context),
               ],
             ),
           ),
@@ -490,118 +378,116 @@ class TimeBlocksPage extends ConsumerWidget {
     );
   }
 
-  List<Widget> _buildSideBySideTaskWidgets(
-    List<TaskModel> tasks,
+  List<Widget> _buildSideBySideItemWidgets(
+    List<dynamic> items,
     double hourHeight,
     double containerWidth,
     int maxConcurrent,
     WidgetRef ref,
+    BuildContext context,
   ) {
     final widgets = <Widget>[];
+    if (items.isEmpty) return widgets;
 
-    if (tasks.isEmpty) {
-      print("No scheduled tasks to display");
-      return widgets;
-    }
+    final sortedValidItems = items.where((item) {
+      if (item is TaskModel)
+        return item.startTime != null && item.endTime != null;
+      if (item is SubtaskModel)
+        return item.startTime != null && item.endTime != null;
+      return false;
+    }).toList()
+      ..sort((a, b) {
+        DateTime aStart =
+            (a is TaskModel) ? a.startTime! : (a as SubtaskModel).startTime!;
+        DateTime bStart =
+            (b is TaskModel) ? b.startTime! : (b as SubtaskModel).startTime!;
+        return aStart.compareTo(bStart);
+      });
 
-    // Sort tasks by startTime to process them in order
-    final sorted = List<TaskModel>.from(tasks)
-      ..removeWhere((task) => task.startTime == null || task.endTime == null)
-      ..sort((a, b) => a.startTime!.compareTo(b.startTime!));
+    if (sortedValidItems.isEmpty) return widgets;
 
-    if (sorted.isEmpty) {
-      print("No tasks with both start and end times");
-      return widgets;
-    }
-
-    // We'll assign each overlapping block a "column" index.
-    final columns = <TaskModel, int>{};
-
-    for (final task in sorted) {
+    final columns = <dynamic, int>{};
+    for (final item in sortedValidItems) {
       int assignedColumn = 0;
       bool foundColumn = false;
-      // Check existing assignments
       while (!foundColumn) {
         bool overlap = false;
-        for (final other in sorted) {
-          if (other == task) continue;
-
+        for (final other in sortedValidItems) {
+          if (other == item) continue;
           final otherColumn = columns[other] ?? -1;
           if (otherColumn != assignedColumn) continue;
-
-          // Check overlap
-          if (_tasksOverlap(task, other)) {
+          if (_itemsOverlap(item, other)) {
             overlap = true;
             break;
           }
         }
-
-        if (overlap) {
+        if (overlap)
           assignedColumn++;
-        } else {
+        else
           foundColumn = true;
-        }
       }
-      columns[task] = assignedColumn;
+      columns[item] = assignedColumn;
     }
 
-    // Calculate the maximum column index
     final maxColumn =
         columns.values.fold(0, (max, col) => col > max ? col : max);
-
-    // Calculate task width based on container width and concurrent tasks
-    final bool hasConcurrent = maxColumn > 0;
-
-    // Width calculation: if there are concurrent tasks, make each task
-    // take up 50% of the available width (or less), otherwise full width
-    final double taskWidth = hasConcurrent
+    final double itemWidth = maxColumn > 0
         ? (containerWidth / (maxColumn + 1)).clamp(100, containerWidth / 2)
-        : containerWidth - 16; // Full width minus padding
+        : containerWidth - 16; // -16 for padding
 
-    // Calculate position & size for each scheduled task
-    for (final task in sorted) {
-      final startTotal = task.startTime!.hour * 60 + task.startTime!.minute;
-      final endTotal = task.endTime!.hour * 60 + task.endTime!.minute;
-      final duration = endTotal - startTotal;
-      final top = startTotal * (hourHeight / 60);
+    for (final item in sortedValidItems) {
+      DateTime itemStartTime = (item is TaskModel)
+          ? item.startTime!
+          : (item as SubtaskModel).startTime!;
+      DateTime itemEndTime =
+          (item is TaskModel) ? item.endTime! : (item as SubtaskModel).endTime!;
 
-      // Calculate height based on duration, with minimum
-      final double height = max(
-        (duration * (hourHeight / 60)),
-        // Set minimum height based on content
-        task.description.isEmpty ? 60.0 : 70.0,
-      );
+      final startTotalMinutes = itemStartTime.hour * 60 + itemStartTime.minute;
+      final endTotalMinutes = itemEndTime.hour * 60 + itemEndTime.minute;
+      final durationMinutes = endTotalMinutes - startTotalMinutes;
 
-      final columnIndex = columns[task] ?? 0;
-      final leftOffset = columnIndex * taskWidth;
+      final top = startTotalMinutes * (hourHeight / 60);
+      final double height =
+          max((durationMinutes * (hourHeight / 60)), 60.0); // Min height 60
 
-      print(
-          "Positioning task: ${task.title} at top: $top, left: $leftOffset, width: $taskWidth, height: $height");
+      final columnIndex = columns[item] ?? 0;
+      final leftOffset = columnIndex * itemWidth;
 
       widgets.add(
         Positioned(
           top: top,
           left: leftOffset,
-          width: taskWidth,
+          width: itemWidth,
           height: height,
-          child: _buildTaskCardWithoutDrag(task, ref),
+          child: _buildItemCardWithoutDrag(item, ref, context),
         ),
       );
     }
-
     return widgets;
   }
 
-  bool _tasksOverlap(TaskModel a, TaskModel b) {
-    final startA = a.startTime!;
-    final endA = a.endTime!;
-    final startB = b.startTime!;
-    final endB = b.endTime!;
+  bool _itemsOverlap(dynamic a, dynamic b) {
+    DateTime startA =
+        (a is TaskModel) ? a.startTime! : (a as SubtaskModel).startTime!;
+    DateTime endA =
+        (a is TaskModel) ? a.endTime! : (a as SubtaskModel).endTime!;
+    DateTime startB =
+        (b is TaskModel) ? b.startTime! : (b as SubtaskModel).startTime!;
+    DateTime endB =
+        (b is TaskModel) ? b.endTime! : (b as SubtaskModel).endTime!;
     return startA.isBefore(endB) && startB.isBefore(endA);
   }
 
-  Widget _buildCurrentTimeIndicator(double hourHeight) {
+  Widget _buildCurrentTimeIndicator(double hourHeight, WidgetRef ref) {
     final now = DateTime.now();
+    // Only show indicator if 'now' is on the selectedDate
+    final selectedDate = ref.read(selectedDateProvider);
+    if (now.year != selectedDate.year ||
+        now.month != selectedDate.month ||
+        now.day != selectedDate.day) {
+      return const SizedBox.shrink();
+    }
+
     final minutesSinceMidnight = now.hour * 60 + now.minute;
     final topPosition = minutesSinceMidnight * (hourHeight / 60);
 
@@ -615,95 +501,291 @@ class TimeBlocksPage extends ConsumerWidget {
         child: Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            width: 10,
-            height: 10,
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-          ),
+              width: 10,
+              height: 10,
+              decoration: const BoxDecoration(
+                  color: Colors.red, shape: BoxShape.circle)),
         ),
       ),
     );
   }
 
-  Widget _buildTaskCardWithoutDrag(TaskModel task, WidgetRef ref) {
-    final pastel = getPastelColor(task.priority);
-    final border = getTaskPriorityColor(task.priority);
+  Widget _buildItemCardWithoutDrag(
+      dynamic item, WidgetRef ref, BuildContext context) {
+    final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
+
+    String title;
+    String? description;
+    int priority = 3; // Default priority for color
+    bool isSubtask = false;
+
+    if (item is TaskModel) {
+      title = item.title;
+      description = item.description;
+      priority = item.priority;
+    } else if (item is SubtaskModel) {
+      title = item.title;
+      isSubtask = true;
+      // Get priority from controller instead of async lookup
+      priority = ref
+          .read(timeBlockControllerProvider.notifier)
+          .getPriorityForSubtask(item.id);
+      // Don't show time estimate in description area - it will be shown in bottom section
+      description = null;
+    } else {
+      return const SizedBox.shrink(); // Should not happen
+    }
+
+    final Color itemColor, borderColor;
+    if (isSubtask) {
+      // Use priority-based colors for subtasks, but with reduced opacity
+      itemColor = getPastelColor(priority, theme.brightness).withOpacity(0.7);
+      borderColor = getTaskPriorityColor(priority, theme.brightness);
+    } else {
+      itemColor = getPastelColor(priority, theme.brightness);
+      borderColor = getTaskPriorityColor(priority, theme.brightness);
+    }
+
+    return _buildCard(context, ref, item, title, description, priority,
+        isSubtask, itemColor, borderColor, theme, localizations);
+  }
+// ...existing code...
+
+  Widget _buildCard(
+      BuildContext context,
+      WidgetRef ref,
+      dynamic item,
+      String title,
+      String? description,
+      int priority,
+      bool isSubtask,
+      Color itemColor,
+      Color borderColor,
+      ThemeData theme,
+      AppLocalizations localizations) {
+    // Get the same colors as Kanban cards
+    final taskPriorityColor = getTaskPriorityColor(priority, theme.brightness);
+    final pastelColor = getPastelColor(priority, theme.brightness);
 
     return Card(
       elevation: 2,
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      color: pastel,
+      margin: const EdgeInsets.symmetric(
+          vertical: 4, horizontal: 2), // Match Kanban margins
+      color: pastelColor, // Use Kanban-style pastel background
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: border.withOpacity(0.6), width: 1),
+        borderRadius: BorderRadius.circular(10), // Match Kanban border radius
+        side: BorderSide(
+            color: taskPriorityColor.withAlpha(153),
+            width: 1), // Match Kanban border
       ),
       child: InkWell(
-        onTap: () => _showTaskModal(ref.context, ref, task),
+        onTap: () => _showItemModal(context, ref, item),
         borderRadius: BorderRadius.circular(10),
         child: Stack(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              padding: const EdgeInsets.fromLTRB(
+                  12, 6, 12, 6), // Slightly increased padding
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    task.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                      height: 1.1,
+                  // Priority color bar with dynamic height based on title length - match Kanban formula
+                  Container(
+                    width: 4, // Match Kanban width
+                    height: min(
+                        60,
+                        12.0 *
+                            (title.length / 10).ceil()), // Use Kanban formula
+                    decoration: BoxDecoration(
+                      color: taskPriorityColor, // Use Kanban-style color
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  if (task.description.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      task.description,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        height: 1.0,
-                      ),
+                  const SizedBox(width: 8), // Match Kanban spacing
+
+                  // Main content area
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Subtask indicator for subtasks - minimal height
+                        if (isSubtask) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.subdirectory_arrow_right,
+                                size: 8, // Slightly bigger icon
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 2),
+                              Flexible(
+                                child: Text(
+                                  localizations.subtask,
+                                  style: TextStyle(
+                                    fontSize: 7, // Slightly bigger font
+                                    fontStyle: FontStyle.italic,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                    height: 1.1,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2), // Small spacing
+                        ],
+
+                        // Title - Use Expanded to take available space
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Calculate how many full lines of text can fit
+                              final fontSize =
+                                  isSubtask ? 10.0 : 11.0; // Bigger fonts
+                              final lineHeight =
+                                  1.2; // More line height for readability
+                              final lineHeightPx = fontSize * lineHeight;
+                              final availableHeight = constraints.maxHeight;
+                              final maxLines = (availableHeight / lineHeightPx)
+                                  .floor()
+                                  .clamp(1, 3);
+
+                              return Text(
+                                title,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: fontSize,
+                                  height: lineHeight,
+                                  color: theme.colorScheme.onSurface,
+                                ),
+                                maxLines: maxLines, // Only show complete lines
+                                overflow: TextOverflow.ellipsis,
+                              );
+                            },
+                          ),
+                        ),
+
+                        // Description (only for tasks) - Fixed single line
+                        if (description != null &&
+                            description.isNotEmpty &&
+                            !isSubtask) ...[
+                          const SizedBox(height: 2), // Small spacing
+                          Text(
+                            description,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9, // Bigger font
+                              height: 1.1,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(
+                            height: 3), // Small spacing before bottom row
+
+                        // Bottom content - Priority and Time/Estimate on same row
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Priority section
+                            Icon(Icons.flag_outlined,
+                                size: 8, // Bigger icon
+                                color: taskPriorityColor),
+                            const SizedBox(width: 2), // More spacing
+                            Flexible(
+                              child: Text(
+                                _getPriorityLabel(context, priority),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 7, // Bigger font
+                                  color: taskPriorityColor,
+                                  fontWeight: FontWeight.w500,
+                                  height: 1.1,
+                                ),
+                              ),
+                            ),
+
+                            // Time or estimate section - close spacing
+                            if ((item is TaskModel &&
+                                    item.startTime != null &&
+                                    item.endTime != null) ||
+                                (item is SubtaskModel &&
+                                    item.startTime != null &&
+                                    item.endTime != null) ||
+                                (isSubtask &&
+                                    item is SubtaskModel &&
+                                    item.rawTimeValue?.isNotEmpty == true)) ...[
+                              const SizedBox(width: 4), // More spacing
+                              Icon(Icons.timer_outlined,
+                                  size: 8, // Bigger icon
+                                  color: theme.colorScheme.onSurface
+                                      .withOpacity(0.6)),
+                              const SizedBox(width: 2), // More spacing
+                              Flexible(
+                                child: Text(
+                                  // Show scheduled time if available, otherwise show estimate for subtasks
+                                  ((item is TaskModel &&
+                                              item.startTime != null &&
+                                              item.endTime != null) ||
+                                          (item is SubtaskModel &&
+                                              item.startTime != null &&
+                                              item.endTime != null))
+                                      ? DateFormat.jm().format((item
+                                              is TaskModel)
+                                          ? item.startTime!
+                                          : (item as SubtaskModel).startTime!)
+                                      : (isSubtask &&
+                                              item is SubtaskModel &&
+                                              item.rawTimeValue?.isNotEmpty ==
+                                                  true)
+                                          ? item.rawTimeValue!
+                                          : '',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 7, // Bigger font
+                                    height: 1.1,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ],
                     ),
-                  ],
-                  const SizedBox(height: 4),
-                  _buildCompactPriorityRow(task),
-                  if (task.startTime != null && task.endTime != null)
-                    _buildCompactTimeRow(task),
+                  ),
                 ],
               ),
             ),
             Positioned(
-              top: 0,
-              right: 0,
+              top: 2, // Slightly more space from top
+              right: 2, // Slightly more space from right
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
-                  onTap: () => _confirmUnschedule(ref.context, ref, task),
-                  borderRadius: const BorderRadius.only(
-                    topRight: Radius.circular(10),
-                    bottomLeft: Radius.circular(10),
-                  ),
+                  onTap: () => _confirmUnschedule(context, ref, item),
+                  borderRadius:
+                      BorderRadius.circular(3), // Slightly bigger radius
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(1), // Slightly more padding
                     decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.05),
-                      borderRadius: const BorderRadius.only(
-                        topRight: Radius.circular(9),
-                        bottomLeft: Radius.circular(10),
-                      ),
+                      color: theme.colorScheme.surfaceVariant.withOpacity(0.9),
+                      borderRadius: BorderRadius.circular(3),
                     ),
-                    child: Icon(
-                      Icons.close,
-                      size: 12,
-                      color: Colors.black54,
-                    ),
+                    child: Icon(Icons.close,
+                        size: 10, // Bigger icon
+                        color: theme.colorScheme.onSurfaceVariant),
                   ),
                 ),
               ),
@@ -714,217 +796,454 @@ class TimeBlocksPage extends ConsumerWidget {
     );
   }
 
-  void _confirmUnschedule(BuildContext context, WidgetRef ref, TaskModel task) {
-    final localizations = AppLocalizations.of(context)!;
+// ...existing code...
 
+  void _confirmUnschedule(BuildContext context, WidgetRef ref, dynamic item) {
+    final localizations = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Unschedule Task'),
-        content: Text(
-            'Remove this task from the schedule? It will remain in your task list.'),
+        title: Text(localizations.unschedule),
+        content: Text(localizations.unscheduleTaskConfirmation),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text(localizations.cancel ?? 'Cancel'),
-          ),
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text(localizations.cancel)),
           ElevatedButton(
             onPressed: () async {
               Navigator.of(context).pop();
-              // Use the controller method instead of direct service
               await ref
                   .read(timeBlockControllerProvider.notifier)
-                  .unscheduleTask(task, context);
+                  .unscheduleTask(item, context);
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Colors.white,
-            ),
-            child: Text('Unschedule'),
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Colors.white),
+            child: Text(localizations.unschedule),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildTaskCard(BuildContext context, WidgetRef ref, TaskModel task,
-      {bool isDragging = false}) {
-    final pastel = getPastelColor(task.priority);
-    final border = getTaskPriorityColor(task.priority);
-    return Card(
-      elevation: isDragging ? 4 : 2,
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      color: pastel,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: border.withOpacity(0.6), width: 1),
+  Widget _buildUnscheduledItemsSection(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    AppLocalizations localizations,
+    List<dynamic> unscheduledItems,
+  ) {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(12.0, 0.0, 12.0, 16.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16.0),
+        color: theme.cardColor,
+        boxShadow: [
+          BoxShadow(
+            color: theme.shadowColor.withAlpha(13),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: () => _showTaskModal(context, ref, task),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 50, maxHeight: 100),
-          padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                task.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  height: 1.1,
+      child: unscheduledItems.isEmpty
+          ? Padding(
+              padding: const EdgeInsets.all(32.0),
+              child: Text(
+                localizations.noTasks,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withAlpha(128),
                 ),
               ),
-              if (task.description.isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(
-                  task.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    height: 1.0,
+            )
+          : SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.all(8),
+              child: IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (final item in unscheduledItems)
+                      _buildUnscheduledItemCard(
+                          context, ref, item, theme, localizations),
+                  ],
+                ),
+              ),
+            ),
+    );
+  }
+
+  Widget _buildUnscheduledItemCard(BuildContext context, WidgetRef ref,
+      dynamic item, ThemeData theme, AppLocalizations localizations) {
+    String title;
+    String? description;
+    int priority = 3; // Default
+    bool isSubtask = false;
+
+    if (item is TaskModel) {
+      title = item.title;
+      description = item.description;
+      priority = item.priority;
+    } else if (item is SubtaskModel) {
+      title = item.title;
+      isSubtask = true;
+      description = null;
+
+      // Get priority from controller instead of FutureBuilder
+      priority = ref
+          .read(timeBlockControllerProvider.notifier)
+          .getPriorityForSubtask(item.id);
+    } else {
+      return const SizedBox.shrink();
+    }
+
+    // Use Kanban-style colors consistently
+    final taskPriorityColor = getTaskPriorityColor(priority, theme.brightness);
+    final itemColor =
+        getPastelColor(priority, theme.brightness).withOpacity(0.3);
+
+    return _buildUnscheduledCard(
+        context,
+        ref,
+        item,
+        title,
+        description,
+        priority,
+        isSubtask,
+        itemColor,
+        taskPriorityColor,
+        theme,
+        localizations);
+  }
+
+  Widget _buildUnscheduledCard(
+      BuildContext context,
+      WidgetRef ref,
+      dynamic item,
+      String title,
+      String? description,
+      int priority,
+      bool isSubtask,
+      Color itemColor,
+      Color borderColor,
+      ThemeData theme,
+      AppLocalizations localizations) {
+    return GestureDetector(
+      onTap: () => _showItemModal(context, ref, item),
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: itemColor,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: borderColor.withAlpha(153)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withAlpha(13),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: InkWell(
+          onTap: () => _showItemModal(context, ref, item),
+          borderRadius: BorderRadius.circular(10),
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top content - Title section with priority color bar
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Use Kanban-style dynamic height formula
+                    Container(
+                      width: 4,
+                      height: min(60,
+                          12.0 * (title.length / 10).ceil()), // Kanban formula
+                      decoration: BoxDecoration(
+                        color: borderColor,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Subtask indicator for subtasks
+                          if (isSubtask)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2.0),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.subdirectory_arrow_right,
+                                    size: 10,
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.6),
+                                  ),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    localizations.subtask,
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontStyle: FontStyle.italic,
+                                      color: theme.colorScheme.onSurface
+                                          .withOpacity(0.6),
+                                      height: 1.0,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                          // Title
+                          Text(
+                            title,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface,
+                              height: 1.2,
+                            ),
+                          ),
+
+                          const SizedBox(height: 6),
+
+                          // Description (only for tasks - subtasks don't show description here)
+                          if (!isSubtask &&
+                              description != null &&
+                              description.isNotEmpty) ...[
+                            Text(
+                              description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.7),
+                                height: 1.0,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 8),
+
+                // Spacer to push bottom content down
+                const Spacer(),
+
+                // Bottom content - Priority (for both tasks and subtasks now)
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.flag_outlined, size: 10, color: borderColor),
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        _getPriorityLabel(context, priority),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 9,
+                          color: borderColor,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Time estimate for subtasks (separate from priority)
+                if (isSubtask &&
+                    item is SubtaskModel &&
+                    item.rawTimeValue?.isNotEmpty == true)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.timer_outlined,
+                          size: 10,
+                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                        const SizedBox(width: 3),
+                        Flexible(
+                          child: Text(
+                            item.rawTimeValue!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 9,
+                              height: 1.1,
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.6),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
               ],
-              const Spacer(),
-              _buildCompactPriorityRow(task),
-              if (task.startTime != null && task.endTime != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 2),
-                  child: _buildCompactTimeRow(task),
-                ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildCompactPriorityRow(TaskModel task) {
-    final priorityColor = getTaskPriorityColor(task.priority);
-    String label = '';
-    switch (task.priority) {
-      case 1:
-        label = 'Lowest Priority';
-        break;
-      case 2:
-        label = 'Low Priority';
-        break;
-      case 3:
-        label = 'Medium Priority';
-        break;
-      case 4:
-        label = 'High Priority';
-        break;
-      case 5:
-        label = 'Highest Priority';
-        break;
-      default:
-        label = '';
+  Color getPastelColor(int? priority, Brightness brightness) {
+    // For dark mode, use darker pastel colors that work well with dark backgrounds
+    if (brightness == Brightness.dark) {
+      switch (priority) {
+        case 1:
+          return const Color(0xFF0D47A1).withOpacity(0.3); // Dark blue pastel
+        case 2:
+          return const Color(0xFF1B5E20).withOpacity(0.3); // Dark green pastel
+        case 3:
+          return const Color(0xFFF57F17).withOpacity(0.3); // Dark yellow pastel
+        case 4:
+          return const Color(0xFFE65100).withOpacity(0.3); // Dark orange pastel
+        case 5:
+          return const Color(0xFFB71C1C).withOpacity(0.3); // Dark red pastel
+        default:
+          return const Color(0xFF424242).withOpacity(0.3); // Dark grey pastel
+      }
     }
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Icon(Icons.flag_outlined, size: 8, color: priorityColor),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 8,
-                color: priorityColor,
-                fontWeight: FontWeight.w500,
-                height: 1.0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildCompactTimeRow(TaskModel task) {
-    return SizedBox(
-      width: double.infinity,
-      child: Row(
-        children: [
-          Icon(Icons.timer_outlined, size: 8, color: Colors.grey[600]),
-          const SizedBox(width: 2),
-          Expanded(
-            child: Text(
-              '${DateFormat.jm().format(task.startTime!)} - '
-              '${DateFormat.jm().format(task.endTime!)}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 8,
-                color: Colors.grey[600],
-                height: 1.0,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color getPastelColor(int? priority) {
+    // Light, subtle pastel colors for light mode
     switch (priority) {
       case 1:
-        return const Color(0xFFE3F2FD);
+        return const Color(0xFFE3F2FD); // Pastel blue
       case 2:
-        return const Color(0xFFE8F5E9);
+        return const Color(0xFFE8F5E9); // Pastel green
       case 3:
-        return const Color(0xFFFFF8E1);
+        return const Color(0xFFFFF8E1); // Pastel yellow
       case 4:
-        return const Color(0xFFFFE0B2);
+        return const Color(0xFFFFE0B2); // Pastel orange
       case 5:
-        return const Color(0xFFFFF0F0);
+        return const Color(0xFFFFF0F0); // Pastel red
       default:
-        return const Color(0xFFF5F5F5);
+        return const Color(0xFFF5F5F5); // Default pastel color
     }
   }
 
-  Color getTaskPriorityColor(int? priority) {
+  Color getTaskPriorityColor(int? priority, Brightness brightness) {
+    // For dark mode, use slightly lighter colors for better visibility
+    if (brightness == Brightness.dark) {
+      switch (priority) {
+        case 1:
+          return const Color(0xFF42A5F5); // Light blue for dark mode
+        case 2:
+          return const Color(0xFF66BB6A); // Light green for dark mode
+        case 3:
+          return const Color(0xFFFFD54F); // Light yellow for dark mode
+        case 4:
+          return const Color(0xFFFFB74D); // Light orange for dark mode
+        case 5:
+          return const Color(0xFFEF5350); // Light red for dark mode
+        default:
+          return const Color(0xFFBDBDBD); // Light grey for dark mode
+      }
+    }
+
+    // Standard colors for light mode
     switch (priority) {
       case 1:
-        return const Color(0xFF2196F3);
+        return const Color(0xFF2196F3); // Blue
       case 2:
-        return const Color(0xFF4CAF50);
+        return const Color(0xFF4CAF50); // Green
       case 3:
-        return const Color(0xFFFFC107);
+        return const Color(0xFFFFC107); // Yellow
       case 4:
-        return const Color(0xFFFF9800);
+        return const Color(0xFFFF9800); // Orange
       case 5:
-        return const Color(0xFFF44336);
+        return const Color(0xFFF44336); // Red
       default:
-        return const Color(0xFF9E9E9E);
+        return const Color(0xFF9E9E9E); // Grey
     }
   }
 
-  void _showTaskModal(BuildContext context, WidgetRef? ref, TaskModel? task) {
+  Future<void> _showItemModal(
+      BuildContext context, WidgetRef ref, dynamic item) async {
+    Widget modalContent;
+
+    if (item is TaskModel || item == null) {
+      // item == null means new Task
+      modalContent = TaskEditorModal(
+        ref: ref,
+        existing: item as TaskModel?,
+        selectedDate: ref.read(selectedDateProvider),
+      );
+    } else if (item is SubtaskModel) {
+      // For SubtaskEditorModal, we need the parent TaskModel.
+      // Fetch it using the taskId from the SubtaskModel.
+      final parentTask =
+          await ref.read(taskServiceProvider).getTaskById(item.taskId);
+      if (parentTask != null) {
+        modalContent = SubtaskEditorModal(
+          ref: ref,
+          parentTask: parentTask,
+          subtask: item, // 'existing' is the subtask itself
+        );
+      } else {
+        // Handle error: parent task not found
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            // SnackBar(content: Text(AppLocalizations.of(context)!.parentTaskNotFound)),
+            SnackBar(content: Text('Parent task not found')),
+          );
+        }
+        return;
+      }
+    } else {
+      return; // Should not happen
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => TaskEditorModal(
-        ref: ref!,
-        existing: task,
-        selectedDate: ref.read(selectedDateProvider),
-      ),
-    ).then((_) {
-      if (ref != null) {
+      builder: (_) => modalContent,
+    ).then((result) {
+      // If modal was popped with 'true' (e.g. after save/delete), refresh.
+      if (result == true) {
+        ref.read(timeBlockControllerProvider.notifier).loadTasks(context);
+      } else if (item == null && result == null) {
+        // New task modal was cancelled
+        // Potentially do nothing or a light refresh if needed
+      } else {
+        // Fallback refresh for other cases if state might be stale
         ref.read(timeBlockControllerProvider.notifier).loadTasks(context);
       }
     });
+  }
+
+  String _getPriorityLabel(BuildContext context, int priority) {
+    final localizations = AppLocalizations.of(context)!;
+    switch (priority) {
+      case 1:
+        return localizations.lowestPriority;
+      case 2:
+        return localizations.lowPriority;
+      case 3:
+        return localizations.mediumPriority;
+      case 4:
+        return localizations.highPriority;
+      case 5:
+        return localizations.highestPriority;
+      default:
+        return "";
+    }
   }
 }

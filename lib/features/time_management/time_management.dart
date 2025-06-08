@@ -4,30 +4,28 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_page.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_page.dart';
 import 'package:spiceease/features/time_management/time_blocks/time_blocks_page.dart';
-import 'package:spiceease/features/tracker/presentation/widgets/tracker_header.dart';
+import 'package:spiceease/components/app_header.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 class TimeManagementPage extends ConsumerWidget {
   const TimeManagementPage({Key? key}) : super(key: key);
 
-// TODO: In screens bigger than a phone, the cards are too big. Fix this.
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
-            AppHeader(),
+            AppHeader(sectionName: localizations.timeManagement),
             const SizedBox(height: 24),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: GridView.count(
-                  crossAxisCount: 1,
-                  childAspectRatio: 2.5,
-                  mainAxisSpacing: 16,
+                child: ListView(
                   children: [
                     _TimeManagementCard(
                       title: localizations.flowmodoro,
@@ -37,10 +35,11 @@ class TimeManagementPage extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (context) => FlowmodoroPage()),
+                              builder: (context) => const FlowmodoroPage()),
                         );
                       },
                     ),
+                    const SizedBox(height: 16),
                     _TimeManagementCard(
                       title: localizations.kanban,
                       description: localizations.kanbanDescription,
@@ -48,10 +47,12 @@ class TimeManagementPage extends ConsumerWidget {
                       color: Colors.blue,
                       onTap: () {
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (context) => KanbanPage()),
+                          MaterialPageRoute(
+                              builder: (context) => const KanbanPage()),
                         );
                       },
                     ),
+                    const SizedBox(height: 16),
                     _TimeManagementCard(
                       title: localizations.timeBlocks,
                       description: localizations.timeBlocksDescription,
@@ -60,10 +61,12 @@ class TimeManagementPage extends ConsumerWidget {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                              builder: (context) => TimeBlocksPage()),
+                              builder: (context) => const TimeBlocksPage()),
                         );
                       },
                     ),
+                    const SizedBox(
+                        height: 18), // Reduce this to 16px when implemented.
                     Stack(
                       children: [
                         _TimeManagementCard(
@@ -76,23 +79,28 @@ class TimeManagementPage extends ConsumerWidget {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(104),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.4),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Center(
                               child: Text(
-                                "Coming soon!",
+                                localizations.comingSoon,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: theme.colorScheme.surface,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
                                 ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(
+                        height: 24), // Reduce this to 16px when implemented.
                     Stack(
                       children: [
                         _TimeManagementCard(
@@ -105,17 +113,20 @@ class TimeManagementPage extends ConsumerWidget {
                         Positioned.fill(
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.black.withAlpha(104),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.4),
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Center(
                               child: Text(
-                                "Coming soon!",
+                                localizations.comingSoon,
                                 style: TextStyle(
-                                  color: Colors.white,
+                                  color: theme.colorScheme.surface,
                                   fontWeight: FontWeight.bold,
                                   fontSize: 20,
                                 ),
+                                overflow: TextOverflow.ellipsis,
+                                maxLines: 1,
                               ),
                             ),
                           ),
@@ -150,59 +161,72 @@ class _TimeManagementCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Card(
       elevation: 1,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      color: Colors.white,
+      color: theme.colorScheme.surface,
+      surfaceTintColor: Colors.transparent,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: color.withAlpha(26),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    size: 40,
-                    color: color,
+          child: IntrinsicHeight(
+            // Add this to make the row adapt to content height
+            child: Row(
+              crossAxisAlignment:
+                  CrossAxisAlignment.stretch, // Stretch to fill height
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(
+                        theme.brightness == Brightness.dark ? 0.15 : 0.1),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: 40,
+                      color: color.withOpacity(
+                          theme.brightness == Brightness.dark ? 0.85 : 1.0),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
+                      const SizedBox(height: 8),
+                      Text(
+                        description,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 3,
                       ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -24,14 +24,15 @@ class EntitySection<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withOpacity(0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 2),
@@ -47,19 +48,21 @@ class EntitySection<T> extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                Expanded( // Wrap the Text widget with Expanded
+                  child: Text(
+                    title,
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    overflow: TextOverflow.ellipsis, // Handle long text gracefully
                   ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.add_rounded),
                   style: IconButton.styleFrom(
-                    backgroundColor: Colors.blue.withOpacity(0.1),
-                    foregroundColor: Colors.blue,
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                    foregroundColor: theme.colorScheme.primary,
                     padding: const EdgeInsets.all(8),
                   ),
                   onPressed: onAdd,
@@ -69,14 +72,21 @@ class EntitySection<T> extends StatelessWidget {
             ),
           ),
           if (isLoading)
-            const Center(child: Padding(
-              padding: EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
+            Center(
+                child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CircularProgressIndicator(
+                color: theme.colorScheme.primary,
+              ),
             ))
           else if (error != null)
-            Center(child: Padding(
+            Center(
+                child: Padding(
               padding: const EdgeInsets.all(16.0),
-              child: Text(error!),
+              child: Text(
+                error!,
+                style: TextStyle(color: theme.colorScheme.error),
+              ),
             ))
           else if (items.isEmpty)
             Center(
@@ -84,7 +94,8 @@ class EntitySection<T> extends StatelessWidget {
                 padding: const EdgeInsets.all(16),
                 child: Text(
                   localizations.noItemsYet,
-                  style: const TextStyle(color: Colors.black54),
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6)),
                 ),
               ),
             )
@@ -103,7 +114,10 @@ class EntitySection<T> extends StatelessWidget {
                       child: itemBuilder(items[index]),
                     ),
                     if (index < items.length - 1)
-                      const Divider(height: 1),
+                      Divider(
+                        height: 1,
+                        color: theme.colorScheme.outline.withOpacity(0.2),
+                      ),
                   ],
                 );
               },

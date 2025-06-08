@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
-class ListModal<T> extends StatelessWidget {
+class ListModal<T> extends ConsumerWidget {
   final String title;
   final String additionalText;
   final List<T> items;
@@ -18,8 +19,9 @@ class ListModal<T> extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final localizations = AppLocalizations.of(context)!;
+
 
     return Dialog(
       child: Padding(
@@ -39,6 +41,7 @@ class ListModal<T> extends StatelessWidget {
                   ),
                 ),
                 IconButton(
+                  key: const Key('add_new_button'),
                   icon: const Icon(Icons.add_circle_outline),
                   onPressed: onAdd,
                 ),
@@ -49,13 +52,15 @@ class ListModal<T> extends StatelessWidget {
               Text(additionalText),
             ],
             const SizedBox(height: 16),
+            // FIX: Use items instead of moods
             if (items.isEmpty)
               Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Text(
                     localizations.noItemsYet,
-                    style: const TextStyle(color: Colors.black54),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ),
               )
@@ -63,8 +68,10 @@ class ListModal<T> extends StatelessWidget {
               Flexible(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: items.length,
-                  itemBuilder: (context, index) => itemBuilder(context, items[index]),
+                  itemCount:
+                      items.length, // Use items.length instead of moods.length
+                  itemBuilder: (context, index) => itemBuilder(context,
+                      items[index]), // Use items[index] instead of moods[index]
                 ),
               ),
           ],
