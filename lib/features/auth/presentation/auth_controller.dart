@@ -134,7 +134,6 @@ class AuthController extends StateNotifier<AuthState> {
     String email,
     String password,
     String? confirmPassword,
-    String? username,
     BuildContext context,
   ) async {
     state = state.copyWith(isLoading: true, error: null);
@@ -145,9 +144,7 @@ class AuthController extends StateNotifier<AuthState> {
         if (password != confirmPassword) {
           throw AuthException('password_mismatch');
         }
-        if (username == null || username.isEmpty) {
-          throw AuthException('username_required');
-        }
+
 
         // Start listening for auth changes before registration
         final completer = Completer<void>();
@@ -157,7 +154,6 @@ class AuthController extends StateNotifier<AuthState> {
               // Create user profile in database
               await _userService.createUser(UserModel(
                 id: user.uid,
-                username: username,
                 createdAt: DateTime.now(),
                 updatedAt: DateTime.now(),
               ));

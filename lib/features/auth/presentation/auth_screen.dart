@@ -29,7 +29,11 @@ class AuthScreen extends ConsumerWidget {
     });
 
     return Scaffold(
-      appBar: AppBar(actions: const [LanguageSwitcher(), SizedBox(width: 12)]),
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        foregroundColor: Theme.of(context).colorScheme.onSurface,
+        actions: const [LanguageSwitcher(), SizedBox(width: 12)],
+      ),
       body: Center(
         child: isSmall
             ? _buildMobileLayout(loc, controller, state)
@@ -108,7 +112,7 @@ class _AuthLogo extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Image.asset(
-          'assets/images/logo.png',
+          'assets/icons/spiceease_logo.png',
           width: isSmall ? 100 : 200,
           height: isSmall ? 100 : 200,
         ),
@@ -142,7 +146,6 @@ class _AuthForm extends StatefulWidget {
 
 class __AuthFormState extends State<_AuthForm> {
   late final TextEditingController _emailController;
-  late final TextEditingController _usernameController;
   late final TextEditingController _passwordController;
   late final TextEditingController _confirmPasswordController;
 
@@ -150,7 +153,6 @@ class __AuthFormState extends State<_AuthForm> {
   void initState() {
     super.initState();
     _emailController = TextEditingController();
-    _usernameController = TextEditingController();
     _passwordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
   }
@@ -158,7 +160,6 @@ class __AuthFormState extends State<_AuthForm> {
   @override
   void dispose() {
     _emailController.dispose();
-    _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
@@ -173,18 +174,7 @@ class __AuthFormState extends State<_AuthForm> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Username field (registration only)
-          if (!isLogin) ...[
-            TextFormField(
-              controller: _usernameController,
-              decoration: InputDecoration(
-                labelText: widget.loc.username,
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 10), // Bottom margin
-          ],
-
+          const SizedBox(height: 10),
           // Email field
           TextFormField(
             controller: _emailController,
@@ -280,7 +270,6 @@ class __AuthFormState extends State<_AuthForm> {
       _emailController.text.trim(),
       _passwordController.text.trim(),
       widget.state.isLogin ? null : _confirmPasswordController.text.trim(),
-      widget.state.isLogin ? null : _usernameController.text.trim(),
       context,
     );
   }
