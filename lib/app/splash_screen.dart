@@ -52,7 +52,7 @@ class SplashScreen extends ConsumerWidget {
           children: [
             /// Displays the app logo from the assets folder.
             const Image(
-              image: AssetImage('assets/images/logo_transparent.png'),
+              image: AssetImage('assets/icons/spiceease_logo.png'),
               width: 150.0,
               height: 150.0,
             ),
