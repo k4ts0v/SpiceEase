@@ -2,34 +2,39 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Provider for managing the application locale
-final localeProvider = StateNotifierProvider<LocaleNotifier, Locale>((ref) {
-  return LocaleNotifier();
-});
-
-class LocaleNotifier extends StateNotifier<Locale> {
-  // Default locale is English
-  LocaleNotifier() : super(const Locale('en')) {
+class LocaleNotifier extends StateNotifier<Locale?> {
+  LocaleNotifier() : super(null) {
     _loadSavedLocale();
   }
 
-  // Load saved locale from SharedPreferences
   Future<void> _loadSavedLocale() async {
-    final prefs = await SharedPreferences.getInstance();
-    final languageCode = prefs.getString('languageCode');
-    if (languageCode != null) {
-      state = Locale(languageCode);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final languageCode = prefs.getString('language_code');
+      if (languageCode != null) {
+        state = Locale(languageCode);
+      } else {
+        // Default to English if no saved preference
+        state = const Locale('en');
+      }
+    } catch (e) {
+      print('Error loading saved locale: $e');
+      state = const Locale('en');
     }
   }
 
-  // Change the application locale
-  Future<void> setLocale(String languageCode) async {
-    state = Locale(languageCode);
-    // Save the selected language code to SharedPreferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('languageCode', languageCode);
+  Future<void> setLocale(Locale locale) async {
+    try {
+      state = locale;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('language_code', locale.languageCode);
+      print('Locale changed to: ${locale.languageCode}');
+    } catch (e) {
+      print('Error saving locale: $e');
+    }
   }
-
-  // Get current language code
-  String get currentLanguageCode => state.languageCode;
 }
+
+final localeProvider = StateNotifierProvider<LocaleNotifier, Locale?>((ref) {
+  return LocaleNotifier();
+});
