@@ -1,4 +1,4 @@
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 
 /// Represents an energy entry entity logged by a user.
 ///
@@ -52,14 +52,15 @@ class EnergyModel {
     required String userId,
     required int energyLevel,
     required String? notes,
-    required DateTime createdAt,
+    required DateTime? createdAt,
     DateTime? updatedAt,
   })  : _id = id,
         _userId = userId,
         _energyLevel = energyLevel,
         _notes = notes,
-        _createdAt = createdAt,
-        _updatedAt = updatedAt ?? createdAt;
+        _createdAt = createdAt ?? DateTime.fromMillisecondsSinceEpoch(0),
+        _updatedAt =
+            updatedAt ?? createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
 
   /// Factory constructor that creates an EnergyModel from a map.
   factory EnergyModel.fromMap(Map<String, dynamic> map) {
@@ -104,5 +105,12 @@ class EnergyModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
+  }
+
+  /// Checks if this entry has valid dates suitable for display and reporting
+  bool hasValidDates() {
+    // Epoch date is used as a sentinel for missing dates
+    final epochCutoff = DateTime(1970, 1, 2);
+    return createdAt.isAfter(epochCutoff);
   }
 }

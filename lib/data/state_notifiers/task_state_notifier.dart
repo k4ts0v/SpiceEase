@@ -8,8 +8,11 @@ class TaskStateNotifier extends StateNotifier<List<TaskModel>> {
   bool _isLoading = false;
   String? _error;
 
-  TaskStateNotifier(this._taskService, this._date) : super([]) {
-    fetchTasks();
+  TaskStateNotifier(this._taskService, this._date) : super([]);
+
+
+  Future<void> init() async {
+    await fetchTasks();
   }
 
   bool get isLoading => _isLoading;

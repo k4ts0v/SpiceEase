@@ -18,6 +18,9 @@ class AppUser {
   /// Verified email address associated with the account
   String _email;
 
+  /// Whether the user's email address has been verified
+  final bool _isEmailVerified;
+
   /// Timestamp of account creation in the authentication system
   ///
   /// Useful for analytics, account age checks, and compliance features.
@@ -30,6 +33,9 @@ class AppUser {
   /// Getter for the user's email
   String? get email => _email;
 
+  /// Getter for the user's email verification status
+  bool get isEmailVerified => _isEmailVerified;
+
   /// Getter for the user's creation date
   DateTime? get created => _created;
 
@@ -38,13 +44,16 @@ class AppUser {
   /// Parameters:
   /// - [uid] : Required unique identifier from authentication provider
   /// - [email] : Verified email address
+  /// - [isEmailVerified] : Whether the email has been verified
   /// - [created] : Optional account creation timestamp
   AppUser({
     required String uid,
-    email,
+    String? email,
+    bool isEmailVerified = false,
     DateTime? created,
   }) : _uid = uid,
-        _email = email,
+        _email = email ?? '',
+        _isEmailVerified = isEmailVerified,
         _created = created;
 
   /// Creates an [AppUser] from Firebase Authentication's [User] object
@@ -62,6 +71,7 @@ class AppUser {
   factory AppUser.fromFirebase(User user) => AppUser(
         uid: user.uid,
         email: user.email,
+        isEmailVerified: user.emailVerified,
         created: user.metadata.creationTime,
       );
 
@@ -87,6 +97,7 @@ class AppUser {
     return AppUser(
       uid: uid,
       email: email.isNotEmpty ? email : null,
+      isEmailVerified: data['emailVerified'] ?? false,
       created: data['created'] != null
           ? DateTime.parse(data['created'].toString())
           : DateTime.now(),
@@ -113,5 +124,17 @@ class AppUser {
       return AppUser.fromRestApi(platformUser);
     }
     return null;
+  }
+
+  AppUser copyWith({
+    String? uid,
+    String? email,
+    bool? isEmailVerified,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      email: email ?? this.email,
+      isEmailVerified: isEmailVerified ?? this.isEmailVerified,
+    );
   }
 }

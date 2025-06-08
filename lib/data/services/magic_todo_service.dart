@@ -4,15 +4,26 @@ import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/providers/current_user_provider.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 
+/// Provides an instance of [MagicTodoService] to the app.
 final magicTodoServiceProvider = Provider((ref) => MagicTodoService(ref));
 
+/// A service responsible for dividing a task into subtasks using goblin.tools API,
+/// taking into account the user's current energy level to adjust the "spiciness" parameter.
 class MagicTodoService {
-  final Ref ref;
-  final Dio _dio = Dio();
+  final Ref ref; // Reference to the provider container for accessing other providers.
+  final Dio _dio; // Dio instance for making HTTP requests.
 
-  MagicTodoService(this.ref);
+  /// Constructor for the `MagicTodoService`.
+  /// Accepts a `Ref` object to access other providers.
+  /// Optionally accepts a `Dio` instance for HTTP requests.
+  /// If no `Dio` instance is provided, a new one is created.
+  /// This allows for easier testing and mocking of HTTP requests.
+  MagicTodoService(this.ref, {Dio? dio}) : _dio = dio ?? Dio();
 
-  /// Maps energy level to spiciness.
+  /// Maps the user's energy level to a "spiciness" value for the API.
+  /// Lower energy means higher spiciness (harder tasks).
+  /// - [energy]: The user's energy level (integer).
+  /// - Returns: An integer spiciness value between 1 and 5.
   int _spicinessFromEnergy(int energy) {
     if (energy <= 2) return 5;
     if (energy <= 4) return 4;
@@ -21,9 +32,20 @@ class MagicTodoService {
     return 1;
   }
 
-  /// Divides the task using goblin.tools API.
-  Future<List<SubtaskModel>> divideTask(
-      {required String title, required String description}) async {
+  /// Divides a task into subtasks using the goblin.tools API.
+  ///
+  /// - Parameters:
+  ///   - `title`: The title of the task.
+  ///   - `description`: A detailed description of the task.
+  ///
+  /// - Returns: A list of [SubtaskModel] representing the subtasks.
+  ///   If the API returns a list, each item is a subtask title.
+  ///   If the API returns a string, it is split by newlines into subtasks.
+  ///   Returns an empty list if the API call fails.
+  Future<List<SubtaskModel>> divideTask({
+    required String title,
+    required String description,
+  }) async {
     // Get last recorded energy from EnergyService.
     final energyService = ref.read(energyServiceProvider);
     final int? lastEnergy =
@@ -31,6 +53,7 @@ class MagicTodoService {
 
     final int spiciness = _spicinessFromEnergy(lastEnergy ?? 0);
 
+    // Prepare the request body for the API.
     final body = {
       "text": "$title $description",
       "spiciness": spiciness.toString(),
@@ -38,6 +61,7 @@ class MagicTodoService {
     };
 
     try {
+      // Make the POST request to the goblin.tools API.
       final response = await _dio.post(
         "https://goblin.tools/api/todo",
         data: body,
@@ -46,13 +70,12 @@ class MagicTodoService {
         ),
       );
 
+      // If the API returns a List, map each item to a SubtaskModel.
       if (response.data is List) {
         print("Goblin API returned a List: ${response.data}");
         return (response.data as List).map((subtaskTitle) {
           return SubtaskModel(
-            id: DateTime.now()
-                .millisecondsSinceEpoch
-                .toString(), // temporary ID
+            id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary ID
             userId: ref.watch(currentUserProvider).value?.uid ?? '',
             taskId: '', // will be set when main task is created
             title: subtaskTitle.toString(),
@@ -60,9 +83,10 @@ class MagicTodoService {
             completed: false,
           );
         }).toList();
-      } else if (response.data is String) {
+      }
+      // If the API returns a String, split by newlines and map to SubtaskModel.
+      else if (response.data is String) {
         print("Goblin API returned a String: ${response.data}");
-        // Split string response by newlines if it's a single string
         final subtasks = response.data
             .toString()
             .split('\n')
@@ -80,6 +104,7 @@ class MagicTodoService {
         }).toList();
       }
 
+      // If the API returns neither a List nor a String, return an empty list.
       return [];
     } catch (e) {
       print('Error dividing task: $e');

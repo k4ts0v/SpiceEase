@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/repositories/subtask_repository.dart';
-import 'package:spiceease/data/services/task_service.dart';
 
 /// A service layer that coordinates subtask-related business logic.
 ///

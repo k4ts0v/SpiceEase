@@ -8,7 +8,10 @@ class SubtaskModel {
   String _title;
   int _order;
   bool _completed;
+  String _status;
   String? _rawTimeValue;
+  final DateTime? _startTime;
+  final DateTime? _endTime;
   final DateTime _createdAt; // Add creation timestamp
   final DateTime _updatedAt; // Add update timestamp
 
@@ -20,7 +23,10 @@ class SubtaskModel {
     required String title,
     int order = 0,
     bool completed = false,
+    String status = 'todo',
     String? rawTimeValue,
+    DateTime? startTime,
+    DateTime? endTime,
     DateTime? createdAt,
     DateTime? updatedAt,
   })  : _id = id,
@@ -29,7 +35,10 @@ class SubtaskModel {
         _title = title,
         _order = order,
         _completed = completed,
+        _status = status,
         _rawTimeValue = rawTimeValue,
+        _startTime = startTime,
+        _endTime = endTime,
         _createdAt = createdAt ?? DateTime.now(),
         _updatedAt = updatedAt ?? DateTime.now();
 
@@ -40,7 +49,10 @@ class SubtaskModel {
   String get title => _title;
   int get order => _order;
   bool get completed => _completed;
+  String? get status => _status;
   String? get rawTimeValue => _rawTimeValue;
+  DateTime? get startTime => _startTime;
+  DateTime? get endTime => _endTime;
   DateTime get createdAt => _createdAt;
   DateTime get updatedAt => _updatedAt;
   // Update toMap method
@@ -52,7 +64,10 @@ class SubtaskModel {
       'title': _title,
       'order': _order,
       'completed': _completed,
+      'status': _status,
       'raw_time_value': _rawTimeValue,
+      'start_time': _startTime,
+      'end_time': _endTime,
       'created_at': _createdAt,
       'updated_at': _updatedAt,
     };
@@ -77,35 +92,44 @@ class SubtaskModel {
       title: map['title'] ?? '',
       order: map['order'] ?? 0,
       completed: map['completed'] ?? false,
+      status: map['status'] ?? 'todo',
       rawTimeValue: map['raw_time_value'],
+      startTime: _parseDynamicDate(map['start_time']),
+      endTime: _parseDynamicDate(map['end_time']),
       createdAt: _parseDynamicDate(map['created_at']),
       updatedAt: _parseDynamicDate(map['updated_at']),
     );
   }
 
   // Add copyWith method
-SubtaskModel copyWith({
-  String? id,
-  String? taskId,
-  String? userId,
-  String? title,
-  int? order,
-  bool? completed,
-  String? rawTimeValue,
-  DateTime? createdAt,
-  DateTime? updatedAt,
-}) {
-  return SubtaskModel(
-    id: id ?? this.id,
-    taskId: taskId ?? this.taskId,
-    userId: userId ?? this.userId,
-    title: title ?? this.title,
-    order: order ?? this.order,
-    completed: completed ?? this.completed,
-    rawTimeValue: rawTimeValue ?? this.rawTimeValue,
-    createdAt: createdAt ?? this.createdAt,
-    updatedAt: updatedAt ?? DateTime.now(), // Always update the updatedAt timestamp
-  );
-}
-
+  SubtaskModel copyWith({
+    String? id,
+    String? taskId,
+    String? userId,
+    String? title,
+    int? order,
+    bool? completed,
+    String? status,
+    String? rawTimeValue,
+    DateTime? startTime,
+    DateTime? endTime,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return SubtaskModel(
+      id: id ?? this.id,
+      taskId: taskId ?? this.taskId,
+      userId: userId ?? this.userId,
+      title: title ?? this.title,
+      order: order ?? this.order,
+      completed: completed ?? this.completed,
+      status: status ?? 'todo',
+      rawTimeValue: rawTimeValue ?? this.rawTimeValue,
+      startTime: startTime,
+      endTime: endTime,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt:
+          updatedAt ?? DateTime.now(), // Always update the updatedAt timestamp
+    );
+  }
 }

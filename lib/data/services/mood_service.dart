@@ -1,6 +1,6 @@
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/database/database_service.dart';
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 import 'package:spiceease/data/models/mood_model.dart';
 import 'package:spiceease/data/repositories/mood_repository.dart';
 

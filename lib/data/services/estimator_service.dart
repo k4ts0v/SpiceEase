@@ -12,11 +12,14 @@ final estimatorServiceProvider = Provider((ref) => EstimatorService(ref));
 class EstimatorService {
   final Ref
       ref; // Reference to the provider container for accessing other providers.
-  final Dio _dio = Dio(); // Dio instance for making HTTP requests.
+  final Dio _dio; // Dio instance for making HTTP requests.
 
   /// Constructor for the `EstimatorService`.
   /// Accepts a `Ref` object to access other providers.
-  EstimatorService(this.ref);
+  /// Optionally accepts a `Dio` instance for HTTP requests.
+  /// If no `Dio` instance is provided, a new one is created.
+  /// This allows for easier testing and mocking of HTTP requests.
+  EstimatorService(this.ref, {Dio? dio}) : _dio = dio ?? Dio();
 
   /// Determines the "spiciness" level based on the user's energy level.
   /// Spiciness is a value between 1 and 5, where higher values indicate higher energy.
@@ -166,8 +169,7 @@ class EstimatorService {
 
   /// Picks the best display unit for the computed average (in minutes).
   /// For example, 35.0 remains “35 minutes” instead of “0.58 hours,”
-  /// and 1.0 remains “1 minute.”
-  Map<String, dynamic> _formatAverage(
+    Map<String, dynamic> _formatAverage(
     double avgMin,
     Map<String, List<String>> unitMappings,
     Map<String, double> unitsToMinutes,
@@ -192,23 +194,17 @@ class EstimatorService {
     final numericValue =
         (value % 1 == 0) ? value.toInt().toString() : value.toStringAsFixed(2);
 
-    // Some simple singular/plural logic for English
-    // If we only have a float of exactly 1.0, it’s singular; otherwise plural.
-    final doubleVal = double.tryParse(value.toString()) ?? 0;
-    final isSingular = doubleVal == 1.0;
-
-    // Basic map of English singular + plural forms
-    // This is used solely when displaying "35 minutes," "2 hours," etc.
-    final singularPlural = <String, List<String>>{
-      'month': ['month', 'months'],
-      'week': ['week', 'weeks'],
-      'day': ['day', 'days'],
-      'hour': ['hour', 'hours'],
-      'minute': ['minute', 'minutes'],
-      'second': ['second', 'seconds'],
-    };
-    final forms = singularPlural[chosen] ?? ['?', '?'];
-    final displayUnit = isSingular ? forms[0] : forms[1];
+    // Use the first plural form from unitMappings for the chosen unit
+    // (Assume the first is singular, second is plural, fallback to English)
+    final mapping = unitMappings[chosen];
+    String displayUnit;
+    if (mapping != null && mapping.length > 1) {
+      displayUnit = mapping[1]; // plural
+    } else if (mapping != null && mapping.isNotEmpty) {
+      displayUnit = mapping[0];
+    } else {
+      displayUnit = chosen; // fallback
+    }
 
     return {
       "estimate": numericValue,

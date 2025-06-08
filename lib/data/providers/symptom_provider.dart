@@ -25,11 +25,10 @@ final todaySymptomsProvider = FutureProvider<List<SymptomModel>>((ref) async {
   return ref.read(symptomServiceProvider).getSymptomsForDate(DateTime.now());
 });
 
-// /// Provides yesterday's symptom count for trend comparison.
-// final yesterdaySymptomCountProvider = FutureProvider<int>((ref) async {
-//   return ref.read(symptomServiceProvider);
-//   // .getYesterdaySymptomCount();
-// });
+
+// Provides the current symptom severity (1-10)
+final symptomSeverityProvider = StateProvider<int?>((ref) => null);
+
 
 /// Provides a state notifier to manage symptoms.
 final symptomStateNotifierProvider = StateNotifierProvider.autoDispose.family<

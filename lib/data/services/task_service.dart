@@ -1,49 +1,43 @@
+// lib/data/services/task_service.dart
+
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/database/database_service.dart';
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/repositories/task_repository.dart';
 
-/// A service layer that coordinates task-related business logic.
-///
-/// This class depends on the [TaskRepository] and provides higher-level
-/// operations for managing tasks. It's responsible for transforming data
-/// or adding additional logic before calling the repository.
 class TaskService {
   final AuthService _authService;
   final DatabaseService _db;
-  final TaskRepository _repository; // Dependency for accessing the repository.
+  final TaskRepository _repository;
 
-  TaskService(this._repository, this._authService, this._db);
+  TaskService(
+    this._repository,
+    this._authService,
+    this._db,
+  );
 
-  /// Retrieves all tasks by delegating to the repository.
   Future<List<TaskModel>> getAllTasks() => _repository.getAllTasks();
 
-  /// Retrieves a specific task by ID through the repository.
   Future<TaskModel?> getTaskById(String id) => _repository.getTaskById(id);
 
-  /// Creates a new task by delegating to the repository.
   Future<TaskModel> createTask(TaskModel task) => _repository.createTask(task);
 
-  /// Updates an existing task by delegating to the repository.
-  Future<TaskModel> updateTask(String id, TaskModel task) async {
-    return await _repository.updateTask(id, task);
-  }
+  Future<TaskModel> updateTask(String id, TaskModel task) =>
+      _repository.updateTask(id, task);
 
-  /// Deletes a task by delegating to the repository.
   Future<void> deleteTask(String id) => _repository.deleteTask(id);
 
-  // Provides task entries for the authenticated user in a specified date.
   Future<List<TaskModel>> getTasksForDate(DateTime date) async {
     final user = await _authService.getCurrentUser();
     if (user == null) return [];
 
     final start = FirestoreDateAdapter.toTimestamp(
-        DateTime(date.year, date.month, date.day));
-    print("Start date: $start"); //For debugging
+      DateTime(date.year, date.month, date.day),
+    );
     final end = FirestoreDateAdapter.toTimestamp(
-        DateTime(date.year, date.month, date.day).add(Duration(days: 1)));
-    print("End date: $end");
+      DateTime(date.year, date.month, date.day).add(const Duration(days: 1)),
+    );
 
     final tasksWithDueDate = await _db.query(
       collection: DatabaseService.tasks,
@@ -63,15 +57,11 @@ class TaskService {
       ],
     );
 
-  print("Tasks with due date: $tasksWithDueDate"); //For debugging
-  print("Tasks without due date: $tasksWithoutDueDate"); //For debugging
-
-    // Combine tasks with and without due dates
     final allTasks = [...tasksWithDueDate, ...tasksWithoutDueDate];
     return allTasks.map((e) => TaskModel.fromMap(e)).toList();
   }
 
-  String generateId() => _db.generateId(); // Generate unique ID
+  String generateId() => _db.generateId();
 
   Future<String> getCurrentUserId() async {
     final user = await _authService.getCurrentUser();
@@ -79,15 +69,17 @@ class TaskService {
     return user.uid;
   }
 
-  Future<List<TaskModel>> getTasksByStatus(String status,
-      {bool sortByPriority = false}) async {
+  Future<List<TaskModel>> getTasksByStatus(
+    String status, {
+    bool sortByPriority = false,
+  }) async {
     final userId = await getCurrentUserId();
 
     final orderFields = [
-      QueryOrder('order'), // Maintain UI order first
+      QueryOrder('order'),
       if (sortByPriority) QueryOrder('priority', descending: true),
-      QueryOrder('due_date'), // Then sort by due date
-      QueryOrder('created_at'), // Finally by creation time
+      QueryOrder('due_date'),
+      QueryOrder('created_at'),
     ];
 
     final tasks = await _db.query(
@@ -100,5 +92,14 @@ class TaskService {
     );
 
     return tasks.map(TaskModel.fromMap).toList();
+  }
+
+  /// You may add a signal method to inform UI when toggling is complete
+  Future<void> toggleTaskCompletion(String taskId, DateTime selectedDate) async {
+    final task = await getTaskById(taskId);
+    if (task == null) throw Exception("Task not found");
+
+    final updatedTask = task.toggleCompletion(selectedDate);
+    await _repository.updateTask(taskId, updatedTask);
   }
 }

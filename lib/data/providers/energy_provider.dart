@@ -37,3 +37,7 @@ final energyStateNotifierProvider = StateNotifierProvider.autoDispose
   final service = ref.read(energyServiceProvider);
   return EnergyStateNotifier(service, date);
 });
+
+
+// Provides the current energy level (1-10)
+final energyProvider = StateProvider<int?>((ref) => null);

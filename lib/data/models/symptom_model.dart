@@ -1,4 +1,4 @@
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 
 /// Represents a symptom logged by a user.
 ///
@@ -102,7 +102,7 @@ class SymptomModel {
       severity: (map['severity'] is int)
           ? map['severity']
           : int.tryParse(map['severity'].toString()) ?? 1,
-      createdAt: FirestoreDateAdapter.fromFirestore(map['created_at']),
+      createdAt: FirestoreDateAdapter.fromFirestore(map['created_at'])!,
       updatedAt: FirestoreDateAdapter.fromFirestore(map['updated_at']),
     );
   }

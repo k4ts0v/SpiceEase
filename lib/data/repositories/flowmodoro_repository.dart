@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 import 'package:spiceease/data/models/flowmodoro_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
 import 'package:spiceease/data/providers/current_user_provider.dart';

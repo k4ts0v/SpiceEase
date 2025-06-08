@@ -20,6 +20,10 @@ class TaskModel {
   final int _subtaskOrder; // position within parent's subtasks
   DateTime? _startTime;
   DateTime? _endTime;
+  final bool _hasReminder;
+  final DateTime? _reminderDateTime;
+  final List<int>? _reminderDaysOfWeek; // For recurring reminders
+  final bool _isRecurringReminder;
 
   // Constructor
   TaskModel({
@@ -41,6 +45,10 @@ class TaskModel {
     final int subtaskOrder = 0,
     DateTime? startTime,
     DateTime? endTime,
+    bool hasReminder = false,
+    DateTime? reminderDateTime,
+    List<int>? reminderDaysOfWeek,
+    bool isRecurringReminder = false,
   })  : _id = id,
         _userId = userId,
         _title = title,
@@ -58,7 +66,11 @@ class TaskModel {
         _isSubtask = isSubtask,
         _subtaskOrder = subtaskOrder,
         _startTime = startTime,
-        _endTime = endTime;
+        _endTime = endTime,
+        _hasReminder = hasReminder,
+        _reminderDateTime = reminderDateTime,
+        _reminderDaysOfWeek = reminderDaysOfWeek,
+        _isRecurringReminder = isRecurringReminder;
 
   // Getters
   String get id => _id;
@@ -79,6 +91,10 @@ class TaskModel {
   int get subtaskOrder => _subtaskOrder;
   DateTime? get startTime => _startTime;
   DateTime? get endTime => _endTime;
+  bool get hasReminder => _hasReminder;
+  DateTime? get reminderDateTime => _reminderDateTime;
+  List<int>? get reminderDaysOfWeek => _reminderDaysOfWeek;
+  bool get isRecurringReminder => _isRecurringReminder;
 
   // Setters
   set title(String newTitle) {
@@ -144,34 +160,41 @@ class TaskModel {
     }
 
     return TaskModel(
-        id: id ?? (map['id'] as String),
-        userId: map['user_id'] as String,
-        title: map['title'] as String,
-        description: map['description'] as String? ?? '',
-        status: map['status'] as String? ?? 'pending',
-        dueDate: _parseDynamicDate(map['due_date']),
-        completedAt: _parseDynamicDate(map['completed_at']),
-        estimatedTime: map['estimated_time'] != null
-            ? map['estimated_time'].toString()
-            : null,
-        priority: map['priority'] is double
-            ? (map['priority'] as double).toInt()
-            : (map['priority'] as int? ?? 1),
-        createdAt: _parseDynamicDate(map['created_at'])!,
-        updatedAt: _parseDynamicDate(map['updated_at'])!,
-        hasSubtasks: map['has_subtasks'] as bool? ?? false,
-        parentTaskId: map['parent_task_id'] as String?,
-        isSubtask: map['is_subtask'] as bool? ?? false,
-        subtaskOrder: map['subtask_order'] is double
-            ? (map['subtask_order'] as double).toInt()
-            : (map['subtask_order'] as int? ?? 0),
-        startTime: _parseDynamicDate(map['start_time']),
-        endTime: _parseDynamicDate(map['end_time']));
+      id: id ?? (map['id'] as String),
+      userId: map['user_id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String? ?? '',
+      status: map['status'] as String? ?? 'pending',
+      dueDate: _parseDynamicDate(map['due_date']),
+      completedAt: _parseDynamicDate(map['completed_at']),
+      estimatedTime: map['estimated_time'] != null
+          ? map['estimated_time'].toString()
+          : null,
+      priority: map['priority'] is double
+          ? (map['priority'] as double).toInt()
+          : (map['priority'] as int? ?? 1),
+      createdAt: _parseDynamicDate(map['created_at'])!,
+      updatedAt: _parseDynamicDate(map['updated_at'])!,
+      hasSubtasks: map['has_subtasks'] as bool? ?? false,
+      parentTaskId: map['parent_task_id'] as String?,
+      isSubtask: map['is_subtask'] as bool? ?? false,
+      subtaskOrder: map['subtask_order'] is double
+          ? (map['subtask_order'] as double).toInt()
+          : (map['subtask_order'] as int? ?? 0),
+      startTime: _parseDynamicDate(map['start_time']),
+      endTime: _parseDynamicDate(map['end_time']),
+      hasReminder: map['has_reminder'] as bool? ?? false,
+      reminderDateTime: _parseDynamicDate(map['reminder_date_time']),
+      reminderDaysOfWeek: (map['reminder_days_of_week'] as List<dynamic>?)
+          ?.map((e) => e as int)
+          .toList(),
+      isRecurringReminder: map['is_recurring_reminder'] as bool? ?? false,
+    );
   }
 
   /// Serializes this TaskModel to a Map
   Map<String, dynamic> toMap() {
-    Map<String, dynamic> updatedTask = {
+    return {
       'user_id': _userId,
       'title': _title,
       'description': _description,
@@ -189,8 +212,11 @@ class TaskModel {
       'subtask_order': _subtaskOrder,
       'start_time': _startTime,
       'end_time': _endTime,
+      'has_reminder': _hasReminder,
+      'reminder_date_time': _reminderDateTime,
+      'reminder_days_of_week': _reminderDaysOfWeek,
+      'is_recurring_reminder': _isRecurringReminder,
     };
-    return updatedTask;
   }
 
   TaskModel copyWith({
@@ -212,6 +238,19 @@ class TaskModel {
     int? subtaskOrder,
     DateTime? startTime,
     DateTime? endTime,
+    bool? hasReminder,
+    DateTime? reminderDateTime,
+    List<int>? reminderDaysOfWeek,
+    bool? isRecurringReminder,
+    // Special flags to indicate when we want to explicitly set to null
+    bool clearCompletedAt = false,
+    bool clearStartTime = false,
+    bool clearEndTime = false,
+    bool clearEstimatedTime = false,
+    bool clearDueDate = false,
+    bool clearReminderDateTime = false,
+    bool clearReminderDaysOfWeek = false,
+    bool clearParentTaskId = false,
   }) {
     return TaskModel(
       id: id ?? this.id,
@@ -219,35 +258,45 @@ class TaskModel {
       title: title ?? this.title,
       description: description ?? this.description,
       status: status ?? this.status,
-      dueDate: dueDate ?? this.dueDate,
-      completedAt: completedAt ?? this.completedAt,
-      estimatedTime: estimatedTime ?? this.estimatedTime,
+      dueDate: clearDueDate ? null : (dueDate ?? this.dueDate),
+      completedAt: clearCompletedAt ? null : (completedAt ?? this.completedAt),
+      estimatedTime:
+          clearEstimatedTime ? null : (estimatedTime ?? this.estimatedTime),
       priority: priority ?? this.priority,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       hasDueDate: hasDueDate ?? this.hasDueDate,
       hasSubtasks: hasSubtasks ?? this.hasSubtasks,
-      parentTaskId: parentTaskId ?? this.parentTaskId,
+      parentTaskId:
+          clearParentTaskId ? null : (parentTaskId ?? this.parentTaskId),
       isSubtask: isSubtask ?? this.isSubtask,
       subtaskOrder: subtaskOrder ?? this.subtaskOrder,
-      startTime: startTime ?? this.startTime,
-      endTime: endTime ?? this.endTime,
+      startTime: clearStartTime ? null : (startTime ?? this.startTime),
+      endTime: clearEndTime ? null : (endTime ?? this.endTime),
+      hasReminder: hasReminder ?? this.hasReminder,
+      reminderDateTime: clearReminderDateTime
+          ? null
+          : (reminderDateTime ?? this.reminderDateTime),
+      reminderDaysOfWeek: clearReminderDaysOfWeek
+          ? null
+          : (reminderDaysOfWeek ?? this.reminderDaysOfWeek),
+      isRecurringReminder: isRecurringReminder ?? this.isRecurringReminder,
     );
   }
 
-  TaskModel toggleCompletion() {
+  TaskModel toggleCompletion(DateTime selectedDate) {
     final bool isCurrentlyCompleted = status == 'Done' || completedAt != null;
 
     if (!isCurrentlyCompleted) {
       return copyWith(
         status: 'Done',
-        completedAt: DateTime.now(),
+        completedAt: selectedDate,
         updatedAt: DateTime.now(),
       );
     } else {
       return copyWith(
         status: 'In Progress',
-        completedAt: null,
+        clearCompletedAt: true,
         updatedAt: DateTime.now(),
       );
     }

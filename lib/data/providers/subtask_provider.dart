@@ -44,34 +44,57 @@ class SubtaskStateNotifier
   }
 
   Future<void> _init() async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       final subtasks = await _service.getSubtasksForTask(_taskId);
-      state = AsyncValue.data(subtasks);
+      if (mounted) {
+        state = AsyncValue.data(subtasks);
+      }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
-  Future<void> refresh() async => _init();
+  Future<void> fetchSubtasks() async {
+    if (!mounted) return;
+    await _init();
+  }
+
+  Future<void> refresh() async {
+    if (!mounted) return;
+    await _init();
+  }
 
   Future<void> updateSubtask(SubtaskModel subtask) async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       await _service.updateSubtask(subtask.id, subtask);
-      await _init(); // Refresh the list after update
+      if (mounted) {
+        await _init(); // Refresh the list after update
+      }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
   Future<void> deleteSubtask(String subtaskId) async {
+    if (!mounted) return;
     state = const AsyncValue.loading();
     try {
       await _service.deleteSubtask(subtaskId);
-      await _init(); // Refresh the list after deletion
+      if (mounted) {
+        await _init(); // Refresh the list after deletion
+      }
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (mounted) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 }
