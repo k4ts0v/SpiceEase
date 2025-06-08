@@ -1,0 +1,17 @@
+{
+  "es": [
+    "loggingRemindersDescription",
+    "categoryReminders",
+    "categoryRemindersDescription",
+    "specificItemReminders",
+    "specificItemRemindersDescription",
+    "enableSpecificRemindersFor",
+    "notificationCategoriesDescription",
+    "taskSpecificRemindersDescription",
+    "habitSpecificRemindersDescription",
+    "medicationSpecificRemindersDescription",
+    "timerNotWorking",
+    "timerDescription",
+    "verifyingCredentials"
+  ]
+}
