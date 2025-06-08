@@ -1,14 +1,19 @@
-// Importing required packages. The `dio` package provides a powerful and easy-to-use HTTP client.
-// The `auth_service.dart` handles user authentication.
-// The `database_service.dart` defines an abstract interface for database operations.
 import 'dart:math';
-
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:dio/dio.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
 import 'database_service.dart';
 
+/// Firestore Database REST API implementation
+///
+/// Provides database operations using Firestore REST API instead of SDK
+/// Features:
+/// - Document CRUD operations
+/// - Complex queries with filters and ordering
+/// - Batch operations
+/// - Proper error handling
+/// - Authentication integration
 class FirestoreDatabaseRestService implements DatabaseService {
   final Dio _dio;
   final AuthService _auth;
@@ -21,45 +26,95 @@ class FirestoreDatabaseRestService implements DatabaseService {
     Dio? dio,
     Uuid? uuid,
   })  : _auth = authService,
-        _uuid = uuid ?? Uuid(),
+        _uuid = uuid ?? const Uuid(),
         _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://firestore.googleapis.com/v1/',
-              connectTimeout: const Duration(seconds: 5),
-              receiveTimeout: const Duration(seconds: 10),
+              connectTimeout: const Duration(seconds: 10),
+              receiveTimeout: const Duration(seconds: 30),
+              headers: {'Content-Type': 'application/json'},
             ));
 
   @override
-  Future<void> initialize() async {}
-
-  Future<dynamic> _call(String method, String url,
-      {Map<String, dynamic>? data}) async {
-    final token = await _auth.getCurrentIdToken();
+  Future<void> initialize() async {
+    print('Initializing Firestore REST service for project: $projectId');
+    // Test connection with a simple request
     try {
-      final resp = await _dio.request<dynamic>(
+      await _call('GET', 'projects/$projectId/databases/(default)');
+      print('Firestore REST service initialized successfully');
+    } catch (e) {
+      print('Firestore REST service initialization failed: $e');
+      // Don't throw - let the app continue and handle errors per operation
+    }
+  }
+
+  /// Makes authenticated HTTP calls to Firestore REST API
+  Future<dynamic> _call(
+    String method,
+    String url, {
+    Map<String, dynamic>? data,
+    Map<String, String>? queryParams,
+  }) async {
+    try {
+      // Get the ID token (which serves as the access token for Firestore)
+      final token = await _auth.getAccessToken();
+      if (token == null) {
+        throw Exception('No access token available');
+      }
+
+      final options = Options(
+        method: method,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      final response = await _dio.request(
         url,
         data: data,
-        options: Options(
-          method: method,
-          headers: {if (token != null) 'Authorization': 'Bearer $token'},
-        ),
+        queryParameters: queryParams,
+        options: options,
       );
-      return resp.data;
+
+      return response.data;
     } on DioException catch (e) {
-      print('Firestore error response data: ${e.response?.data}');
-      rethrow;
+      print('Firestore REST API error: ${e.response?.statusCode} ${e.message}');
+      print('Error response: ${e.response?.data}');
+
+      // More specific error handling
+      switch (e.response?.statusCode) {
+        case 401:
+          throw Exception('Authentication failed - invalid or expired token');
+        case 403:
+          throw Exception('Permission denied - check Firestore security rules');
+        case 404:
+          return null;
+        case 400:
+          final errorMsg =
+              e.response?.data?['error']?['message'] ?? 'Bad request';
+          throw Exception('Invalid request: $errorMsg');
+        default:
+          rethrow;
+      }
     }
   }
 
   @override
   Future<Map<String, dynamic>?> getDocument(String path) async {
-    final raw = await _call(
-      'GET',
-      'projects/$projectId/databases/(default)/documents/$path',
-    ) as Map<String, dynamic>?;
+    try {
+      final response = await _call(
+        'GET',
+        'projects/$projectId/databases/(default)/documents/$path',
+      );
 
-    if (raw == null || raw['fields'] == null) return null;
-    return _decode(raw);
+      if (response == null) return null;
+
+      return _decode(response as Map<String, dynamic>);
+    } catch (e) {
+      print('Error getting document $path: $e');
+      return null;
+    }
   }
 
   @override
@@ -67,75 +122,141 @@ class FirestoreDatabaseRestService implements DatabaseService {
     String collectionPath,
     Map<String, dynamic> data,
   ) async {
-    final id = data['id'] ?? generateId();
-    final path = '$collectionPath/$id';
+    try {
+      final id = data['id'] ?? generateId();
+      final path = '$collectionPath/$id';
 
-    final dataWithoutId = Map<String, dynamic>.from(data)..remove('id');
+      // Remove id from data before encoding (it's in the path)
+      final dataToEncode = Map<String, dynamic>.from(data)..remove('id');
 
-    final raw = await _call(
-      'PATCH',
-      'projects/$projectId/databases/(default)/documents/$path?currentDocument.exists=false',
-      data: {
-        'fields': _encode(dataWithoutId),
-      },
-    ) as Map<String, dynamic>;
+      // Convert any Timestamp objects to DateTime before encoding
+      final cleanedData = _preprocessData(dataToEncode);
 
-    return _decode(raw);
+      final response = await _call(
+        'PATCH',
+        'projects/$projectId/databases/(default)/documents/$path?currentDocument.exists=false',
+        data: {
+          'fields': _encode(cleanedData),
+        },
+      );
+
+      if (response == null) {
+        throw Exception('Failed to create document - no response');
+      }
+
+      return _decode(response as Map<String, dynamic>);
+    } catch (e) {
+      print('Error creating document: $e');
+      rethrow;
+    }
   }
-
-  // @override
-  // Future<Map<String, dynamic>> updateDocument(
-  //   String path,
-  //   Map<String, dynamic> data,
-  // ) async {
-  //   final raw = await _call(
-  //     'PATCH',
-  //     'projects/$projectId/databases/(default)/documents/$path',
-  //     data: {
-  //       'fields': _encode(data),
-  //       'mask': {'fieldPaths': data.keys.toList()},
-  //     },
-  //   ) as Map<String, dynamic>;
-
-  //   return _decode(raw);
-  // }
 
   @override
   Future<Map<String, dynamic>> updateDocument(
     String path,
     Map<String, dynamic> data,
   ) async {
-    // Remove 'created_at' from data right before sending the request
-    final filteredData = Map<String, dynamic>.from(data);
-    // ..remove('created_at') // Make sure we remove it
-    // ..remove('id') // Make sure we remove it
-    // ..remove('user_id'); // Make sure we remove it
+    try {
+      final updateData = Map<String, dynamic>.from(data)
+        ..remove('id')
+        ..remove('created_at');
 
-    // Encode the data excluding 'created_at'
-    final requestBody = {
-      'fields': _encode(filteredData),
-    };
+      if (updateData.isEmpty) {
+        throw Exception('No valid fields to update');
+      }
 
-    print(
-        'Firestore REST PATCH request to: projects/$projectId/databases/(default)/documents/$path');
-    print('Request body: ${requestBody.toString()}');
+      // Convert any Timestamp objects to DateTime before encoding
+      final cleanedData = _preprocessData(updateData);
 
-    // Make the actual call to Firestore
-    final raw = await _call(
-      'PATCH',
-      'projects/$projectId/databases/(default)/documents/$path',
-      data: requestBody,
-    ) as Map<String, dynamic>;
+      // Build valid field paths (handle nested fields properly)
+      final updateMaskFields = _buildFieldPaths(cleanedData);
 
-    return _decode(raw);
+      // Create the URL with properly encoded field paths
+      final baseUrl = 'projects/$projectId/databases/(default)/documents/$path';
+      final fieldPathsQuery = updateMaskFields
+          .map((field) => 'updateMask.fieldPaths=$field')
+          .join('&');
+      final fullUrl = '$baseUrl?$fieldPathsQuery';
+
+      final response = await _call(
+        'PATCH',
+        fullUrl,
+        data: {
+          'fields': _encode(cleanedData),
+        },
+      );
+
+      return _decode(response as Map<String, dynamic>);
+    } catch (e) {
+      print('Error updating document $path: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> batchUpdate(List<Map<String, dynamic>> updates) async {
+    try {
+      if (updates.isEmpty) return;
+
+      final writes = <Map<String, dynamic>>[];
+
+      for (final update in updates) {
+        final path = update['path'] as String?;
+        final data = update['data'] as Map<String, dynamic>?;
+
+        if (path == null || data == null) {
+          throw Exception('Invalid batch update: missing path or data');
+        }
+
+        if (path.split('/').length != 2) {
+          throw Exception('Invalid document path: $path');
+        }
+
+        // Remove read-only fields and preprocess data
+        final updateData = Map<String, dynamic>.from(data)
+          ..remove('id')
+          ..remove('created_at');
+
+        final cleanedData = _preprocessData(updateData);
+        final fieldPaths = _buildFieldPaths(cleanedData);
+
+        writes.add({
+          'update': {
+            'name': 'projects/$projectId/databases/(default)/documents/$path',
+            'fields': _encode(cleanedData),
+          },
+          'updateMask': {
+            'fieldPaths': fieldPaths,
+          },
+        });
+      }
+
+      await _call(
+        'POST',
+        'projects/$projectId/databases/(default)/documents:batchWrite',
+        data: {'writes': writes},
+      );
+
+      print(
+          'Successfully completed batch update of ${writes.length} documents');
+    } catch (e) {
+      print('Error in batch update: $e');
+      rethrow;
+    }
   }
 
   @override
   Future<void> deleteDocument(String path) async {
-    await _call(
-      'DELETE',
-      'projects/$projectId/databases/(default)/documents/$path',
-    );
+    try {
+      await _call(
+        'DELETE',
+        'projects/$projectId/databases/(default)/documents/$path',
+      );
+      print('Successfully deleted document: $path');
+    } catch (e) {
+      print('Error deleting document $path: $e');
+      rethrow;
+    }
   }
 
   @override
@@ -147,95 +268,229 @@ class FirestoreDatabaseRestService implements DatabaseService {
     String? startAfter,
     String? endBefore,
   }) async {
-    final structuredQuery = <String, dynamic>{
-      'from': [
-        {'collectionId': collection}
-      ],
-      if (filters != null && filters.isNotEmpty) 'where': _buildFilter(filters),
-      if (orderBy != null) 'orderBy': orderBy.map(_orderToJson).toList(),
-      if (limit != null) 'limit': limit,
-      if (startAfter != null)
-        'startAt': {
+    try {
+      // Build structured query
+      final structuredQuery = <String, dynamic>{
+        'from': [
+          {'collectionId': collection}
+        ],
+      };
+
+      // Add filters if provided
+      if (filters != null && filters.isNotEmpty) {
+        structuredQuery['where'] = _buildFilter(filters);
+      }
+
+      // Add ordering if provided
+      if (orderBy != null && orderBy.isNotEmpty) {
+        structuredQuery['orderBy'] = orderBy.map(_orderToJson).toList();
+      }
+
+      // Add limit if provided
+      if (limit != null) {
+        structuredQuery['limit'] = limit;
+      }
+
+      // Add pagination if provided
+      if (startAfter != null) {
+        structuredQuery['startAt'] = {
           'values': [
             {'stringValue': startAfter}
           ]
-        },
-      if (endBefore != null)
-        'endAt': {
+        };
+      }
+
+      if (endBefore != null) {
+        structuredQuery['endAt'] = {
           'values': [
             {'stringValue': endBefore}
           ]
-        },
-    };
+        };
+      }
 
-    final response = await _call(
-      'POST',
-      'projects/$projectId/databases/(default)/documents:runQuery',
-      data: {'structuredQuery': structuredQuery},
-    ) as List<dynamic>;
+      print('Executing query on collection: $collection');
+      print('Query structure: ${structuredQuery.toString()}');
 
-    return response
-        .where((e) => e is Map && e['document'] != null)
-        .map((e) => _decode(e['document'] as Map<String, dynamic>))
-        .toList();
+      final response = await _call(
+        'POST',
+        'projects/$projectId/databases/(default)/documents:runQuery',
+        data: {'structuredQuery': structuredQuery},
+      );
+
+      if (response == null) {
+        print('Query returned null response');
+        return <Map<String, dynamic>>[];
+      }
+
+      // Handle empty response
+      if (response is! List) {
+        print('Query response is not a list: ${response.runtimeType}');
+        return <Map<String, dynamic>>[];
+      }
+
+      final responseList = response as List<dynamic>;
+
+      if (responseList.isEmpty) {
+        print('Query returned empty results');
+        return <Map<String, dynamic>>[];
+      }
+
+      // Process results
+      final results = <Map<String, dynamic>>[];
+
+      for (final item in responseList) {
+        if (item is Map<String, dynamic> && item.containsKey('document')) {
+          try {
+            final decoded = _decode(item['document'] as Map<String, dynamic>);
+            results.add(decoded);
+          } catch (e) {
+            print('Error decoding document: $e');
+            // Skip this document but continue with others
+          }
+        }
+      }
+
+      print('Query returned ${results.length} documents');
+      return results;
+    } catch (e) {
+      print('Error executing query on collection $collection: $e');
+      // Return empty list instead of throwing to prevent app crashes
+      return <Map<String, dynamic>>[];
+    }
   }
 
-  // Builds a composite filter for Firestore queries.
+  @override
+  String generateId() {
+    return _generateFirestoreId();
+  }
+
+  /// Preprocesses data to handle Firestore-specific types
+  Map<String, dynamic> _preprocessData(Map<String, dynamic> data) {
+    final processed = <String, dynamic>{};
+
+    data.forEach((key, value) {
+      processed[key] = _preprocessValue(value);
+    });
+
+    return processed;
+  }
+
+  /// Preprocesses a single value to handle Firestore types
+  dynamic _preprocessValue(dynamic value) {
+    if (value == null) {
+      return null;
+    } else if (value is Timestamp) {
+      // Convert Firestore Timestamp to DateTime and normalize to date only
+      return _normalizeDate(value.toDate());
+    } else if (value is DateTime) {
+      // Normalize DateTime to date only (remove time component)
+      return _normalizeDate(value);
+    } else if (value is List) {
+      return value.map(_preprocessValue).toList();
+    } else if (value is Map) {
+      return _preprocessData(value.cast<String, dynamic>());
+    } else {
+      return value;
+    }
+  }
+
+  /// Normalizes DateTime to date-only (removes time component) and ensures consistent format
+  DateTime _normalizeDate(DateTime date) {
+    // Create a date-only DateTime in local time to match UI expectations
+    // The UI comparison logic expects local time, not UTC
+    return DateTime(date.year, date.month, date.day);
+  }
+
+  /// Builds field paths for updateMask, handling nested fields properly
+  List<String> _buildFieldPaths(Map<String, dynamic> data,
+      [String prefix = '']) {
+    final paths = <String>[];
+
+    data.forEach((key, value) {
+      final fieldPath = prefix.isEmpty ? key : '$prefix.$key';
+
+      if (value is Map<String, dynamic>) {
+        // For nested objects, we need to specify the exact field paths
+        paths.addAll(_buildFieldPaths(value, fieldPath));
+      } else {
+        // For primitive values and arrays, add the field path directly
+        paths.add(fieldPath);
+      }
+    });
+
+    return paths;
+  }
+
+  /// Generates a Firestore-compatible document ID
+  String _generateFirestoreId([int length = 20]) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final rand = Random.secure();
+    return List.generate(length, (_) => chars[rand.nextInt(chars.length)])
+        .join();
+  }
+
+  /// Builds composite filters for Firestore queries
   Map<String, dynamic> _buildFilter(List<QueryFilter> filters) {
-    if (filters.length == 1)
-      return _filterToJson(filters.first); // Single filter.
+    if (filters.length == 1) {
+      return _filterToJson(filters.first);
+    }
+
     return {
       'compositeFilter': {
-        'op': 'AND', // Combines multiple filters with an AND operation.
+        'op': 'AND',
         'filters': filters.map(_filterToJson).toList(),
       }
     };
   }
 
-  // Converts a QueryFilter object to Firestore's JSON format.
-  Map<String, dynamic> _filterToJson(QueryFilter f) {
-    if (f is BasicFilter) {
+  /// Converts QueryFilter to Firestore JSON format
+  Map<String, dynamic> _filterToJson(QueryFilter filter) {
+    if (filter is BasicFilter) {
       return {
         'fieldFilter': {
-          'field': {'fieldPath': f.field},
-          'op': _operatorToFirestoreOp(
-              f.op), // Translates operators (e.g., EQUAL, LESS_THAN).
-          'value': _valueToJson(f.value), // Converts values to Firestore JSON.
+          'field': {'fieldPath': filter.field},
+          'op': _operatorToFirestoreOp(filter.op),
+          'value': _valueToJson(filter.value),
         }
       };
-    } else if (f is OrFilter) {
+    } else if (filter is OrFilter) {
       return {
         'compositeFilter': {
           'op': 'OR',
-          'filters': f.filters.map(_filterToJson).toList(),
+          'filters': filter.filters.map(_filterToJson).toList(),
         }
       };
-    } else if (f is AndFilter) {
+    } else if (filter is AndFilter) {
       return {
         'compositeFilter': {
           'op': 'AND',
-          'filters': f.filters.map(_filterToJson).toList(),
+          'filters': filter.filters.map(_filterToJson).toList(),
         }
       };
-    } else if (f is NotFilter) {
+    } else if (filter is NotFilter) {
       return {
         'unaryFilter': {
-          'op': 'NOT',
-          'filter': _filterToJson(f.filter),
+          'op': 'IS_NOT_NULL',
+          'field': {
+            'fieldPath': 'dummy'
+          }, // Firestore requires a field for unary filters
         }
       };
     }
-    throw ArgumentError(
-        'Unsupported filter type: $f'); // Handles unsupported filters.
+
+    throw ArgumentError('Unsupported filter type: ${filter.runtimeType}');
   }
 
-  // Encodes sorting order into Firestore's JSON format.
-  Map<String, dynamic> _orderToJson(QueryOrder o) => {
-        'field': {'fieldPath': o.field},
-        'direction': o.descending ? 'DESCENDING' : 'ASCENDING',
-      };
+  /// Converts QueryOrder to Firestore JSON format
+  Map<String, dynamic> _orderToJson(QueryOrder order) {
+    return {
+      'field': {'fieldPath': order.field},
+      'direction': order.descending ? 'DESCENDING' : 'ASCENDING',
+    };
+  }
 
-  // Maps QueryOperator enums to Firestore's supported operations.
+  /// Maps QueryOperator to Firestore operation strings
   String _operatorToFirestoreOp(QueryOperator op) {
     switch (op) {
       case QueryOperator.equal:
@@ -257,159 +512,132 @@ class FirestoreDatabaseRestService implements DatabaseService {
       case QueryOperator.notInList:
         return 'NOT_IN';
       case QueryOperator.contains:
-        return 'ARRAY_CONTAINS'; // Substring matching is client-side.
+        return 'ARRAY_CONTAINS';
     }
   }
 
-  // Converts query values into Firestore-compatible JSON formats.
-  // In FirestoreDatabaseRestService
-  Map<String, dynamic> _valueToJson(dynamic v) {
-    if (v == null) return {'nullValue': null};
-    if (v is String) return {'stringValue': v};
-    if (v is int) return {'integerValue': v.toString()};
-    if (v is double) return {'doubleValue': v};
-    if (v is bool) return {'booleanValue': v};
-
-    // Handle both DateTime and Firestore Timestamp
-    if (v is DateTime) {
-      return {'timestampValue': v.toUtc().toIso8601String()};
+  /// Converts values to Firestore JSON format
+  Map<String, dynamic> _valueToJson(dynamic value) {
+    if (value == null) return {'nullValue': null};
+    if (value is String) return {'stringValue': value};
+    if (value is int) return {'integerValue': value.toString()};
+    if (value is double) return {'doubleValue': value};
+    if (value is bool) return {'booleanValue': value};
+    if (value is DateTime) {
+      // Normalize date before storing and ensure proper format for Firestore
+      final normalizedDate = _normalizeDate(value);
+      // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
+      return {'timestampValue': normalizedDate.toUtc().toIso8601String()};
     }
-    if (v is Timestamp) {
-      // Add Firestore SDK Timestamp support
-      return {'timestampValue': v.toDate().toUtc().toIso8601String()};
+    if (value is Timestamp) {
+      // Normalize date before storing and ensure proper format for Firestore
+      final normalizedDate = _normalizeDate(value.toDate());
+      // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
+      return {'timestampValue': normalizedDate.toUtc().toIso8601String()};
     }
 
-    throw ArgumentError('Unsupported query value: ${v.runtimeType}');
+    if (value is List) {
+      return {
+        'arrayValue': {'values': value.map(_valueToJson).toList()}
+      };
+    }
+    if (value is Map) {
+      return {
+        'mapValue': {'fields': _encode(value.cast<String, dynamic>())}
+      };
+    }
+
+    throw ArgumentError('Unsupported query value type: ${value.runtimeType}');
   }
 
-  /// Decodes a Firestore document JSON structure into a Dart Map
-  ///
-  /// Firestore documents arrive in a complex nested format. This method:
-  /// 1. Extracts the document ID from the full resource path
-  /// 2. Converts Firestore's typed field values to native Dart types
-  /// 3. Handles nested arrays and maps recursively
-  /// 4. Returns a flat Map with native types for easy application use
+  /// Decodes Firestore document to Dart Map
   Map<String, dynamic> _decode(Map<String, dynamic> doc) {
-    // Extract the main fields object containing all document data
-    final fields = doc['fields'] as Map<String, dynamic>;
+    try {
+      final fields = doc['fields'] as Map<String, dynamic>? ?? {};
 
-    // Extract document ID from the full resource path:
-    // "projects/{project}/databases/{database}/documents/{collection}/{docId}"
-    final pathSegments = (doc['name'] as String).split('/');
-    final id = pathSegments.last;
+      // Extract document ID from path
+      final docName = doc['name'] as String? ?? '';
+      final pathSegments = docName.split('/');
+      final id = pathSegments.isNotEmpty ? pathSegments.last : '';
 
-    // Initialize result with document ID first
-    final result = <String, dynamic>{'id': id};
+      final result = <String, dynamic>{'id': id};
 
-    // Process each field in the Firestore document
-    fields.forEach((String fieldName, dynamic fieldValue) {
-      // Firestore fields are always wrapped in type objects
-      // Example: {'stringValue': 'Hello'}, {'integerValue': '123'}
-      final typeMap = fieldValue as Map<String, dynamic>;
+      // Decode each field
+      fields.forEach((fieldName, fieldValue) {
+        if (fieldValue is Map<String, dynamic>) {
+          result[fieldName] = _decodeValue(fieldValue);
+        }
+      });
 
-      // Get the value type key and actual value
-      final valueType = typeMap.keys.first;
-      final rawValue = typeMap[valueType];
-
-      // Convert based on Firestore type
-      switch (valueType) {
-        case 'stringValue':
-          result[fieldName] = rawValue as String;
-          break;
-        case 'integerValue':
-          result[fieldName] = int.parse(rawValue as String);
-          break;
-        case 'doubleValue':
-          result[fieldName] = (rawValue as num).toDouble();
-          break;
-        case 'booleanValue':
-          result[fieldName] = rawValue as bool;
-          break;
-        case 'timestampValue':
-          result[fieldName] = DateTime.parse(rawValue as String);
-          break;
-        case 'nullValue':
-          result[fieldName] = null;
-          break;
-        case 'arrayValue':
-          // Arrays contain nested values that need recursive decoding
-          result[fieldName] = _decodeArray(rawValue['values'] as List<dynamic>);
-          break;
-        case 'mapValue':
-          // Maps become nested objects with their own fields
-          result[fieldName] =
-              _decode(rawValue['fields'] as Map<String, dynamic>);
-          break;
-        default:
-          throw UnsupportedError('Unsupported Firestore type: $valueType');
+      // Debug logging for completed_dates specifically
+      if (result.containsKey('completed_dates')) {
+        print('Document $id completed_dates: ${result['completed_dates']}');
       }
-    });
 
-    return result;
+      return result;
+    } catch (e) {
+      print('Error decoding document: $e');
+      return {'id': '', 'error': 'Failed to decode document'};
+    }
   }
 
-  /// Recursively decodes Firestore array values to Dart Lists
-  ///
-  /// Handles:
-  /// - Mixed type arrays
-  /// - Nested arrays and maps
-  /// - Type conversion for each element
-  List<dynamic> _decodeArray(List<dynamic> firestoreArray) {
-    return firestoreArray.map((dynamic element) {
-      // Each array element is wrapped in a type object
-      final elementMap = element as Map<String, dynamic>;
-      final elementType = elementMap.keys.first;
-      final elementValue = elementMap[elementType];
+  /// Decodes a single Firestore value
+  dynamic _decodeValue(Map<String, dynamic> valueMap) {
+    final valueType = valueMap.keys.first;
+    final rawValue = valueMap[valueType];
 
-      switch (elementType) {
-        case 'stringValue':
-          return elementValue as String;
-        case 'integerValue':
-          return int.parse(elementValue as String);
-        case 'doubleValue':
-          return (elementValue as num).toDouble();
-        case 'booleanValue':
-          return elementValue as bool;
-        case 'timestampValue':
-          return DateTime.parse(elementValue as String);
-        case 'nullValue':
-          return null;
-        case 'arrayValue':
-          // Recursively decode nested arrays
-          return _decodeArray(elementValue['values'] as List<dynamic>);
-        case 'mapValue':
-          // Recursively decode nested maps
-          return _decode(elementValue['fields'] as Map<String, dynamic>);
-        default:
-          throw UnsupportedError(
-              'Unsupported array element type: $elementType');
-      }
-    }).toList();
+    switch (valueType) {
+      case 'stringValue':
+        return rawValue as String;
+      case 'integerValue':
+        return int.parse(rawValue as String);
+      case 'doubleValue':
+        return (rawValue as num).toDouble();
+      case 'booleanValue':
+        return rawValue as bool;
+      case 'timestampValue':
+        // Parse the timestamp and normalize to date only
+        final parsedDate = DateTime.parse(rawValue as String);
+        final normalized = _normalizeDate(parsedDate);
+        // Debug logging
+        print('Decoded timestamp: $rawValue -> $parsedDate -> $normalized');
+        return normalized;
+      case 'nullValue':
+        return null;
+      case 'arrayValue':
+        final values = rawValue['values'] as List<dynamic>? ?? [];
+        final decodedList =
+            values.map((v) => _decodeValue(v as Map<String, dynamic>)).toList();
+        // Debug logging for arrays (like completed_dates)
+        if (decodedList.isNotEmpty && decodedList.first is DateTime) {
+          print('Decoded DateTime array: $decodedList');
+        }
+        return decodedList;
+      case 'mapValue':
+        final fields = rawValue['fields'] as Map<String, dynamic>? ?? {};
+        final result = <String, dynamic>{};
+        fields.forEach((key, value) {
+          result[key] = _decodeValue(value as Map<String, dynamic>);
+        });
+        return result;
+      default:
+        print('Unknown Firestore value type: $valueType');
+        return rawValue;
+    }
   }
 
-  /// Encodes application data to Firestore-compatible JSON format
-  ///
-  /// Converts Dart types to Firestore type wrappers:
-  /// - Handles null values
-  /// - Recursively processes nested Lists and Maps
-  /// - Converts special types like DateTime
+  /// Encodes Dart Map to Firestore format
   Map<String, dynamic> _encode(Map<String, dynamic> data) {
     final encoded = <String, dynamic>{};
 
-    data.forEach((String key, dynamic value) {
+    data.forEach((key, value) {
       encoded[key] = _encodeValue(value);
     });
 
     return encoded;
   }
 
-  /// Recursively encodes a single value to Firestore JSON format
-  ///
-  /// This is the core type conversion method that handles:
-  /// - Basic Dart primitive types
-  /// - Nested collection types (List/Map)
-  /// - Special type handling for DateTime
-  /// - Type checking for unsupported values
+  /// Encodes a single value to Firestore format
   Map<String, dynamic> _encodeValue(dynamic value) {
     if (value == null) {
       return {'nullValue': null};
@@ -422,59 +650,36 @@ class FirestoreDatabaseRestService implements DatabaseService {
     } else if (value is bool) {
       return {'booleanValue': value};
     } else if (value is DateTime) {
-      return {'timestampValue': value.toUtc().toIso8601String()};
+      // Normalize date before encoding and ensure proper format for Firestore
+      final normalizedDate = _normalizeDate(value);
+      // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
+      final isoString = normalizedDate.toUtc().toIso8601String();
+      // Debug logging
+      print('Encoding DateTime: $value -> $normalizedDate -> $isoString');
+      return {'timestampValue': isoString};
     } else if (value is Timestamp) {
-      // Fix: handle Firestore Timestamp
-      return {'timestampValue': value.toDate().toUtc().toIso8601String()};
+      // Normalize date before encoding and ensure proper format for Firestore
+      final normalizedDate = _normalizeDate(value.toDate());
+      // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
+      final isoString = normalizedDate.toUtc().toIso8601String();
+      // Debug logging
+      print('Encoding Timestamp: $value -> $normalizedDate -> $isoString');
+      return {'timestampValue': isoString};
     } else if (value is List) {
+      final encodedList = value.map(_encodeValue).toList();
+      // Debug logging for arrays (like completed_dates)
+      if (value.isNotEmpty && value.first is DateTime) {
+        print('Encoding DateTime array: $value -> encoded as array');
+      }
       return {
-        'arrayValue': {'values': value.map(_encodeValue).toList()}
+        'arrayValue': {'values': encodedList}
       };
     } else if (value is Map) {
       return {
         'mapValue': {'fields': _encode(value.cast<String, dynamic>())}
       };
     }
-    throw ArgumentError('Unsupported data type for encoding: '
-        '${value.runtimeType}');
-  }
 
-  String _generateFirestoreId([int length = 20]) {
-    const chars =
-        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    final rand = Random.secure();
-    return List.generate(length, (_) => chars[rand.nextInt(chars.length)])
-        .join();
-  }
-
-  @override
-  String generateId() {
-    return _generateFirestoreId();
-  }
-
-  @override
-  Future<void> batchUpdate(List<Map<String, dynamic>> updates) async {
-    final writes = updates.map((update) {
-      final path = update['path'] as String;
-      final data = update['data'] as Map<String, dynamic>;
-
-      if (path.split('/').length != 2) {
-        throw Exception('Invalid document path: $path');
-      }
-
-      return {
-        'update': {
-          'name': 'projects/$projectId/databases/(default)/documents/$path',
-          'fields': _encode(data),
-          'updateMask': {'fieldPaths': data.keys.toList()},
-        }
-      };
-    }).toList();
-
-    await _call(
-      'POST',
-      'projects/$projectId/databases/(default)/documents:batchWrite',
-      data: {'writes': writes},
-    );
+    throw ArgumentError('Unsupported data type: ${value.runtimeType}');
   }
 }

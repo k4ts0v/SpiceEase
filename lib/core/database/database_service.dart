@@ -126,6 +126,24 @@ class BasicFilter implements QueryFilter {
   final dynamic value;
 
   const BasicFilter(this.field, this.op, this.value);
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is BasicFilter &&
+        other.field == field &&
+        other.op == op &&
+        // Consider how you want to compare values, especially if they are collections or complex objects.
+        // For simple values, direct comparison is fine. For DateTime, ensure they are compared correctly (e.g., isAtSameMomentAs).
+        // Using DeepCollectionEquality().equals(other.value, value) from package:collection can be robust for complex values.
+        other.value == value;
+  }
+
+  @override
+  int get hashCode {
+    // Using Object.hash is a modern and safe way to combine hash codes.
+    return Object.hash(field, op, value);
+  }
 }
 
 /// Composite OR filter.

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'database_service.dart';
 
 /// Firestore SDK implementation of [DatabaseService]
@@ -18,8 +19,22 @@ class FirebaseDatabaseService implements DatabaseService {
   /// Requires Firebase to be initialized elsewhere in the application
   @override
   Future<void> initialize() async {
-    // Firebase initialization should be Done at app startup
-    _fs = FirebaseFirestore.instance;
+    try {
+      // Ensure Firebase is initialized first
+      if (Firebase.apps.isEmpty) {
+        throw Exception(
+            'Firebase not initialized. Call Firebase.initializeApp() first.');
+      }
+
+      _fs = FirebaseFirestore.instance;
+
+      // Test the connection to ensure it's working
+      await _fs!.enableNetwork();
+      print('Firestore initialized successfully');
+    } catch (e) {
+      print('Failed to initialize Firestore: $e');
+      throw Exception('Failed to initialize Firestore: $e');
+    }
   }
 
   /// Generates the ID of the document using Firestore's native ID generation.
@@ -108,6 +123,9 @@ class FirebaseDatabaseService implements DatabaseService {
 
     final docRef = _fs!.collection(collection).doc(docId);
     await docRef.delete();
+    if ((await docRef.get()).exists) {
+      throw Exception('Failed to delete document at $path');
+    }
   }
 
   /// Executes a complex query with multiple filters and ordering
@@ -129,6 +147,9 @@ class FirebaseDatabaseService implements DatabaseService {
     String? endBefore,
   }) async {
     // Base query starts with collection reference
+    if (_fs == null) {
+      throw Exception('Firestore not initialized');
+    }
     Query<Map<String, dynamic>> baseQuery = _fs!.collection(collection);
 
     // Categorize filters into different types

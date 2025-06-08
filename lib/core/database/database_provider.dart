@@ -1,30 +1,33 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/auth/auth_provider.dart';
-import 'package:spiceease/core/database/database_service.dart';
-import 'package:spiceease/core/database/firebase_database_service.dart';
-import 'package:spiceease/core/database/firebase_database_rest.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:spiceease/core/database/database_service.dart';
+import 'package:spiceease/core/database/firebase_database_rest.dart';
+import 'package:spiceease/core/auth/auth_provider.dart';
+import 'dart:io' show Platform;
 
-/// Provides the appropriate database service implementation based on platform.
-/// Uses Firebase REST API for Linux platform (for compatibility).
-/// Uses standard Firebase SDK for another platforms.
+import 'package:spiceease/core/database/firebase_database_service.dart';
+
+/// Provider for the database service
+/// Uses REST implementation on Linux, Firebase SDK on other platforms
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
-  // Get authentication service from dependency tree.
-  final authService = ref.watch(authServiceProvider);
+  if (Platform.isLinux) {
+    // Use REST implementation for Linux
+    final projectId = dotenv.env['FIREBASE_PROJECT_ID'];
+    if (projectId == null) {
+      throw Exception('FIREBASE_PROJECT_ID not found in .env file');
+    }
 
-  // Load Firebase project ID from environment variables.
-  final firebaseProjectId =
-      dotenv.env['FIREBASE_PROJECT_ID']!;
-
-  // Use REST implementation for Linux platform.
-  if (defaultTargetPlatform == TargetPlatform.linux) {
     return FirestoreDatabaseRestService(
-      projectId: firebaseProjectId,
-      authService: authService,
+      projectId: projectId,
+      authService: ref.read(authServiceProvider),
     );
-  }
+  } else {
+    // For other platforms, use the SDK.
+    final projectId = dotenv.env['FIREBASE_PROJECT_ID'];
+    if (projectId == null) {
+      throw Exception('FIREBASE_PROJECT_ID not found in .env file');
+    }
 
-  // Use standard Firebase SDK for another platforms.
-  return FirebaseDatabaseService();
+    return FirebaseDatabaseService();
+  }
 });
