@@ -19,7 +19,7 @@ import 'auth_service.dart';
 class FirebaseAuthRestService implements AuthService {
   final Dio _dio; // HTTP client for REST API calls
   final String apiKey; // Firebase project API key
-  final _storage = const FlutterSecureStorage(); // Secure token storage
+  final FlutterSecureStorage _storage; // Secure token storage
   final StreamController<AppUser?> _authController =
       StreamController.broadcast(); // Auth state stream
 
@@ -30,12 +30,13 @@ class FirebaseAuthRestService implements AuthService {
   FirebaseAuthRestService({
     required this.apiKey,
     Dio? dio,
-  }) : _dio = dio ??
+    FlutterSecureStorage? storage,
+  })  : _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://identitytoolkit.googleapis.com/v1/',
-              headers: {'Content-Type': 'application/json'},
-            )) {
-    _initAuthInterceptor(); // Setup request/response interceptors
+            )),
+        _storage = storage ?? const FlutterSecureStorage() {
+    _initAuthInterceptor();
   }
 
   /// Initialize authentication interceptors
@@ -87,29 +88,41 @@ class FirebaseAuthRestService implements AuthService {
     ));
   }
 
+  /// Get access token for Firestore API calls
+  @override
+  Future<String?> getAccessToken() async {
+    try {
+      // For Firestore REST API, we use the ID token directly
+      return await getCurrentIdToken();
+    } catch (e) {
+      print('Error getting access token: $e');
+      return null;
+    }
+  }
+
   /// Initialize auth state from storage
   ///
   /// Checks for existing tokens and validates them
   /// Updates auth state stream if valid session exists
   @override
-Future<void> initialize() async {
-  final token = await _storage.read(key: 'idToken');
-  if (token != null) {
-    try {
-      // Check and log token expiration status
-      if (_isTokenExpired(token)) {
-        print('Token is expired, signing out for fresh authentication');
-        await signOut(); // Force fresh login instead of trying refresh
-      } else {
-        print('Token is valid, fetching user profile');
-        _authController.add(await _fetchUserProfile(token));
+  Future<void> initialize() async {
+    final token = await _storage.read(key: 'idToken');
+    if (token != null) {
+      try {
+        // Check and log token expiration status
+        if (_isTokenExpired(token)) {
+          print('Token is expired, signing out for fresh authentication');
+          await signOut(); // Force fresh login instead of trying refresh
+        } else {
+          print('Token is valid, fetching user profile');
+          _authController.add(await _fetchUserProfile(token));
+        }
+      } catch (e) {
+        print('Error during authentication initialization: $e');
+        await signOut();
       }
-    } catch (e) {
-      print('Error during authentication initialization: $e');
-      await signOut();
     }
   }
-}
 
   /// Email/password registration
   ///
@@ -375,6 +388,7 @@ Future<void> initialize() async {
   ///
   /// Extracts error message from DioException
   String _parseError(DioException e) {
+    print('Parsing error: ${e}');
     return e.response?.data?['error']?['message'] ??
         e.message ??
         'Authentication failed';
@@ -469,6 +483,436 @@ Future<void> initialize() async {
     } catch (e) {
       print('Error checking token expiration: $e');
       return true;
+    }
+  }
+
+  /// Updates the user's email address
+  ///
+  /// - Parameter [newEmail]: The new email address to set
+  // ...existing code...
+
+  // ...existing code...
+
+  @override
+  Future<void> updateEmail(String newEmail) async {
+    try {
+      print('DEBUG: Auth service - updateEmail called with: $newEmail');
+
+      final token = await getCurrentIdToken();
+      if (token == null) {
+        throw AuthException('Authentication required');
+      }
+
+      // Step 1: Try to update the email directly
+      final response = await _dio.post(
+        'https://identitytoolkit.googleapis.com/v1/accounts:update',
+        queryParameters: {
+          'key': apiKey,
+        },
+        data: {
+          'idToken': token,
+          'email': newEmail,
+          'returnSecureToken': true,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        print('DEBUG: Auth service - Email updated successfully to: $newEmail');
+
+        // Store new tokens and update auth state
+        await _storeTokens(response.data);
+        _authController.add(AppUser.fromFirebase(response.data));
+
+        // Send verification email to the NEW address
+        await sendEmailVerification();
+      }
+    } on DioException catch (e) {
+      print(
+          'DEBUG: Auth service - DioException in updateEmail: ${e.response?.data}');
+
+      if (e.response?.statusCode == 400) {
+        final errorData = e.response?.data;
+        if (errorData != null && errorData['error'] != null) {
+          final errorMessage = errorData['error']['message'] ?? '';
+
+          if (errorMessage.contains('OPERATION_NOT_ALLOWED') &&
+              errorMessage.contains('Please verify the new email')) {
+            // Firebase requires new email verification first
+            // Store the email change request and send verification
+            await _initiateEmailChangeWithVerification(newEmail);
+            throw AuthException('VERIFICATION_EMAIL_SENT:$newEmail');
+          } else if (errorMessage.contains('EMAIL_EXISTS')) {
+            throw AuthException('An account with this email already exists');
+          } else if (errorMessage.contains('INVALID_ID_TOKEN')) {
+            throw AuthException('requires_recent_login');
+          } else {
+            throw AuthException(errorMessage);
+          }
+        }
+      }
+
+      throw AuthException('Failed to update email: ${e.message}');
+    } catch (e) {
+      print('DEBUG: Auth service - Exception in updateEmail: $e');
+      throw AuthException('Failed to update email: $e');
+    }
+  }
+
+  /// Initiate email change with verification flow
+  Future<void> _initiateEmailChangeWithVerification(String newEmail) async {
+    print('DEBUG: Initiating email change with verification for: $newEmail');
+
+    try {
+      // Store the current user's info and the requested new email
+      final currentUser = await getCurrentUser();
+      if (currentUser == null) {
+        throw AuthException('Authentication required');
+      }
+
+      await _storage.write(key: 'email_change_request', value: newEmail);
+      await _storage.write(
+          key: 'original_user_email', value: currentUser.email);
+
+      // Try to create a temporary account to send verification to new email
+      final tempPassword = _generateSecurePassword();
+
+      final createResponse = await _dio.post(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signUp',
+        queryParameters: {'key': apiKey},
+        data: {
+          'email': newEmail,
+          'password': tempPassword,
+          'returnSecureToken': true,
+        },
+      );
+
+      if (createResponse.statusCode == 200) {
+        final tempToken = createResponse.data['idToken'];
+
+        // Send verification email to the new address
+        await _dio.post(
+          'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
+          queryParameters: {'key': apiKey},
+          data: {
+            'requestType': 'VERIFY_EMAIL',
+            'idToken': tempToken,
+          },
+        );
+
+        // Store temp account info for later cleanup
+        await _storage.write(key: 'temp_account_token', value: tempToken);
+        await _storage.write(key: 'temp_account_password', value: tempPassword);
+
+        print('DEBUG: Verification email sent to new address: $newEmail');
+      }
+    } on DioException catch (e) {
+      print(
+          'DEBUG: Error in _initiateEmailChangeWithVerification: ${e.response?.data}');
+
+      if (e.response?.data?['error']?['message']?.contains('EMAIL_EXISTS') ==
+          true) {
+        // Email already has an account - ask user to sign in with that account instead
+        throw AuthException('EXISTING_ACCOUNT_VERIFICATION:$newEmail');
+      } else {
+        throw AuthException('Failed to send verification email to new address');
+      }
+    }
+  }
+
+  /// Check if user has verified the new email and complete the change
+  Future<bool> checkAndCompleteEmailChange() async {
+    try {
+      final pendingEmail = await _storage.read(key: 'email_change_request');
+      final tempToken = await _storage.read(key: 'temp_account_token');
+      final tempPassword = await _storage.read(key: 'temp_account_password');
+
+      if (pendingEmail == null || tempToken == null || tempPassword == null) {
+        print('DEBUG: No pending email change found');
+        return false;
+      }
+
+      print(
+          'DEBUG: Checking verification status for pending email: $pendingEmail');
+
+      // Check if the temp account's email is verified
+      try {
+        final lookupResponse = await _dio.post(
+          'https://identitytoolkit.googleapis.com/v1/accounts:lookup',
+          queryParameters: {'key': apiKey},
+          data: {'idToken': tempToken},
+        );
+
+        final tempUser = lookupResponse.data['users'][0];
+        if (tempUser['emailVerified'] == true) {
+          print('DEBUG: New email is verified, completing email change...');
+
+          // Now we can update the original user's email
+          final currentToken = await getCurrentIdToken();
+          if (currentToken == null) {
+            throw AuthException('Authentication required');
+          }
+
+          // Delete the temp account first (we don't need it anymore)
+          try {
+            await _dio.post(
+              'https://identitytoolkit.googleapis.com/v1/accounts:delete',
+              queryParameters: {'key': apiKey},
+              data: {'idToken': tempToken},
+            );
+            print('DEBUG: Temp account deleted');
+          } catch (e) {
+            print('DEBUG: Error deleting temp account: $e');
+            // Continue anyway
+          }
+
+          // Now try to update the original user's email again
+          final updateResponse = await _dio.post(
+            'https://identitytoolkit.googleapis.com/v1/accounts:update',
+            queryParameters: {'key': apiKey},
+            data: {
+              'idToken': currentToken,
+              'email': pendingEmail,
+              'returnSecureToken': true,
+            },
+          );
+
+          if (updateResponse.statusCode == 200) {
+            print(
+                'DEBUG: Email change completed successfully to: $pendingEmail');
+
+            // Store new tokens and update auth state
+            await _storeTokens(updateResponse.data);
+            _authController.add(AppUser.fromFirebase(updateResponse.data));
+
+            // Clean up stored data
+            await _cleanupEmailChangeData();
+
+            return true;
+          } else {
+            throw AuthException('Failed to complete email update');
+          }
+        } else {
+          print('DEBUG: New email not verified yet');
+          return false;
+        }
+      } catch (e) {
+        print('DEBUG: Error checking temp account: $e');
+        // Clean up if temp account is invalid
+        await _cleanupEmailChangeData();
+        return false;
+      }
+    } catch (e) {
+      print('DEBUG: Error in checkAndCompleteEmailChange: $e');
+      await _cleanupEmailChangeData();
+      throw AuthException('Failed to complete email change: $e');
+    }
+  }
+
+  /// Clean up email change related data
+  Future<void> _cleanupEmailChangeData() async {
+    await _storage.delete(key: 'email_change_request');
+    await _storage.delete(key: 'original_user_email');
+    await _storage.delete(key: 'temp_account_token');
+    await _storage.delete(key: 'temp_account_password');
+  }
+
+  /// Get pending email change info
+  Future<String?> getPendingEmailChange() async {
+    return await _storage.read(key: 'email_change_request');
+  }
+
+  String _generateSecurePassword() {
+    const chars =
+        'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#\$%^&*';
+    final random = DateTime.now().millisecondsSinceEpoch;
+    return List.generate(
+        16, (index) => chars[(random * 17 + index * 31) % chars.length]).join();
+  }
+
+  // Remove the old completeEmailChange method and helper methods that create confusion
+  // ...existing code...
+
+  /// Attempt to send verification email to new email address
+  /// This is a workaround since Firebase REST API doesn't directly support this
+  Future<void> _sendVerificationToNewEmail(String newEmail) async {
+    print('DEBUG: Attempting to send verification to new email: $newEmail');
+
+    // Workaround: Create a temporary account to send verification
+    try {
+      // Generate a secure temporary password
+      final tempPassword = _generateSecurePassword();
+
+      // Create temporary account with new email
+      final createResponse = await _dio.post(
+        'https://identitytoolkit.googleapis.com/v1/accounts:signUp',
+        queryParameters: {'key': apiKey},
+        data: {
+          'email': newEmail,
+          'password': tempPassword,
+          'returnSecureToken': true,
+        },
+      );
+
+      if (createResponse.statusCode == 200) {
+        final tempToken = createResponse.data['idToken'];
+
+        // Send verification email to the new address
+        await _dio.post(
+          'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
+          queryParameters: {'key': apiKey},
+          data: {
+            'requestType': 'VERIFY_EMAIL',
+            'idToken': tempToken,
+          },
+        );
+
+        // Store the temporary account info for later cleanup
+        await _storage.write(key: 'temp_account_token', value: tempToken);
+        await _storage.write(key: 'pending_email_change', value: newEmail);
+
+        print('DEBUG: Verification email sent to new address: $newEmail');
+
+        // Note: We don't delete the temp account immediately because the user
+        // needs to verify the email first. We'll clean it up after verification.
+      }
+    } on DioException catch (e) {
+      print('DEBUG: Error creating temp account: ${e.response?.data}');
+
+      if (e.response?.data?['error']?['message']?.contains('EMAIL_EXISTS') ==
+          true) {
+        // The email already has an account - that's actually good!
+        // We can try to trigger a verification email to that existing account
+        try {
+          await _triggerVerificationForExistingEmail(newEmail);
+        } catch (existingEmailError) {
+          rethrow; // Re-throw the original error
+        }
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  /// Trigger verification email for existing email account
+  Future<void> _triggerVerificationForExistingEmail(String email) async {
+    try {
+      // Send password reset email as a workaround to verify email ownership
+      await _dio.post(
+        'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
+        queryParameters: {'key': apiKey},
+        data: {
+          'requestType': 'PASSWORD_RESET',
+          'email': email,
+        },
+      );
+
+      print('DEBUG: Password reset email sent to existing account: $email');
+      throw AuthException('EXISTING_ACCOUNT_VERIFICATION:$email');
+    } catch (e) {
+      print('DEBUG: Error sending password reset to existing account: $e');
+      rethrow;
+    }
+  }
+
+  /// Updates the user's password
+  ///
+  /// - Parameters:
+  ///   - [currentPassword]: The user's current password for verification
+  ///   - [newPassword]: The new password to set
+  @override
+  Future<void> updatePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      // First verify the current password by signing in again
+      final user = await getCurrentUser();
+      if (user == null || user.email == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      // Verify current password with a sign-in attempt
+      // We don't store this token because we'll get a new one after password change
+      try {
+        await _dio.post(
+          'accounts:signInWithPassword',
+          queryParameters: {'key': apiKey},
+          data: {
+            'email': user.email,
+            'password': currentPassword,
+            'returnSecureToken': false,
+          },
+        );
+      } on DioException catch (e) {
+        // If verification fails, it's likely an incorrect password
+        throw AuthException('invalid_current_password');
+      }
+
+      // Once verified, update the password
+      final token = await getCurrentIdToken();
+      if (token == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      // Change password with verified token
+      final response = await _dio.post(
+        'accounts:update',
+        queryParameters: {'key': apiKey},
+        data: {
+          'idToken': token,
+          'password': newPassword,
+          'returnSecureToken': true,
+        },
+      );
+
+      // Store the new tokens and update auth state
+      await _storeTokens(response.data);
+      _authController.add(AppUser.fromFirebase(response.data));
+    } on DioException catch (e) {
+      throw AuthException(_parseError(e));
+    }
+  }
+
+  /// Re-authenticates the user with their credentials
+  @override
+  Future<void> reauthenticate(String email, String password) async {
+    try {
+      // Re-authenticate by performing a fresh sign-in
+      final response = await _dio.post(
+        'accounts:signInWithPassword',
+        queryParameters: {'key': apiKey},
+        data: {
+          'email': email,
+          'password': password,
+          'returnSecureToken': true,
+        },
+      );
+
+      // Store the new tokens
+      await _storeTokens(response.data);
+      _authController.add(AppUser.fromFirebase(response.data));
+    } on DioException catch (e) {
+      throw AuthException(_parseError(e));
+    }
+  }
+
+  /// Send email verification to current user
+  @override
+  Future<void> sendEmailVerification() async {
+    try {
+      final token = await getCurrentIdToken();
+      if (token == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      await _dio.post(
+        'accounts:sendOobCode',
+        queryParameters: {'key': apiKey},
+        data: {
+          'requestType': 'VERIFY_EMAIL',
+          'idToken': token,
+        },
+      );
+    } on DioException catch (e) {
+      throw AuthException(_parseError(e));
     }
   }
 }

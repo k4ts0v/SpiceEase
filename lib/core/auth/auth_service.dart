@@ -23,6 +23,25 @@ abstract class AuthService {
   /// Throws registration-specific exceptions for invalid inputs/duplicate accounts
   Future<void> register(String email, String password);
 
+  /// Updates the user's email address
+  ///
+  /// Requires the user to be authenticated.
+  /// Throws exceptions for invalid email formats or if the user is not authenticated.
+  Future<void> updateEmail(String email);
+
+  /// Updates the user's password
+  ///
+  /// Requires the user to be authenticated.
+  /// Throws exceptions for invalid email formats or if the user is not authenticated.
+  Future<void> updatePassword(String currentPassword, String newPassword);
+
+  /// Re-authenticates the user with their credentials
+  ///
+  /// - Parameters:
+  ///   - [email]: The user's email address
+  ///   - [password]: The user's password
+  Future<void> reauthenticate(String email, String password);
+
   /// Terminates current user session
   ///
   /// Clears authentication state and any cached credentials
@@ -59,4 +78,16 @@ abstract class AuthService {
   /// Validates the current session
   /// Returns true if session is valid, false otherwise
   Future<bool> validateSession() async => true; // Default implementation
+
+  /// Gets the current user's access token
+  ///
+  /// Returns a string representing the access token for the authenticated user.
+  /// Throws an exception if the user is not authenticated or if there is an error retrieving the token.
+  Future<String?> getAccessToken();
+
+  /// Send email verification to current user
+  ///
+  /// Requires the user to be authenticated.
+  /// Throws exceptions if the user is not authenticated or if there is an error sending the verification email.
+  Future<void> sendEmailVerification();
 }

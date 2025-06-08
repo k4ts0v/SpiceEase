@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
@@ -5,6 +7,8 @@ import 'package:spiceease/core/auth/firebase_auth_rest.dart';
 import 'package:spiceease/core/auth/firebase_auth_service.dart';
 import 'package:spiceease/core/auth/user_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 /// Provides an instance of [AuthService] based on the platform.
 ///
@@ -17,14 +21,24 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// ```dart
 /// final authService = ref.watch(authServiceProvider);
 /// ```
-final authServiceProvider = Provider<AuthService>((ref) {
-  if (defaultTargetPlatform == TargetPlatform.linux) {
-    /// Use the Firebase REST API for Linux platform.
-    return FirebaseAuthRestService(apiKey: dotenv.env['API_KEY_WEB']!);
-  }
 
-  /// Use the Firebase SDK for all other platforms.
-  return FirebaseAuthService();
+/// Provider for the authentication service
+/// Uses REST implementation on Linux, Firebase SDK on other platforms
+final authServiceProvider = Provider<AuthService>((ref) {
+  if (kIsWeb) {
+    // Use Firebase SDK for web
+    return FirebaseAuthService();
+  } else if (Platform.isLinux) {
+    // Use REST for Linux
+    final apiKey = dotenv.env['API_KEY_WEB'];
+    if (apiKey == null) {
+      throw Exception('API_KEY_WEB not found in .env file');
+    }
+    return FirebaseAuthRestService(apiKey: apiKey);
+  } else {
+    // Use Firebase SDK for Android, iOS, macOS, Windows
+    return FirebaseAuthService();
+  }
 });
 
 /// A provider that streams the authentication state of the current user.

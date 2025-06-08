@@ -108,9 +108,10 @@ class FirebaseAuthService implements AuthService {
   ///   or `null` if no user is signed in.
   @override
   Stream<AppUser?> authStateChanges() {
-    return _auth!.authStateChanges().map((user) {
-      return user != null ? AppUser.fromPlatformUser(user) : null;
-    });
+    return _auth?.authStateChanges().map((user) {
+          return user != null ? AppUser.fromPlatformUser(user) : null;
+        }) ??
+        Stream.value(null);
   }
 
   /// Checks whether a user is currently signed in.
@@ -215,6 +216,7 @@ class FirebaseAuthService implements AuthService {
       case 'EXPIRED_ACTION_CODE':
       case 'EXPIRED_OOB_CODE':
       case 'TOKEN_EXPIRED':
+      case 'USER_TOKEN_EXPIRED':
         return 'session_expired';
       case 'MISSING_PASSWORD':
         return 'missing_password';
@@ -228,4 +230,102 @@ class FirebaseAuthService implements AuthService {
         return code.toLowerCase();
     }
   }
+
+  /// Updates the user's email address
+  ///
+  /// - Parameter [newEmail]: The new email address to set
+  @override
+  Future<void> updateEmail(String newEmail) async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      await user.verifyBeforeUpdateEmail(newEmail);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Updates the user's password
+  ///
+  /// - Parameters:
+  ///   - [currentPassword]: The user's current password for verification
+  ///   - [newPassword]: The new password to set
+  @override
+  Future<void> updatePassword(
+      String currentPassword, String newPassword) async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      // For security-sensitive operations, Firebase requires recent authentication
+      final credential = EmailAuthProvider.credential(
+        email: user.email ?? '',
+        password: currentPassword,
+      );
+
+      // Re-authenticate the user first
+      await user.reauthenticateWithCredential(credential);
+
+      // Then update the password
+      await user.updatePassword(newPassword);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Re-authenticates the user with their credentials
+  @override
+  Future<void> reauthenticate(String email, String password) async {
+    try {
+      // Get current user
+      final user = auth.currentUser;
+      if (user == null) {
+        throw AuthException('not_signed_in');
+      }
+
+      // Create credential
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+
+      // Re-authenticate
+      await user.reauthenticateWithCredential(credential);
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
+  Future<String?> getAccessToken() {
+    return Future.value(null);
+  }
+
+  /// Sends email verification to current user
+@override
+Future<void> sendEmailVerification() async {
+  try {
+    final user = auth.currentUser;
+    if (user == null) {
+      throw AuthException('not_signed_in');
+    }
+
+    await user.sendEmailVerification();
+  } on FirebaseAuthException catch (e) {
+    throw AuthException(_parseError(e));
+  } catch (e) {
+    rethrow;
+  }
+}
 }
