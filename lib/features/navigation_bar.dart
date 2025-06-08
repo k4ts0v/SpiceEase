@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:spiceease/features/reports/reports_page.dart';
+import 'package:spiceease/features/settings/settings_page.dart';
+import 'package:spiceease/features/settings/settings_page.dart';
 import 'package:spiceease/features/time_management/time_management.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_screen.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
@@ -18,11 +21,13 @@ class _NavBarState extends State<NavBar> {
     TrackerScreen(),
     TimeManagementPage(),
     ReportsPage(),
-    PlaceholderScreen(labelKey: 'profile'),
+    SettingsPage(),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     final localizations = AppLocalizations.of(context)!;
 
     // Define navigation items inside build to access localizations
@@ -43,9 +48,9 @@ class _NavBarState extends State<NavBar> {
         label: localizations.insights,
       ),
       _NavBarItem(
-        icon: Icons.person_outline_rounded,
-        selectedIcon: Icons.person_rounded,
-        label: localizations.profile,
+        icon: Icons.settings,
+        selectedIcon: Icons.settings,
+        label: localizations.settings,
       ),
     ];
 
@@ -55,10 +60,10 @@ class _NavBarState extends State<NavBar> {
         bottomNavigationBar: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colorScheme.surface,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: colorScheme.shadow.withOpacity(0.1),
                 blurRadius: 10,
                 offset: const Offset(0, -2),
               ),
@@ -84,10 +89,12 @@ class _NavBarState extends State<NavBar> {
                       children: [
                         Icon(
                           isSelected ? item.selectedIcon : item.icon,
-                          color:
-                              isSelected ? Colors.blueAccent : Colors.black54,
+                          color: isSelected
+                              ? colorScheme.primary
+                              : colorScheme.onSurface.withOpacity(0.6),
                           size: 28,
                         ),
+                        // Uncomment if you want to show labels
                         // const SizedBox(height: 4),
                         // Text(
                         //   item.label,
@@ -96,8 +103,9 @@ class _NavBarState extends State<NavBar> {
                         //     fontWeight: isSelected
                         //         ? FontWeight.bold
                         //         : FontWeight.normal,
-                        //     color:
-                        //         isSelected ? Colors.blueAccent : Colors.black54,
+                        //     color: isSelected
+                        //         ? colorScheme.primary
+                        //         : colorScheme.onSurface.withOpacity(0.6),
                         //   ),
                         //   textAlign: TextAlign.center,
                         // ),
@@ -114,7 +122,6 @@ class _NavBarState extends State<NavBar> {
   }
 }
 
-
 class _NavBarItem {
   final IconData icon;
   final IconData selectedIcon;
@@ -125,35 +132,4 @@ class _NavBarItem {
     required this.selectedIcon,
     required this.label,
   });
-}
-
-class PlaceholderScreen extends StatelessWidget {
-  final String labelKey;
-
-  const PlaceholderScreen({super.key, required this.labelKey});
-
-  @override
-  Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-    // Use reflection to get the appropriate localized string
-    // based on the provided key
-    String localizedLabel;
-    switch (labelKey) {
-      case 'insights':
-        localizedLabel = localizations.insights;
-        break;
-      case 'profile':
-        localizedLabel = localizations.profile;
-        break;
-      default:
-        localizedLabel = labelKey;
-    }
-
-    return Center(
-      child: Text(
-        'Page',
-        style: const TextStyle(fontSize: 24),
-      ),
-    );
-  }
 }

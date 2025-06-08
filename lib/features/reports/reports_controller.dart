@@ -1,16 +1,18 @@
 import 'dart:math';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/database/firerstore_date_adapter.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 import 'package:spiceease/data/models/mood_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 import 'package:spiceease/data/providers/flowmodoro_provider.dart';
 import 'package:spiceease/data/providers/habit_provider.dart';
+import 'package:spiceease/data/providers/medication_provider.dart';
 import 'package:spiceease/data/providers/mood_provider.dart';
 import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/services/flowmodoro_service.dart';
+import 'package:spiceease/data/services/medication_service.dart';
 import 'package:spiceease/data/services/subtask_service.dart';
 import 'package:spiceease/data/services/symptom_service.dart';
 import 'package:spiceease/data/services/task_service.dart';
@@ -19,6 +21,7 @@ import 'package:spiceease/data/services/habit_service.dart';
 import 'package:spiceease/data/services/energy_service.dart';
 import 'package:spiceease/features/reports/metrics_data.dart';
 import 'package:spiceease/features/reports/pie_data.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 class ReportsState {
   final List<MetricsData> lineChartData;
@@ -89,6 +92,7 @@ class ReportsController extends StateNotifier<ReportsState> {
   final SymptomService symptomsService;
   final EnergyService energyService;
   final FlowmodoroService flowmodoroService;
+  final MedicationService medicationService;
 
   ReportsController({
     required this.taskService,
@@ -98,6 +102,7 @@ class ReportsController extends StateNotifier<ReportsState> {
     required this.symptomsService,
     required this.energyService,
     required this.flowmodoroService,
+    required this.medicationService,
   }) : super(
           const ReportsState(
             lineChartData: [],
@@ -107,31 +112,64 @@ class ReportsController extends StateNotifier<ReportsState> {
           ),
         );
 
-  int _calculateTasksStreak(List tasks, List subtasks) {
+  /// Checks if a date is valid for reporting (not null, not epoch/sentinel date)
+  bool _isValidDate(DateTime? date) {
+    if (date == null) return false;
+    // Filter out epoch dates or dates very close to epoch (used as sentinels)
+    return date.isAfter(DateTime(1970, 1, 2));
+  }
+
+  /// Safely extracts date from an object's field with validation
+  DateTime? _safeGetDate(dynamic obj, String fieldName) {
+    final date = FirestoreDateAdapter.fromFirestore(obj[fieldName]);
+    return _isValidDate(date) ? date : null;
+  }
+
+  int _calculateTasksStreak(
+      List tasks, List subtasks, DateTime rangeStart, DateTime rangeEnd) {
     Map<String, bool> completedDates = {};
+
+    // Filter tasks within the time range
     for (final task in tasks) {
-      if (task.completedAt != null) {
-        final date = FirestoreDateAdapter.fromFirestore(task.completedAt);
+      final date = FirestoreDateAdapter.fromFirestore(task.completedAt);
+      if (_isValidDate(date) &&
+          date!.isAfter(rangeStart) &&
+          date.isBefore(rangeEnd)) {
         completedDates['${date.year}-${date.month}-${date.day}'] = true;
       }
     }
+
+    // Filter subtasks within the time range
     for (final subtask in subtasks) {
       if (subtask.completed) {
         final date = FirestoreDateAdapter.fromFirestore(subtask.updatedAt);
-        completedDates['${date.year}-${date.month}-${date.day}'] = true;
+        if (_isValidDate(date) &&
+            date!.isAfter(rangeStart) &&
+            date.isBefore(rangeEnd)) {
+          completedDates['${date.year}-${date.month}-${date.day}'] = true;
+        }
       }
     }
+
     return _calculateLongestStreak(completedDates);
   }
 
-  int _calculateHabitsStreak(List habits) {
+  int _calculateHabitsStreak(
+      List habits, DateTime rangeStart, DateTime rangeEnd) {
     Map<String, bool> completedDates = {};
+
+    // Filter habits within the time range
     for (final habit in habits) {
       if (habit.lastCompleted != null) {
         final date = FirestoreDateAdapter.fromFirestore(habit.lastCompleted);
-        completedDates['${date.year}-${date.month}-${date.day}'] = true;
+        if (_isValidDate(date) &&
+            date!.isAfter(rangeStart) &&
+            date.isBefore(rangeEnd)) {
+          completedDates['${date.year}-${date.month}-${date.day}'] = true;
+        }
       }
     }
+
     return _calculateLongestStreak(completedDates);
   }
 
@@ -158,20 +196,31 @@ class ReportsController extends StateNotifier<ReportsState> {
   Future<List<TaskModel>> fetchTimeBlocks() async {
     final tasks = await taskService.getAllTasks();
     return tasks.where((task) {
-      return ((task.startTime != null && task.endTime != null) ||
+      final completedAt = FirestoreDateAdapter.fromFirestore(task.completedAt);
+      final startTime = FirestoreDateAdapter.fromFirestore(task.startTime);
+      final endTime = FirestoreDateAdapter.fromFirestore(task.endTime);
+
+      return ((_isValidDate(startTime) && _isValidDate(endTime)) ||
               task.estimatedTime != null) &&
-          task.completedAt != null;
+          _isValidDate(completedAt);
     }).toList();
   }
 
   Future<(int, double, double, double)> fetchFlowmodoroStats() async {
     final sessions = await flowmodoroService.getAllFlowmodoro();
+
+    // Filter out sessions with invalid dates
+    final validSessions = sessions.where((session) {
+      final createdAt = FirestoreDateAdapter.fromFirestore(session.createdAt);
+      return _isValidDate(createdAt);
+    }).toList();
+
     double focus = 0.0, breaks = 0.0;
-    for (final session in sessions) {
+    for (final session in validSessions) {
       focus += ((session.focusMinutes ?? 0) * (session.pomoCount ?? 1)) / 60.0;
       breaks += ((session.breakMinutes ?? 0) * (session.pomoCount ?? 1)) / 60.0;
     }
-    return (sessions.length, focus, breaks, focus + breaks);
+    return (validSessions.length, focus, breaks, focus + breaks);
   }
 
   int _parseEstimatedTimeToMinutes(String estimatedTime) {
@@ -187,10 +236,24 @@ class ReportsController extends StateNotifier<ReportsState> {
     return minutes > 0 ? minutes : 60;
   }
 
-  String formatTimeDisplay(double hours) {
-    return hours < 1.0
-        ? "${(hours * 60).round()} minutes"
-        : "${hours.toStringAsFixed(1)} hours";
+  String formatTimeDisplay(double hours, AppLocalizations localizations) {
+    if (hours <= 0) {
+      return "0 ${localizations.minutes}";
+    }
+
+    // Convert hours to minutes for small values
+    if (hours < 1.0) {
+      final minutes = (hours * 60).round();
+      return "$minutes ${minutes == 1 ? localizations.minute : localizations.minutes}";
+    }
+
+    // For larger values, show hours with one decimal place
+    if (hours < 10) {
+      return "${hours.toStringAsFixed(1)} ${localizations.hours}";
+    }
+
+    // For very large values, round to nearest hour
+    return "${hours.round()} ${localizations.hours}";
   }
 
   Future<void> fetchReportsForTimeRange(String timeRange,
@@ -199,16 +262,11 @@ class ReportsController extends StateNotifier<ReportsState> {
     final tasks = await taskService.getAllTasks();
     final subtasks = await subtaskService.getAllSubtasks();
     final habits = await habitService.getAllHabits();
+    final medications = await medicationService.getAllMedications();
     final moodEntries = await moodService.getAllMoods();
     final energyEntries = await energyService.getAllEnergyEntries();
     final symptoms = await symptomsService.getAllSymptoms();
     final flowmodoro = await flowmodoroService.getAllFlowmodoro();
-
-    final tasksCompleted = tasks.where((t) => t.completedAt != null).length +
-        subtasks.where((s) => s.completed).length;
-    final habitsCompleted = habits.where((h) => h.lastCompleted != null).length;
-    final tasksStreak = _calculateTasksStreak(tasks, subtasks);
-    final habitsStreak = _calculateHabitsStreak(habits);
 
     DateTime rangeStart = referenceDate, rangeEnd = referenceDate;
     List<MetricsData> newLineData = [];
@@ -228,6 +286,7 @@ class ReportsController extends StateNotifier<ReportsState> {
             _countEntries(symptoms, hourStart, hourEnd),
             _countTasks(tasks, subtasks, hourStart, hourEnd),
             _countHabits(habits, hourStart, hourEnd),
+            _countMedications(medications, hourStart, hourEnd),
           ));
         }
         break;
@@ -240,15 +299,17 @@ class ReportsController extends StateNotifier<ReportsState> {
         for (int i = 0; i < 7; i++) {
           final day = rangeStart.add(Duration(days: i));
           newLineData.add(MetricsData(
-            '${day.month}/${day.day}',
-            _calculateAverage(
-                moodEntries, day, day.add(const Duration(days: 1))),
-            _calculateAverage(
-                energyEntries, day, day.add(const Duration(days: 1))),
-            _countEntries(symptoms, day, day.add(const Duration(days: 1))),
-            _countTasks(tasks, subtasks, day, day.add(const Duration(days: 1))),
-            _countHabits(habits, day, day.add(const Duration(days: 1))),
-          ));
+              '${day.month}/${day.day}',
+              _calculateAverage(
+                  moodEntries, day, day.add(const Duration(days: 1))),
+              _calculateAverage(
+                  energyEntries, day, day.add(const Duration(days: 1))),
+              _countEntries(symptoms, day, day.add(const Duration(days: 1))),
+              _countTasks(
+                  tasks, subtasks, day, day.add(const Duration(days: 1))),
+              _countHabits(habits, day, day.add(const Duration(days: 1))),
+              _countMedications(
+                  medications, day, day.add(const Duration(days: 1)))));
         }
         break;
 
@@ -266,6 +327,7 @@ class ReportsController extends StateNotifier<ReportsState> {
             _countEntries(symptoms, weekStart, weekEnd),
             _countTasks(tasks, subtasks, weekStart, weekEnd),
             _countHabits(habits, weekStart, weekEnd),
+            _countMedications(medications, weekStart, weekEnd),
           ));
         }
         break;
@@ -277,33 +339,68 @@ class ReportsController extends StateNotifier<ReportsState> {
           final monthStart = DateTime(referenceDate.year, month + 1, 1);
           final monthEnd = DateTime(referenceDate.year, month + 2, 1);
           newLineData.add(MetricsData(
-            _getMonthName(month + 1),
-            _calculateAverage(moodEntries, monthStart, monthEnd),
-            _calculateAverage(energyEntries, monthStart, monthEnd),
-            _countEntries(symptoms, monthStart, monthEnd),
-            _countTasks(tasks, subtasks, monthStart, monthEnd),
-            _countHabits(habits, monthStart, monthEnd),
-          ));
+              _getMonthName(month + 1),
+              _calculateAverage(moodEntries, monthStart, monthEnd),
+              _calculateAverage(energyEntries, monthStart, monthEnd),
+              _countEntries(symptoms, monthStart, monthEnd),
+              _countTasks(tasks, subtasks, monthStart, monthEnd),
+              _countHabits(habits, monthStart, monthEnd),
+              _countMedications(medications, monthStart, monthEnd)));
         }
         break;
     }
 
-    final filteredFlow = flowmodoro
-        .where((s) =>
-            FirestoreDateAdapter.fromFirestore(s.createdAt)
-                .isAfter(rangeStart) &&
-            FirestoreDateAdapter.fromFirestore(s.createdAt).isBefore(rangeEnd))
-        .toList();
+    // Count only tasks with valid completion dates within the range
+    final tasksCompleted = tasks.where((t) {
+          final completedAt = FirestoreDateAdapter.fromFirestore(t.completedAt);
+          return _isValidDate(completedAt) &&
+              completedAt!.isAfter(rangeStart) &&
+              completedAt.isBefore(rangeEnd);
+        }).length +
+        subtasks.where((s) {
+          if (s.completed) {
+            final updatedAt = FirestoreDateAdapter.fromFirestore(s.updatedAt);
+            return _isValidDate(updatedAt) &&
+                updatedAt!.isAfter(rangeStart) &&
+                updatedAt.isBefore(rangeEnd);
+          }
+          return false;
+        }).length;
 
-    final (flowCount, focusHours, breakHours, totalFlowHours) =
-        await fetchFlowmodoroStats();
-    final timeBlocks = (await fetchTimeBlocks())
-        .where((t) =>
-            FirestoreDateAdapter.fromFirestore(t.completedAt)
-                .isAfter(rangeStart) &&
-            FirestoreDateAdapter.fromFirestore(t.completedAt)
-                .isBefore(rangeEnd))
-        .toList();
+    // Count only habits with valid completion dates within the range
+    final habitsCompleted = habits.where((h) {
+      final lastCompleted = FirestoreDateAdapter.fromFirestore(h.lastCompleted);
+      return _isValidDate(lastCompleted) &&
+          lastCompleted!.isAfter(rangeStart) &&
+          lastCompleted.isBefore(rangeEnd);
+    }).length;
+
+    // Calculate streaks within the selected time range
+    final tasksStreak =
+        _calculateTasksStreak(tasks, subtasks, rangeStart, rangeEnd);
+    final habitsStreak = _calculateHabitsStreak(habits, rangeStart, rangeEnd);
+
+    final filteredFlow = flowmodoro.where((s) {
+      final createdAt = FirestoreDateAdapter.fromFirestore(s.createdAt);
+      return _isValidDate(createdAt) &&
+          createdAt!.isAfter(rangeStart) &&
+          createdAt.isBefore(rangeEnd);
+    }).toList();
+
+    int flowCount = filteredFlow.length;
+    double focusHours = 0.0, breakHours = 0.0;
+    for (final session in filteredFlow) {
+      focusHours += ((session.focusMinutes) * (session.pomoCount)) / 60.0;
+      breakHours += ((session.breakMinutes) * (session.pomoCount)) / 60.0;
+    }
+    double totalFlowHours = focusHours + breakHours;
+
+    final timeBlocks = (await fetchTimeBlocks()).where((t) {
+      final completedAt = FirestoreDateAdapter.fromFirestore(t.completedAt);
+      return _isValidDate(completedAt) &&
+          completedAt!.isAfter(rangeStart) &&
+          completedAt.isBefore(rangeEnd);
+    }).toList();
 
     state = state.copyWith(
       lineChartData: newLineData,
@@ -323,21 +420,33 @@ class ReportsController extends StateNotifier<ReportsState> {
   double _calculateAverage(List entries, DateTime start, DateTime end) {
     final filtered = entries.where((e) {
       final date = FirestoreDateAdapter.fromFirestore(e.createdAt);
-      return date.isAfter(start) && date.isBefore(end);
+      return _isValidDate(date) && !date!.isBefore(start) && !date.isAfter(end);
     }).toList();
 
     if (filtered.isEmpty) return 0;
-    if (entries.first is MoodModel) {
-      return filtered.map((m) => m.moodLevel.toDouble()).average;
+
+    // Check the type of the first filtered entry
+    final first = filtered.first;
+    if (first is MoodModel) {
+      return filtered.map((m) => (m as MoodModel).moodLevel.toDouble()).average;
+    } else if (first.runtimeType.toString().contains('Energy')) {
+      // Handles EnergyModel or dynamic with energyLevel
+      return filtered.map((e) => (e as dynamic).energyLevel.toDouble()).average;
+    } else if (first is Map && first.containsKey('moodLevel')) {
+      return filtered.map((m) => m['moodLevel'].toDouble()).average;
+    } else if (first is Map && first.containsKey('energyLevel')) {
+      return filtered.map((e) => e['energyLevel'].toDouble()).average;
     }
-    return filtered.map((e) => e.energyLevel.toDouble()).average;
+    return 0;
   }
 
   double _countEntries(List entries, DateTime start, DateTime end) {
     return entries
         .where((e) {
           final date = FirestoreDateAdapter.fromFirestore(e.createdAt);
-          return date.isAfter(start) && date.isBefore(end);
+          return _isValidDate(date) &&
+              date!.isAfter(start) &&
+              date.isBefore(end);
         })
         .length
         .toDouble();
@@ -345,16 +454,16 @@ class ReportsController extends StateNotifier<ReportsState> {
 
   double _countTasks(List tasks, List subtasks, DateTime start, DateTime end) {
     final taskCount = tasks.where((t) {
-      final date = t.completedAt != null
-          ? FirestoreDateAdapter.fromFirestore(t.completedAt)
-          : null;
-      return date != null && date.isAfter(start) && date.isBefore(end);
+      final date = FirestoreDateAdapter.fromFirestore(t.completedAt);
+      return _isValidDate(date) && date!.isAfter(start) && date.isBefore(end);
     }).length;
 
     final subtaskCount = subtasks.where((s) {
+      final date = FirestoreDateAdapter.fromFirestore(s.updatedAt);
       return s.completed &&
-          FirestoreDateAdapter.fromFirestore(s.updatedAt).isAfter(start) &&
-          FirestoreDateAdapter.fromFirestore(s.updatedAt).isBefore(end);
+          _isValidDate(date) &&
+          date!.isAfter(start) &&
+          date.isBefore(end);
     }).length;
 
     return (taskCount + subtaskCount).toDouble();
@@ -363,22 +472,40 @@ class ReportsController extends StateNotifier<ReportsState> {
   double _countHabits(List habits, DateTime start, DateTime end) {
     return habits
         .where((h) {
-          final date = h.lastCompleted != null
-              ? FirestoreDateAdapter.fromFirestore(h.lastCompleted)
-              : null;
-          return date != null && date.isAfter(start) && date.isBefore(end);
+          final date = FirestoreDateAdapter.fromFirestore(h.lastCompleted);
+          return _isValidDate(date) &&
+              date!.isAfter(start) &&
+              date.isBefore(end);
         })
         .length
         .toDouble();
   }
 
+  double _countMedications(List medications, DateTime start, DateTime end,
+      {String timeRange = 'day'}) {
+    int count = 0;
+    for (final m in medications) {
+      if (m.completedDates != null && m.completedDates.isNotEmpty) {
+        // For 'day', count if any completedDate falls within the day range
+        // For week/month/year, same logic applies (range is just wider)
+        final takenInRange = m.completedDates
+            .any((date) => !date.isBefore(start) && date.isBefore(end));
+        if (takenInRange) {
+          count++;
+        }
+      }
+    }
+    return count.toDouble();
+  }
+
   double calculateTotalTime(List<TaskModel> blocks) {
     double total = 0.0;
     for (final block in blocks) {
-      if (block.startTime != null && block.endTime != null) {
-        final start = FirestoreDateAdapter.fromFirestore(block.startTime);
-        final end = FirestoreDateAdapter.fromFirestore(block.endTime);
-        total += end.difference(start).inMinutes / 60.0;
+      final startTime = FirestoreDateAdapter.fromFirestore(block.startTime);
+      final endTime = FirestoreDateAdapter.fromFirestore(block.endTime);
+
+      if (_isValidDate(startTime) && _isValidDate(endTime)) {
+        total += endTime!.difference(startTime!).inMinutes / 60.0;
       } else if (block.estimatedTime != null) {
         total += _parseEstimatedTimeToMinutes(block.estimatedTime!) / 60.0;
       }
@@ -402,10 +529,11 @@ class ReportsController extends StateNotifier<ReportsState> {
       ][month - 1];
 }
 
-extension on Iterable {
-  double get average => isEmpty
-      ? 0
-      : reduce((a, b) => a + b) / length.toDouble();
+extension AverageDouble on Iterable {
+  double get average {
+    if (isEmpty) return 0;
+    return map((e) => (e as num).toDouble()).reduce((a, b) => a + b) / length;
+  }
 }
 
 final reportsControllerProvider =
@@ -418,7 +546,6 @@ final reportsControllerProvider =
     symptomsService: ref.watch(symptomServiceProvider),
     energyService: ref.watch(energyServiceProvider),
     flowmodoroService: ref.watch(flowmodoroServiceProvider),
+    medicationService: ref.watch(medicationServiceProvider),
   );
 });
-
-
