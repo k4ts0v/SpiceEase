@@ -54,7 +54,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get userNotFound => 'Incorrect email or password.';
 
   @override
-  String get emailAlreadyInUse => 'This email is already registered. Try logging in instead.';
+  String get emailAlreadyInUse =>
+      'This email is already registered. Try logging in instead.';
 
   @override
   String get missingPassword => 'Please enter your password.';
@@ -78,10 +79,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cancel => 'Cancel';
 
   @override
-  String get passwordResetEmail => 'The email for resetting the password was sent!';
+  String get passwordResetEmail =>
+      'The email for resetting the password was sent!';
 
   @override
-  String get resetPasswordError => 'An error ocurred while resetting the password.';
+  String get resetPasswordError =>
+      'An error ocurred while resetting the password.';
 
   @override
   String get unknownError => 'An unknown error happened.';
@@ -361,7 +364,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get breakIntoSubtasks => 'Break into subtasks';
 
   @override
-  String get breakIntoSubtasksPrompt => 'Do you want to break this task into subtasks?';
+  String get breakIntoSubtasksPrompt =>
+      'Do you want to break this task into subtasks?';
 
   @override
   String get subtask => 'Subtask';
@@ -442,19 +446,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get kanban => 'Kanban';
 
   @override
-  String get kanbanDescription => 'Visualize your workflow with cards organized in columns to track progress.';
+  String get kanbanDescription =>
+      'Visualize your workflow with cards organized in columns to track progress.';
 
   @override
   String get timeBlocks => 'Time Blocks';
 
   @override
-  String get timeBlocksDescription => 'Schedule your day in dedicated time blocks to increase focus and productivity.';
+  String get timeBlocksDescription =>
+      'Schedule your day in dedicated time blocks to increase focus and productivity.';
 
   @override
   String get flowmodoro => 'Flowmodoro';
 
   @override
-  String get flowmodoroDescription => 'Work while you feel productive, then take a proportional break to recharge.';
+  String get flowmodoroDescription =>
+      'Work while you feel productive, then take a proportional break to recharge.';
 
   @override
   String get noTasksInThisColumn => 'No tasks in this column';
@@ -590,7 +597,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get year => 'year';
 
   @override
-  String get estimateInstructions => 'Give the estimate in numbers. For ranges, separate them using \'to\'.';
+  String get estimateInstructions =>
+      'Give the estimate in numbers. For ranges, separate them using \'to\'.';
 
   @override
   String get allTasksScheduled => 'All tasks are scheduled';
@@ -602,7 +610,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unschedule => 'Unschedule';
 
   @override
-  String get unscheduleTaskConfirmation => 'Remove this task from the schedule? It will remain in your task list.';
+  String get unscheduleTaskConfirmation =>
+      'Remove this task from the schedule? It will remain in your task list.';
 
   @override
   String get noEndTime => 'No end time set';
@@ -629,7 +638,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selectTaskForFlowmodoro => 'Select a task for Flowmodoro';
 
   @override
-  String get flowmodoroExplanation => 'Focus on one task at a time with timed work and break intervals';
+  String get flowmodoroExplanation =>
+      'Focus on one task at a time with timed work and break intervals';
 
   @override
   String get selectATaskToStart => 'Select a task to start';
@@ -659,7 +669,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get flowmodoroCompleted => 'Flowmodoro completed';
 
   @override
-  String get markTaskAsCompleted => 'Would you like to mark this task as completed?';
+  String get markTaskAsCompleted =>
+      'Would you like to mark this task as completed?';
 
   @override
   String get notYet => 'Not Yet';
@@ -721,13 +732,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get speedrun => 'Speedrun';
 
   @override
-  String get speedrunDescription => 'Prove yourself by completing tasks in a limited time. The faster you finish, the more points you earn.';
+  String get speedrunDescription =>
+      'Prove yourself by completing tasks in a limited time. The faster you finish, the more points you earn.';
 
   @override
   String get diceRoller => 'Dice Roller';
 
   @override
-  String get diceRollerDescription => 'Roll dice to generate random numbers for your tasks. Use it to know how many items you have to complete.';
+  String get diceRollerDescription =>
+      'Roll dice to generate random numbers for your tasks. Use it to know how many items you have to complete.';
 
   @override
   String get metricsOverTime => 'Metrics over time';
@@ -798,7 +811,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get security => 'Security';
 
   @override
-  String get incompleteSubtasksWarning => 'Some subtasks are not completed yet.';
+  String get incompleteSubtasksWarning =>
+      'Some subtasks are not completed yet.';
 
   @override
   String get generalSettings => 'General Settings';
@@ -827,19 +841,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get alwaysShowCritical => 'Always Show Critical Notifications';
 
   @override
-  String get alwaysShowCriticalDescription => 'Critical notifications will be shown regardless of energy levels or symptoms';
+  String get alwaysShowCriticalDescription =>
+      'Critical notifications will be shown regardless of energy levels or symptoms';
 
   @override
   String get lowEnergyThreshold => 'Low Energy Threshold';
 
   @override
-  String get lowEnergyDescription => 'When your energy is below this level, only high priority notifications will be shown';
+  String get lowEnergyDescription =>
+      'When your energy is below this level, only high priority notifications will be shown';
 
   @override
   String get highSymptomThreshold => 'High Symptom Threshold';
 
   @override
-  String get highSymptomDescription => 'When your symptoms are above this level, only critical notifications will be shown';
+  String get highSymptomDescription =>
+      'When your symptoms are above this level, only critical notifications will be shown';
 
   @override
   String get quietHours => 'Quiet Hours';
@@ -878,7 +895,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get yesterday => 'Yesterday';
 
   @override
-  String get configureNotificationPreferences => 'Configure how and when notifications appear';
+  String get configureNotificationPreferences =>
+      'Configure how and when notifications appear';
 
   @override
   String get viewPastNotifications => 'View previously received notifications';
@@ -902,13 +920,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dailyReminder => 'Daily reminder';
 
   @override
-  String get taskReminderDescription => 'Daily reminder to review pending tasks';
+  String get taskReminderDescription =>
+      'Daily reminder to review pending tasks';
 
   @override
-  String get habitReminderDescription => 'Daily reminder to check habit progress';
+  String get habitReminderDescription =>
+      'Daily reminder to check habit progress';
 
   @override
-  String get medicationReminderDescription => 'Daily reminder to take medications';
+  String get medicationReminderDescription =>
+      'Daily reminder to take medications';
 
   @override
   String get symptomReminderDescription => 'Daily reminder to log symptoms';
@@ -938,34 +959,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sunday => 'Sun';
 
   @override
-  String get loggingRemindersDescription => 'Daily reminders to log your health data';
+  String get loggingRemindersDescription =>
+      'Daily reminders to log your health data';
 
   @override
   String get categoryReminders => 'Category Reminders';
 
   @override
-  String get categoryRemindersDescription => 'Set up daily reminders for each type of data you want to track';
+  String get categoryRemindersDescription =>
+      'Set up daily reminders for each type of data you want to track';
 
   @override
   String get specificItemReminders => 'Specific Item Reminders';
 
   @override
-  String get specificItemRemindersDescription => 'Allow setting reminders for individual tasks, habits, and medications';
+  String get specificItemRemindersDescription =>
+      'Allow setting reminders for individual tasks, habits, and medications';
 
   @override
   String get enableSpecificRemindersFor => 'Enable specific reminders for:';
 
   @override
-  String get notificationCategoriesDescription => 'Choose which types of notifications you want to receive';
+  String get notificationCategoriesDescription =>
+      'Choose which types of notifications you want to receive';
 
   @override
-  String get taskSpecificRemindersDescription => 'Set due date reminders for individual tasks';
+  String get taskSpecificRemindersDescription =>
+      'Set due date reminders for individual tasks';
 
   @override
-  String get habitSpecificRemindersDescription => 'Set time-based reminders for individual habits';
+  String get habitSpecificRemindersDescription =>
+      'Set time-based reminders for individual habits';
 
   @override
-  String get medicationSpecificRemindersDescription => 'Set medication time reminders';
+  String get medicationSpecificRemindersDescription =>
+      'Set medication time reminders';
 
   @override
   String get specificRemindersDescription => 'Set individual reminders';
@@ -1114,7 +1142,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get clearData => 'Clear Data';
 
   @override
-  String get clearDataWarning => 'This will permanently delete all your data. This action cannot be undone.';
+  String get clearDataWarning =>
+      'This will permanently delete all your data. This action cannot be undone.';
 
   @override
   String get clearDataConfirm => 'Are you sure you want to clear all data?';
@@ -1165,7 +1194,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get permissionDenied => 'Permission denied';
 
   @override
-  String get storagePermissionRequired => 'Storage permission is required to export/import data';
+  String get storagePermissionRequired =>
+      'Storage permission is required to export/import data';
 
   @override
   String get grantPermission => 'Grant Permission';
@@ -1174,13 +1204,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dataProtection => 'Data Protection';
 
   @override
-  String get dataProtectionDesc => 'Your data is stored locally on your device and is not shared with third parties';
+  String get dataProtectionDesc =>
+      'Your data is stored locally on your device and is not shared with third parties';
 
   @override
   String get analytics => 'Analytics';
 
   @override
-  String get analyticsDesc => 'Help improve the app by sending anonymous usage data';
+  String get analyticsDesc =>
+      'Help improve the app by sending anonymous usage data';
 
   @override
   String get crashReporting => 'Crash Reporting';
@@ -1228,31 +1260,36 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appCrashesOrFreezes => 'App Crashes or freezes';
 
   @override
-  String get appCrashesDescription => 'The app stops responding or closes unexpectedly';
+  String get appCrashesDescription =>
+      'The app stops responding or closes unexpectedly';
 
   @override
   String get dataSyncIssues => 'Data Not Syncing';
 
   @override
-  String get dataSyncDescription => 'Changes aren\'t being saved or data appears missing';
+  String get dataSyncDescription =>
+      'Changes aren\'t being saved or data appears missing';
 
   @override
   String get performanceIssues => 'Performance issues';
 
   @override
-  String get performanceDescription => 'The app is running slowly or taking long to load';
+  String get performanceDescription =>
+      'The app is running slowly or taking long to load';
 
   @override
   String get timerNotWorking => 'Timer not working';
 
   @override
-  String get timerDescription => 'Flowmodoro or other timers aren\'t functioning properly';
+  String get timerDescription =>
+      'Flowmodoro or other timers aren\'t functioning properly';
 
   @override
   String get tryTheseSolutions => 'Try these solutions:';
 
   @override
-  String get stillHavingIssues => 'Still having issues? Contact support for personalized help.';
+  String get stillHavingIssues =>
+      'Still having issues? Contact support for personalized help.';
 
   @override
   String get forceCloseRestart => 'Force close and restart the app';
@@ -1261,7 +1298,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get restartDevice => 'Restart your device';
 
   @override
-  String get checkStorageSpace => 'Check if you have enough storage space (need at least 100MB free)';
+  String get checkStorageSpace =>
+      'Check if you have enough storage space (need at least 100MB free)';
 
   @override
   String get updateApp => 'Update to the latest version of the app';
@@ -1273,13 +1311,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get uninstallReinstall => 'Uninstall, and reinstall the app';
 
   @override
-  String get checkInternetConnection => 'Verify that you have a stable internet connection';
+  String get checkInternetConnection =>
+      'Verify that you have a stable internet connection';
 
   @override
   String get checkCorrectDate => 'Check if you\'re viewing the correct date';
 
   @override
-  String get ensureNoFilters => 'Ensure no filters are applied that might hide your data';
+  String get ensureNoFilters =>
+      'Ensure no filters are applied that might hide your data';
 
   @override
   String get forceCloseReopen => 'Force close and reopen the app';
@@ -1288,10 +1328,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tryLoggingAgain => 'Try logging the same data again';
 
   @override
-  String get closeBackgroundApps => 'Close other apps running in the background';
+  String get closeBackgroundApps =>
+      'Close other apps running in the background';
 
   @override
-  String get clearOldData => 'Clear old data you no longer need (Settings > Data Management)';
+  String get clearOldData =>
+      'Clear old data you no longer need (Settings > Data Management)';
 
   @override
   String get checkAvailableStorage => 'Check available storage space';
@@ -1332,7 +1374,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get openLink => 'Open Link';
 
   @override
-  String get unableToOpenLinkAutomatically => 'Unable to open link automatically. Copy this link and open it in your browser:';
+  String get unableToOpenLinkAutomatically =>
+      'Unable to open link automatically. Copy this link and open it in your browser:';
 
   @override
   String get urlCopied => 'URL copied to clipboard';
@@ -1353,7 +1396,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get describeTheBug => 'Describe the bug';
 
   @override
-  String get bugDescription => 'A clear and concise description of what the bug is.';
+  String get bugDescription =>
+      'A clear and concise description of what the bug is.';
 
   @override
   String get toReproduce => 'To Reproduce';
@@ -1377,13 +1421,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get expectedBehavior => 'Expected behavior';
 
   @override
-  String get expectedBehaviorDescription => 'A clear and concise description of what you expected to happen.';
+  String get expectedBehaviorDescription =>
+      'A clear and concise description of what you expected to happen.';
 
   @override
   String get screenshots => 'Screenshots';
 
   @override
-  String get screenshotsDescription => 'If applicable, add screenshots to help explain your problem.';
+  String get screenshotsDescription =>
+      'If applicable, add screenshots to help explain your problem.';
 
   @override
   String get deviceInformation => 'Device Information';
@@ -1404,34 +1450,41 @@ class AppLocalizationsEn extends AppLocalizations {
   String get additionalContext => 'Additional context';
 
   @override
-  String get additionalContextDescription => 'Add any other context about the problem here.';
+  String get additionalContextDescription =>
+      'Add any other context about the problem here.';
 
   @override
-  String get featureRequestProblem => 'Is your feature request related to a problem? Please describe.';
+  String get featureRequestProblem =>
+      'Is your feature request related to a problem? Please describe.';
 
   @override
-  String get featureRequestProblemDescription => 'A clear and concise description of what the problem is. Ex. I\'m always frustrated when [...]';
+  String get featureRequestProblemDescription =>
+      'A clear and concise description of what the problem is. Ex. I\'m always frustrated when [...]';
 
   @override
   String get describeSolution => 'Describe the solution you\'d like';
 
   @override
-  String get describeSolutionDescription => 'A clear and concise description of what you want to happen.';
+  String get describeSolutionDescription =>
+      'A clear and concise description of what you want to happen.';
 
   @override
   String get describeAlternatives => 'Describe alternatives you\'ve considered';
 
   @override
-  String get describeAlternativesDescription => 'A clear and concise description of any alternative solutions or features you\'ve considered.';
+  String get describeAlternativesDescription =>
+      'A clear and concise description of any alternative solutions or features you\'ve considered.';
 
   @override
-  String get featureAdditionalContext => 'Add any other context or screenshots about the feature request here.';
+  String get featureAdditionalContext =>
+      'Add any other context or screenshots about the feature request here.';
 
   @override
   String get useCase => 'Use Case';
 
   @override
-  String get useCaseDescription => 'Describe how this feature would be used and who would benefit from it.';
+  String get useCaseDescription =>
+      'Describe how this feature would be used and who would benefit from it.';
 
   @override
   String get faqCategoryGettingStarted => 'Getting Started';
@@ -1452,103 +1505,125 @@ class AppLocalizationsEn extends AppLocalizations {
   String get faqHowCreateFirstTask => 'How do I create my first task?';
 
   @override
-  String get faqHowCreateFirstTaskAnswer => 'Tap the \"+\" button on the main tracker screen, select \"Task\", fill in the details, and tap \"Save\". You can add a title, description, due date, and priority. Subtasks are automatically generated based on your task description, but you can add more by pressing the add button in the list, below the last subtask.';
+  String get faqHowCreateFirstTaskAnswer =>
+      'Tap the \"+\" button on the main tracker screen, select \"Task\", fill in the details, and tap \"Save\". You can add a title, description, due date, and priority. Subtasks are automatically generated based on your task description, but you can add more by pressing the add button in the list, below the last subtask.';
 
   @override
-  String get faqDifferenceTasksHabits => 'What\'s the difference between tasks and habits?';
+  String get faqDifferenceTasksHabits =>
+      'What\'s the difference between tasks and habits?';
 
   @override
-  String get faqDifferenceTasksHabitsAnswer => 'Tasks are one-time activities with specific deadlines, while habits are recurring activities you want to do regularly (daily, weekly, etc.). Habits help build long-term routines.';
+  String get faqDifferenceTasksHabitsAnswer =>
+      'Tasks are one-time activities with specific deadlines, while habits are recurring activities you want to do regularly (daily, weekly, etc.). Habits help build long-term routines.';
 
   @override
-  String get faqEnergyTrackingTasks => 'How does energy tracking affect my tasks?';
+  String get faqEnergyTrackingTasks =>
+      'How does energy tracking affect my tasks?';
 
   @override
-  String get faqEnergyTrackingTasksAnswer => 'Your energy level (tracked daily from 1-10) is used by the app\'s AI to provide smarter task management. Higher energy levels result in longer estimated durations and more detailed subtask breakdowns, as the app assumes you can handle more complex work. Lower energy levels lead to shorter, simpler tasks to match your capacity. This helps ensure your daily planning is realistic based on how you\'re actually feeling.';
+  String get faqEnergyTrackingTasksAnswer =>
+      'Your energy level (tracked daily from 1-10) is used by the app\'s AI to provide smarter task management. Higher energy levels result in longer estimated durations and more detailed subtask breakdowns, as the app assumes you can handle more complex work. Lower energy levels lead to shorter, simpler tasks to match your capacity. This helps ensure your daily planning is realistic based on how you\'re actually feeling.';
 
   @override
-  String get faqTaskEstimatesEnergy => 'Why do my task estimates change based on energy?';
+  String get faqTaskEstimatesEnergy =>
+      'Why do my task estimates change based on energy?';
 
   @override
-  String get faqTaskEstimatesEnergyAnswer => 'The app uses your energy level to adjust time estimates because your productivity varies with how you feel. On high-energy days (7-10), tasks might be estimated to take longer because you can work more thoroughly and handle complexity. On low-energy days (1-4), the same task gets shorter estimates with simpler steps, assuming you need to work more efficiently and take more breaks.';
+  String get faqTaskEstimatesEnergyAnswer =>
+      'The app uses your energy level to adjust time estimates because your productivity varies with how you feel. On high-energy days (7-10), tasks might be estimated to take longer because you can work more thoroughly and handle complexity. On low-energy days (1-4), the same task gets shorter estimates with simpler steps, assuming you need to work more efficiently and take more breaks.';
 
   @override
   String get faqWhatIsFlowmodoro => 'What is the Flowmodoro Technique?';
 
   @override
-  String get faqWhatIsFlowmodoroAnswer => 'Flowmodoro is a flexible productivity method where you work until you naturally feel like taking a break, then take a break proportional to your work time (usually 1/5th of work time). You can set up custom time periods, but the app uses Pomodoro defaults (25-minute work sessions, 5-minute breaks) as a starting point.';
+  String get faqWhatIsFlowmodoroAnswer =>
+      'Flowmodoro is a flexible productivity method where you work until you naturally feel like taking a break, then take a break proportional to your work time (usually 1/5th of work time). You can set up custom time periods, but the app uses Pomodoro defaults (25-minute work sessions, 5-minute breaks) as a starting point.';
 
   @override
   String get faqKanbanBoards => 'How do Kanban boards work?';
 
   @override
-  String get faqKanbanBoardsAnswer => 'Kanban boards help you visualize your workflow with columns like \"To Do\", \"In Progress\", and \"Done\". You can drag tasks between columns to track their status and see your progress at a glance.';
+  String get faqKanbanBoardsAnswer =>
+      'Kanban boards help you visualize your workflow with columns like \"To Do\", \"In Progress\", and \"Done\". You can drag tasks between columns to track their status and see your progress at a glance.';
 
   @override
   String get faqTimeBlocks => 'What are Time Blocks?';
 
   @override
-  String get faqTimeBlocksAnswer => 'Time blocking is a scheduling method where you assign specific time slots to different activities or types of work. This helps you stay focused and ensures important tasks get dedicated time.';
+  String get faqTimeBlocksAnswer =>
+      'Time blocking is a scheduling method where you assign specific time slots to different activities or types of work. This helps you stay focused and ensures important tasks get dedicated time.';
 
   @override
   String get faqCustomizeTimers => 'Can I customize timer durations?';
 
   @override
-  String get faqCustomizeTimersAnswer => 'Yes! You can adjust work periods, break lengths, and long break intervals in the timer settings to match your personal productivity rhythm.';
+  String get faqCustomizeTimersAnswer =>
+      'Yes! You can adjust work periods, break lengths, and long break intervals in the timer settings to match your personal productivity rhythm.';
 
   @override
-  String get faqEnergyTaskScheduling => 'How does my energy level affect task scheduling?';
+  String get faqEnergyTaskScheduling =>
+      'How does my energy level affect task scheduling?';
 
   @override
-  String get faqEnergyTaskSchedulingAnswer => 'The app considers your daily energy when suggesting task scheduling. High-energy periods are better for complex, demanding tasks, while low-energy periods are reserved for simpler, routine activities. The AI learns your patterns over time to suggest optimal timing for different types of work.';
+  String get faqEnergyTaskSchedulingAnswer =>
+      'The app considers your daily energy when suggesting task scheduling. High-energy periods are better for complex, demanding tasks, while low-energy periods are reserved for simpler, routine activities. The AI learns your patterns over time to suggest optimal timing for different types of work.';
 
   @override
-  String get faqSymptomRatingsAccuracy => 'How accurate should my symptom ratings be?';
+  String get faqSymptomRatingsAccuracy =>
+      'How accurate should my symptom ratings be?';
 
   @override
-  String get faqSymptomRatingsAccuracyAnswer => 'Use a consistent scale (1-10) and try to be as objective as possible. The 1-10 scale is based on the [Mankoski Pain Scale](https://www.painscale.com/article/mankoski-pain-scale), which provides specific descriptions for each level (1 = barely noticeable, 10 = unconscious from pain). The key is consistency over time rather than perfect accuracy on individual entries.';
+  String get faqSymptomRatingsAccuracyAnswer =>
+      'Use a consistent scale (1-10) and try to be as objective as possible. The 1-10 scale is based on the [Mankoski Pain Scale](https://www.painscale.com/article/mankoski-pain-scale), which provides specific descriptions for each level (1 = barely noticeable, 10 = unconscious from pain). The key is consistency over time rather than perfect accuracy on individual entries.';
 
   @override
   String get faqCustomSymptoms => 'Can I track custom symptoms?';
 
   @override
-  String get faqCustomSymptomsAnswer => 'Yes! You can add custom symptom types beyond the defaults. This allows you to track anything specific to your health condition.';
+  String get faqCustomSymptomsAnswer =>
+      'Yes! You can add custom symptom types beyond the defaults. This allows you to track anything specific to your health condition.';
 
   @override
   String get faqDataStorage => 'Where is my data stored?';
 
   @override
-  String get faqDataStorageAnswer => 'Currently, all your data is stored in a cloud database. However, the developer is working on implementing a local storage solution and a way for users to self-host their data if they prefer.';
+  String get faqDataStorageAnswer =>
+      'Currently, all your data is stored in a cloud database. However, the developer is working on implementing a local storage solution and a way for users to self-host their data if they prefer.';
 
   @override
   String get faqMultipleDevices => 'Can I use the app on multiple devices?';
 
   @override
-  String get faqMultipleDevicesAnswer => 'Yes! Since your data is stored in a cloud database, you can access it from any device as long as you\'re logged into your account.';
+  String get faqMultipleDevicesAnswer =>
+      'Yes! Since your data is stored in a cloud database, you can access it from any device as long as you\'re logged into your account.';
 
   @override
   String get faqDeleteApp => 'What happens if I delete the app?';
 
   @override
-  String get faqDeleteAppAnswer => 'Your data will remain safely stored in the cloud database. You can reinstall the app and log back into your account to access all your data.';
+  String get faqDeleteAppAnswer =>
+      'Your data will remain safely stored in the cloud database. You can reinstall the app and log back into your account to access all your data.';
 
   @override
   String get faqDataMissing => 'My data seems to be missing';
 
   @override
-  String get faqDataMissingAnswer => 'Verify that you have an active internet connection. Check if you\'re looking at the correct date. If the problem persists, try logging out and back into your account to refresh the data sync.';
+  String get faqDataMissingAnswer =>
+      'Verify that you have an active internet connection. Check if you\'re looking at the correct date. If the problem persists, try logging out and back into your account to refresh the data sync.';
 
   @override
   String get faqAppSlow => 'The app is running slowly';
 
   @override
-  String get faqAppSlowAnswer => 'Try restarting the app first. If problems persist, you can clear the app\'s cache and data in your phone\'s Settings > Apps > SpiceEase > Storage.';
+  String get faqAppSlowAnswer =>
+      'Try restarting the app first. If problems persist, you can clear the app\'s cache and data in your phone\'s Settings > Apps > SpiceEase > Storage.';
 
   @override
   String get faqFeatureMissing => 'I can\'t find a feature I used before';
 
   @override
-  String get faqFeatureMissingAnswer => 'Features may be located in different sections after updates. Check the help section or use the search function to find what you\'re looking for.';
+  String get faqFeatureMissingAnswer =>
+      'Features may be located in different sections after updates. Check the help section or use the search function to find what you\'re looking for.';
 
   @override
   String get searchFAQs => 'Search FAQs...';
@@ -1566,7 +1641,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tipsSubtitle => 'Tips and tricks for better productivity';
 
   @override
-  String get frequentlyAskedQuestionsSubtitle => 'Find answers to common questions';
+  String get frequentlyAskedQuestionsSubtitle =>
+      'Find answers to common questions';
 
   @override
   String get troubleshootingSubtitle => 'Solve common problems';
@@ -1635,7 +1711,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialWorkingWithSubtasks => 'Working with Subtasks';
 
   @override
-  String get tutorialTaskEstimationTimePlanning => 'Task Estimation and Time Planning';
+  String get tutorialTaskEstimationTimePlanning =>
+      'Task Estimation and Time Planning';
 
   @override
   String get tutorialSettingUpDailyHabits => 'Setting Up Daily Habits';
@@ -1656,7 +1733,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialRecordingEnergyEntries => 'Recording Energy Entries';
 
   @override
-  String get tutorialUsingFlowmodoroTechnique => 'Using the Flowmodoro Technique';
+  String get tutorialUsingFlowmodoroTechnique =>
+      'Using the Flowmodoro Technique';
 
   @override
   String get tutorialManagingKanbanBoard => 'Managing Your Kanban Board';
@@ -1665,7 +1743,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialSchedulingTimeBlocks => 'Scheduling with Time Blocks';
 
   @override
-  String get tutorialUnderstandingReportsCharts => 'Understanding Reports and Charts';
+  String get tutorialUnderstandingReportsCharts =>
+      'Understanding Reports and Charts';
 
   @override
   String get tutorialCustomizingReportViews => 'Customizing Report Views';
@@ -1677,61 +1756,79 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialManagingAccount => 'Managing Your Account';
 
   @override
-  String get tutorialIconGridStep1 => 'The main screen shows an icon grid with different categories';
+  String get tutorialIconGridStep1 =>
+      'The main screen shows an icon grid with different categories';
 
   @override
-  String get tutorialIconGridStep2 => 'Each icon represents a different type of data you can track';
+  String get tutorialIconGridStep2 =>
+      'Each icon represents a different type of data you can track';
 
   @override
-  String get tutorialIconGridStep3 => 'Tap any icon to see your existing entries for that category';
+  String get tutorialIconGridStep3 =>
+      'Tap any icon to see your existing entries for that category';
 
   @override
-  String get tutorialIconGridStep4 => 'Use the \"+\" button within each category to add new entries';
+  String get tutorialIconGridStep4 =>
+      'Use the \"+\" button within each category to add new entries';
 
   @override
-  String get tutorialIconGridStep5 => 'Alternatively, for habits, medications, tasks or symptoms, use the \"Add [Item]\" buttons for quick access';
+  String get tutorialIconGridStep5 =>
+      'Alternatively, for habits, medications, tasks or symptoms, use the \"Add [Item]\" buttons for quick access';
 
   @override
-  String get tutorialIconGridStep6 => 'The grid layout makes it easy to see all your tracking options';
+  String get tutorialIconGridStep6 =>
+      'The grid layout makes it easy to see all your tracking options';
 
   @override
-  String get tutorialListViewStep1 => 'Tap the list icon in the bottom navigation to switch to list view';
+  String get tutorialListViewStep1 =>
+      'Tap the list icon in the bottom navigation to switch to list view';
 
   @override
-  String get tutorialListViewStep2 => 'The list shows all your items grouped by type (tasks, habits, etc.)';
+  String get tutorialListViewStep2 =>
+      'The list shows all your items grouped by type (tasks, habits, etc.)';
 
   @override
-  String get tutorialListViewStep3 => 'Items are color-coded by category for easy identification';
+  String get tutorialListViewStep3 =>
+      'Items are color-coded by category for easy identification';
 
   @override
-  String get tutorialListViewStep4 => 'You can see completion status and due dates at a glance';
+  String get tutorialListViewStep4 =>
+      'You can see completion status and due dates at a glance';
 
   @override
-  String get tutorialListViewStep5 => 'Tap any item to view details or mark as complete';
+  String get tutorialListViewStep5 =>
+      'Tap any item to view details or mark as complete';
 
   @override
-  String get tutorialListViewStep6 => 'Use the filter and sort options to organize your view';
+  String get tutorialListViewStep6 =>
+      'Use the filter and sort options to organize your view';
 
   @override
-  String get tutorialListViewStep7 => 'Switch back to grid view anytime using the grid icon';
+  String get tutorialListViewStep7 =>
+      'Switch back to grid view anytime using the grid icon';
 
   @override
   String get tutorialFirstTaskStep1 => 'Go to the tracker screen';
 
   @override
-  String get tutorialFirstTaskStep2 => 'Choose the task icon from the icon grid OR tap \"Add Task\" button';
+  String get tutorialFirstTaskStep2 =>
+      'Choose the task icon from the icon grid OR tap \"Add Task\" button';
 
   @override
-  String get tutorialFirstTaskStep3 => 'If using icon grid: tap the \"+\" button in the top-right corner';
+  String get tutorialFirstTaskStep3 =>
+      'If using icon grid: tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialFirstTaskStep4 => 'Enter a title and description for your task';
+  String get tutorialFirstTaskStep4 =>
+      'Enter a title and description for your task';
 
   @override
-  String get tutorialFirstTaskStep5 => 'Set a due date if desired and a priority level';
+  String get tutorialFirstTaskStep5 =>
+      'Set a due date if desired and a priority level';
 
   @override
-  String get tutorialFirstTaskStep6 => 'Add subtasks if needed by pressing the \"Divide into subtasks\" button';
+  String get tutorialFirstTaskStep6 =>
+      'Add subtasks if needed by pressing the \"Divide into subtasks\" button';
 
   @override
   String get tutorialFirstTaskStep7 => 'Tap \"Save\" to create your task';
@@ -1743,73 +1840,94 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialEditTaskStep2 => 'Tap on any existing task to open it';
 
   @override
-  String get tutorialEditTaskStep3 => 'To edit: tap the edit button and modify any field';
+  String get tutorialEditTaskStep3 =>
+      'To edit: tap the edit button and modify any field';
 
   @override
-  String get tutorialEditTaskStep4 => 'You can change title, description, due date or priority';
+  String get tutorialEditTaskStep4 =>
+      'You can change title, description, due date or priority';
 
   @override
-  String get tutorialEditTaskStep5 => 'To delete: tap the delete button and confirm';
+  String get tutorialEditTaskStep5 =>
+      'To delete: tap the delete button and confirm';
 
   @override
   String get tutorialEditTaskStep6 => 'Save changes when editing';
 
   @override
-  String get tutorialSubtasksStep1 => 'When creating or editing a task, tap \"Divide into subtasks\"';
+  String get tutorialSubtasksStep1 =>
+      'When creating or editing a task, tap \"Divide into subtasks\"';
 
   @override
-  String get tutorialSubtasksStep2 => 'This generates a list of subtasks under the main task automatically';
+  String get tutorialSubtasksStep2 =>
+      'This generates a list of subtasks under the main task automatically';
 
   @override
-  String get tutorialSubtasksStep3 => 'Each subtask can be marked complete independently and has its own estimated time';
+  String get tutorialSubtasksStep3 =>
+      'Each subtask can be marked complete independently and has its own estimated time';
 
   @override
-  String get tutorialSubtasksStep4 => 'The main task shows progress based on completed subtasks';
+  String get tutorialSubtasksStep4 =>
+      'The main task shows progress based on completed subtasks';
 
   @override
-  String get tutorialSubtasksStep5 => 'Subtasks help break down complex tasks into manageable steps';
+  String get tutorialSubtasksStep5 =>
+      'Subtasks help break down complex tasks into manageable steps';
 
   @override
-  String get tutorialSubtasksStep6 => 'You can add, edit, or delete subtasks at any time';
+  String get tutorialSubtasksStep6 =>
+      'You can add, edit, or delete subtasks at any time';
 
   @override
-  String get tutorialSubtasksStep7 => 'The main task is completed when all subtasks are done';
+  String get tutorialSubtasksStep7 =>
+      'The main task is completed when all subtasks are done';
 
   @override
-  String get tutorialEstimationStep1 => 'When creating or editing a task, look for the \"Estimate task\" button';
+  String get tutorialEstimationStep1 =>
+      'When creating or editing a task, look for the \"Estimate task\" button';
 
   @override
-  String get tutorialEstimationStep2 => 'Your current energy level directly impacts task estimation';
+  String get tutorialEstimationStep2 =>
+      'Your current energy level directly impacts task estimation';
 
   @override
-  String get tutorialEstimationStep3 => 'Higher energy levels suggest shorter completion times and less subdivision needed';
+  String get tutorialEstimationStep3 =>
+      'Higher energy levels suggest shorter completion times and less subdivision needed';
 
   @override
-  String get tutorialEstimationStep4 => 'Lower energy levels may require breaking tasks into smaller, more manageable chunks';
+  String get tutorialEstimationStep4 =>
+      'Lower energy levels may require breaking tasks into smaller, more manageable chunks';
 
   @override
-  String get tutorialEstimationStep5 => 'The app considers your energy patterns when suggesting time estimates';
+  String get tutorialEstimationStep5 =>
+      'The app considers your energy patterns when suggesting time estimates';
 
   @override
-  String get tutorialEstimationStep6 => 'Estimated times help with scheduling and time blocking';
+  String get tutorialEstimationStep6 =>
+      'Estimated times help with scheduling and time blocking';
 
   @override
   String get tutorialHabitsStep1 => 'Go to the tracker screen';
 
   @override
-  String get tutorialHabitsStep2 => 'Choose the habit icon from the icon grid OR tap \"Add Habit\" button';
+  String get tutorialHabitsStep2 =>
+      'Choose the habit icon from the icon grid OR tap \"Add Habit\" button';
 
   @override
-  String get tutorialHabitsStep3 => 'If using icon grid: tap the \"+\" button in the top-right corner';
+  String get tutorialHabitsStep3 =>
+      'If using icon grid: tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialHabitsStep4 => 'Enter the habit name (e.g., \"Drink 8 glasses of water\")';
+  String get tutorialHabitsStep4 =>
+      'Enter the habit name (e.g., \"Drink 8 glasses of water\")';
 
   @override
-  String get tutorialHabitsStep5 => 'Choose the frequency: daily, weekly, or custom';
+  String get tutorialHabitsStep5 =>
+      'Choose the frequency: daily, weekly, or custom';
 
   @override
-  String get tutorialHabitsStep6 => 'For custom frequency, select specific days of the week';
+  String get tutorialHabitsStep6 =>
+      'For custom frequency, select specific days of the week';
 
   @override
   String get tutorialHabitsStep7 => 'Set target times per day if applicable';
@@ -1818,76 +1936,96 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialHabitsStep8 => 'Add a description if desired';
 
   @override
-  String get tutorialHabitsStep9 => 'Save your habit and mark it complete each day you do it';
+  String get tutorialHabitsStep9 =>
+      'Save your habit and mark it complete each day you do it';
 
   @override
   String get tutorialStreaksStep1 => 'View your habits in the grid or list';
 
   @override
-  String get tutorialStreaksStep2 => 'Each habit shows if it was completed today';
+  String get tutorialStreaksStep2 =>
+      'Each habit shows if it was completed today';
 
   @override
-  String get tutorialStreaksStep3 => 'Tap a habit\'s checkbox to mark it complete for the day';
+  String get tutorialStreaksStep3 =>
+      'Tap a habit\'s checkbox to mark it complete for the day';
 
   @override
-  String get tutorialStreaksStep4 => 'Mark habits complete daily to maintain streaks';
+  String get tutorialStreaksStep4 =>
+      'Mark habits complete daily to maintain streaks';
 
   @override
-  String get tutorialStreaksStep5 => 'Streaks reset if you miss a day (based on your frequency)';
+  String get tutorialStreaksStep5 =>
+      'Streaks reset if you miss a day (based on your frequency)';
 
   @override
-  String get tutorialStreaksStep6 => 'Use the reports screen to see your habit history';
+  String get tutorialStreaksStep6 =>
+      'Use the reports screen to see your habit history';
 
   @override
-  String get tutorialStreaksStep7 => 'Aim for consistency rather than perfection';
+  String get tutorialStreaksStep7 =>
+      'Aim for consistency rather than perfection';
 
   @override
-  String get tutorialStreaksStep8 => 'Celebrate milestone streaks to stay motivated';
+  String get tutorialStreaksStep8 =>
+      'Celebrate milestone streaks to stay motivated';
 
   @override
   String get tutorialSymptomsStep1 => 'Go to the tracker screen';
 
   @override
-  String get tutorialSymptomsStep2 => 'Choose the symptom icon from the icon grid OR tap \"Add Symptom\" button';
+  String get tutorialSymptomsStep2 =>
+      'Choose the symptom icon from the icon grid OR tap \"Add Symptom\" button';
 
   @override
-  String get tutorialSymptomsStep3 => 'If using icon grid: tap the \"+\" button in the top-right corner';
+  String get tutorialSymptomsStep3 =>
+      'If using icon grid: tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialSymptomsStep4 => 'Choose from common categories or add a custom one';
+  String get tutorialSymptomsStep4 =>
+      'Choose from common categories or add a custom one';
 
   @override
-  String get tutorialSymptomsStep5 => 'Rate the severity on a scale of 1-10 (use Mankoski scale if preferred)';
+  String get tutorialSymptomsStep5 =>
+      'Rate the severity on a scale of 1-10 (use Mankoski scale if preferred)';
 
   @override
-  String get tutorialSymptomsStep6 => 'Add notes about triggers, context, or treatments tried';
+  String get tutorialSymptomsStep6 =>
+      'Add notes about triggers, context, or treatments tried';
 
   @override
   String get tutorialSymptomsStep7 => 'Include location on body if applicable';
 
   @override
-  String get tutorialSymptomsStep8 => 'Save the entry to track patterns over time';
+  String get tutorialSymptomsStep8 =>
+      'Save the entry to track patterns over time';
 
   @override
   String get tutorialMedicationStep1 => 'Go to the tracker screen';
 
   @override
-  String get tutorialMedicationStep2 => 'Choose the medication icon from the icon grid';
+  String get tutorialMedicationStep2 =>
+      'Choose the medication icon from the icon grid';
 
   @override
-  String get tutorialMedicationStep3 => 'Tap the \"+\" button in the top-right corner';
+  String get tutorialMedicationStep3 =>
+      'Tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialMedicationStep4 => 'Enter the medication name and dosage amount';
+  String get tutorialMedicationStep4 =>
+      'Enter the medication name and dosage amount';
 
   @override
-  String get tutorialMedicationStep5 => 'Select the unit (mg, ml, tablets, etc.)';
+  String get tutorialMedicationStep5 =>
+      'Select the unit (mg, ml, tablets, etc.)';
 
   @override
-  String get tutorialMedicationStep6 => 'Set the frequency: daily, weekly, as needed, or custom schedule';
+  String get tutorialMedicationStep6 =>
+      'Set the frequency: daily, weekly, as needed, or custom schedule';
 
   @override
-  String get tutorialMedicationStep7 => 'Save the medication and mark as taken when you take your dose';
+  String get tutorialMedicationStep7 =>
+      'Save the medication and mark as taken when you take your dose';
 
   @override
   String get tutorialMoodStep1 => 'Go to the tracker screen';
@@ -1896,22 +2034,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialMoodStep2 => 'Choose the mood icon from the icon grid';
 
   @override
-  String get tutorialMoodStep3 => 'Tap the \"+\" button in the top-right corner';
+  String get tutorialMoodStep3 =>
+      'Tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialMoodStep4 => 'Select your current mood level on a scale of 1-10';
+  String get tutorialMoodStep4 =>
+      'Select your current mood level on a scale of 1-10';
 
   @override
   String get tutorialMoodStep5 => 'Add notes about what influenced your mood';
 
   @override
-  String get tutorialMoodStep6 => 'Include any relevant triggers, events, or circumstances';
+  String get tutorialMoodStep6 =>
+      'Include any relevant triggers, events, or circumstances';
 
   @override
   String get tutorialMoodStep7 => 'Note any coping strategies used';
 
   @override
-  String get tutorialMoodStep8 => 'Save the mood entry to track patterns over time';
+  String get tutorialMoodStep8 =>
+      'Save the mood entry to track patterns over time';
 
   @override
   String get tutorialEnergyStep1 => 'Go to the tracker screen';
@@ -1920,16 +2062,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialEnergyStep2 => 'Choose the energy icon from the icon grid';
 
   @override
-  String get tutorialEnergyStep3 => 'Tap the \"+\" button in the top-right corner';
+  String get tutorialEnergyStep3 =>
+      'Tap the \"+\" button in the top-right corner';
 
   @override
-  String get tutorialEnergyStep4 => 'Select your current energy level on a scale of 1-10';
+  String get tutorialEnergyStep4 =>
+      'Select your current energy level on a scale of 1-10';
 
   @override
-  String get tutorialEnergyStep5 => 'Add notes about what influenced your energy';
+  String get tutorialEnergyStep5 =>
+      'Add notes about what influenced your energy';
 
   @override
-  String get tutorialEnergyStep6 => 'Include any relevant triggers, events, or circumstances';
+  String get tutorialEnergyStep6 =>
+      'Include any relevant triggers, events, or circumstances';
 
   @override
   String get tutorialFlowmodoroStep1 => 'Navigate to the Time Management page';
@@ -1938,109 +2084,140 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialFlowmodoroStep2 => 'Tap on \"Flowmodoro\"';
 
   @override
-  String get tutorialFlowmodoroStep3 => 'Choose a task to work on from your task list';
+  String get tutorialFlowmodoroStep3 =>
+      'Choose a task to work on from your task list';
 
   @override
-  String get tutorialFlowmodoroStep4 => 'Set your work duration (start with 25 minutes if unsure)';
+  String get tutorialFlowmodoroStep4 =>
+      'Set your work duration (start with 25 minutes if unsure)';
 
   @override
-  String get tutorialFlowmodoroStep5 => 'Set your break duration (typically 5-15 minutes)';
+  String get tutorialFlowmodoroStep5 =>
+      'Set your break duration (typically 5-15 minutes)';
 
   @override
   String get tutorialFlowmodoroStep6 => 'Tap \"Start\" to begin the work timer';
 
   @override
-  String get tutorialFlowmodoroStep7 => 'Work focused on your task until the timer ends';
+  String get tutorialFlowmodoroStep7 =>
+      'Work focused on your task until the timer ends';
 
   @override
-  String get tutorialFlowmodoroStep8 => 'Take the break when prompted - step away from work';
+  String get tutorialFlowmodoroStep8 =>
+      'Take the break when prompted - step away from work';
 
   @override
-  String get tutorialFlowmodoroStep9 => 'After break, start another work session or finish';
+  String get tutorialFlowmodoroStep9 =>
+      'After break, start another work session or finish';
 
   @override
-  String get tutorialFlowmodoroStep10 => 'Track your completed sessions for productivity insights';
+  String get tutorialFlowmodoroStep10 =>
+      'Track your completed sessions for productivity insights';
 
   @override
-  String get tutorialKanbanStep1 => 'Go to Time Management and select \"Kanban\"';
+  String get tutorialKanbanStep1 =>
+      'Go to Time Management and select \"Kanban\"';
 
   @override
-  String get tutorialKanbanStep2 => 'Your tasks are organized in columns: To Do, In Progress, Done';
+  String get tutorialKanbanStep2 =>
+      'Your tasks are organized in columns: To Do, In Progress, Done';
 
   @override
-  String get tutorialKanbanStep3 => 'Drag tasks between columns to update their status';
+  String get tutorialKanbanStep3 =>
+      'Drag tasks between columns to update their status';
 
   @override
-  String get tutorialKanbanStep4 => 'Add new tasks directly to the To Do column';
+  String get tutorialKanbanStep4 =>
+      'Add new tasks directly to the To Do column';
 
   @override
-  String get tutorialKanbanStep5 => 'Move tasks to In Progress when you start working on them';
+  String get tutorialKanbanStep5 =>
+      'Move tasks to In Progress when you start working on them';
 
   @override
   String get tutorialKanbanStep6 => 'Complete tasks by moving them to Done';
 
   @override
-  String get tutorialKanbanStep7 => 'Use filters to show only specific categories or priorities';
+  String get tutorialKanbanStep7 =>
+      'Use filters to show only specific categories or priorities';
 
   @override
-  String get tutorialKanbanStep8 => 'Customize columns and workflow to match your needs';
+  String get tutorialKanbanStep8 =>
+      'Customize columns and workflow to match your needs';
 
   @override
-  String get tutorialTimeBlocksStep1 => 'Navigate to Time Management and tap \"Time Blocks\"';
+  String get tutorialTimeBlocksStep1 =>
+      'Navigate to Time Management and tap \"Time Blocks\"';
 
   @override
-  String get tutorialTimeBlocksStep2 => 'View your calendar with existing scheduled items';
+  String get tutorialTimeBlocksStep2 =>
+      'View your calendar with existing scheduled items';
 
   @override
-  String get tutorialTimeBlocksStep3 => 'To schedule a task: set a start time and an end time, or set a start time only if the task has a time estimate';
+  String get tutorialTimeBlocksStep3 =>
+      'To schedule a task: set a start time and an end time, or set a start time only if the task has a time estimate';
 
   @override
-  String get tutorialTimeBlocksStep4 => 'To unschedule: press the x button on top of the scheduled item';
+  String get tutorialTimeBlocksStep4 =>
+      'To unschedule: press the x button on top of the scheduled item';
 
   @override
-  String get tutorialTimeBlocksStep5 => 'Color coding helps distinguish the priorities of tasks';
+  String get tutorialTimeBlocksStep5 =>
+      'Color coding helps distinguish the priorities of tasks';
 
   @override
   String get tutorialReportsStep1 => 'Navigate to the Reports section';
 
   @override
-  String get tutorialReportsStep2 => 'Choose your time range: day, week, month or year';
+  String get tutorialReportsStep2 =>
+      'Choose your time range: day, week, month or year';
 
   @override
-  String get tutorialReportsStep3 => 'If there is any data that you don\'t want to see, click it in the legend to hide it';
+  String get tutorialReportsStep3 =>
+      'If there is any data that you don\'t want to see, click it in the legend to hide it';
 
   @override
-  String get tutorialReportsStep4 => 'Charts automatically update based on your selections';
+  String get tutorialReportsStep4 =>
+      'Charts automatically update based on your selections';
 
   @override
-  String get tutorialReportsStep5 => 'Hover or tap data points for detailed information';
+  String get tutorialReportsStep5 =>
+      'Hover or tap data points for detailed information';
 
   @override
-  String get tutorialReportsStep6 => 'Use charts to identify patterns and trends in your data';
+  String get tutorialReportsStep6 =>
+      'Use charts to identify patterns and trends in your data';
 
   @override
-  String get tutorialCustomReportsStep1 => 'In the Reports section, look for the legend below charts';
+  String get tutorialCustomReportsStep1 =>
+      'In the Reports section, look for the legend below charts';
 
   @override
-  String get tutorialCustomReportsStep2 => 'Tap on any item in the legend to hide/show that data series';
+  String get tutorialCustomReportsStep2 =>
+      'Tap on any item in the legend to hide/show that data series';
 
   @override
-  String get tutorialCustomReportsStep3 => 'Hidden items appear grayed out in the legend';
+  String get tutorialCustomReportsStep3 =>
+      'Hidden items appear grayed out in the legend';
 
   @override
-  String get tutorialCustomReportsStep4 => 'This lets you focus on specific data points';
+  String get tutorialCustomReportsStep4 =>
+      'This lets you focus on specific data points';
 
   @override
-  String get tutorialCustomReportsStep5 => 'For example, hide the habits to see other items more clearly';
+  String get tutorialCustomReportsStep5 =>
+      'For example, hide the habits to see other items more clearly';
 
   @override
-  String get tutorialCustomReportsStep6 => 'Combine with date filters for precise analysis';
+  String get tutorialCustomReportsStep6 =>
+      'Combine with date filters for precise analysis';
 
   @override
   String get tutorialSettingsStep1 => 'Navigate to Settings from the main menu';
 
   @override
-  String get tutorialSettingsStep2 => 'Customize your theme (light, dark, or system)';
+  String get tutorialSettingsStep2 =>
+      'Customize your theme (light, dark, or system)';
 
   @override
   String get tutorialSettingsStep3 => 'Set your preferred language and region';
@@ -2049,7 +2226,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutorialAccountStep1 => 'Go to Settings and tap \"Account\"';
 
   @override
-  String get tutorialAccountStep2 => 'View your account details and email address';
+  String get tutorialAccountStep2 =>
+      'View your account details and email address';
 
   @override
   String get tutorialAccountStep3 => 'Change your or email password if needed';
@@ -2130,7 +2308,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get requiresRecentLogin => 'Please sign in again to continue';
 
   @override
-  String get tooManyAttempts => 'Too many failed attempts. Please try again later';
+  String get tooManyAttempts =>
+      'Too many failed attempts. Please try again later';
 
   @override
   String get userDisabled => 'This account has been disabled';
@@ -2139,22 +2318,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unexpectedError => 'An unexpected error occurred';
 
   @override
-  String get securityVerificationRequired => 'For security purposes, please verify your current password to change your email address.';
+  String get securityVerificationRequired =>
+      'For security purposes, please verify your current password to change your email address.';
 
   @override
-  String get passwordChangeVerification => 'For security purposes, please verify your current password before setting a new one.';
+  String get passwordChangeVerification =>
+      'For security purposes, please verify your current password before setting a new one.';
 
   @override
-  String get passwordRequiredForEmailChange => 'Your password is required to verify this security change';
+  String get passwordRequiredForEmailChange =>
+      'Your password is required to verify this security change';
 
   @override
-  String get passwordRequirements => 'Password must be at least 6 characters long';
+  String get passwordRequirements =>
+      'Password must be at least 6 characters long';
 
   @override
-  String get emailMustBeDifferent => 'New email must be different from current email';
+  String get emailMustBeDifferent =>
+      'New email must be different from current email';
 
   @override
-  String get passwordMustBeDifferent => 'New password must be different from current password';
+  String get passwordMustBeDifferent =>
+      'New password must be different from current password';
 
   @override
   String get updatingEmail => 'Updating email address...';
@@ -2166,10 +2351,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verifyNewEmail => 'Verify New Email';
 
   @override
-  String get emailVerificationSent => 'A verification email has been sent to your new email address:';
+  String get emailVerificationSent =>
+      'A verification email has been sent to your new email address:';
 
   @override
-  String get emailVerificationInstructions => 'Please check your inbox and click the verification link to complete the email change. Your email address will not be updated until verified.';
+  String get emailVerificationInstructions =>
+      'Please check your inbox and click the verification link to complete the email change. Your email address will not be updated until verified.';
 
   @override
   String get resendVerification => 'Resend';
@@ -2181,7 +2368,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get verificationEmailResent => 'Verification email sent again';
 
   @override
-  String get failedToResendVerification => 'Failed to resend verification email';
+  String get failedToResendVerification =>
+      'Failed to resend verification email';
 
   @override
   String get failedToLoadUser => 'Failed to load user information';
@@ -2196,16 +2384,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get emailChangeRequiresVerification => 'Email Verification Required';
 
   @override
-  String get emailChangeVerificationMessage => 'To change your email address, you must first verify your current email. This is a security requirement.';
+  String get emailChangeVerificationMessage =>
+      'To change your email address, you must first verify your current email. This is a security requirement.';
 
   @override
   String get currentEmail => 'Current Email:';
 
   @override
-  String get emailVerificationInstructions2 => 'We will send a verification email to your current address. Please verify it, then try changing your email again.';
+  String get emailVerificationInstructions2 =>
+      'We will send a verification email to your current address. Please verify it, then try changing your email again.';
 
   @override
-  String get verificationEmailSent2 => 'Verification email sent to your current address';
+  String get verificationEmailSent2 =>
+      'Verification email sent to your current address';
 
   @override
   String get failedToSendVerification => 'Failed to send verification email';
@@ -2214,7 +2405,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sendVerification => 'Send Verification';
 
   @override
-  String get emailVerificationRequired => 'Email verification is required before changing email address';
+  String get emailVerificationRequired =>
+      'Email verification is required before changing email address';
 
   @override
   String get operationNotAllowed => 'This operation is not allowed';

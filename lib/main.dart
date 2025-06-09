@@ -3,14 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:spiceease/core/database/firebase_options.dart';
 import 'package:spiceease/app/app_wrapper.dart';
+import 'package:spiceease/app/splash_screen.dart';
 import 'package:spiceease/app/theme/app_theme.dart';
 import 'package:spiceease/app/theme/theme_provider.dart';
-import 'package:spiceease/data/services/notification_service.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/l10n/l10n.dart';
 import 'package:spiceease/l10n/locale_provider.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
+
+/// Create a global navigator key to allow navigation from anywhere
+final navigatorKey = GlobalKey<NavigatorState>();
 
 /// Main entry point for the application with environment initialization
 void main() async {
@@ -19,6 +24,16 @@ void main() async {
 
   // Load environment variables from .env file before initializing the app
   await dotenv.load(fileName: ".env");
+
+  // Initialize Firebase FIRST
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("✅ Firebase initialized successfully");
+  } catch (e) {
+    print("❌ Firebase initialization failed: $e");
+  }
 
   print("🚀 Starting SpiceEase app...");
 
@@ -56,6 +71,9 @@ class MyApp extends ConsumerWidget {
       darkTheme: darkTheme,
       themeMode: themeState.themeMode,
       debugShowCheckedModeBanner: false,
+      
+      // Add the navigator key to enable navigation from anywhere
+      navigatorKey: navigatorKey,
 
       locale: currentLocale,
 
@@ -70,8 +88,7 @@ class MyApp extends ConsumerWidget {
       // Define all supported locales from the L10n class
       supportedLocales: L10n.all,
 
-
-      // Start directly with AppWrapper which handles auth checking
+      // Start with AppWrapper which handles the splash screen and navigation
       home: const AppWrapper(),
     );
   }

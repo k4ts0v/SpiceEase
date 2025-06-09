@@ -92,7 +92,7 @@ ThemeData generateAppTheme(
     ),
 
     // Card Theme
-    cardTheme: CardTheme(
+    cardTheme: CardThemeData(
       color: cardColor,
       elevation: isDark ? 4 : 1,
       shape: RoundedRectangleBorder(

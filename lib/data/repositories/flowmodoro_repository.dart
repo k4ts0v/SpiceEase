@@ -2,7 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/database/firestore_date_adapter.dart';
 import 'package:spiceease/data/models/flowmodoro_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
-import 'package:spiceease/data/providers/current_user_provider.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 
 /// A repository layer that abstracts flowmodoro-related database operations.
 ///
@@ -76,7 +76,7 @@ class FlowmodoroRepository {
   }
 
   Future<List<FlowmodoroModel>> getFlowmodorosForDate(DateTime date) async {
-    final user = await _ref.read(currentUserProvider.future);
+    final user = await _ref.read(unifiedAuthProvider).value;
     if (user == null) return [];
 
     final start = FirestoreDateAdapter.toTimestamp(

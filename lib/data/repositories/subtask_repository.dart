@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
-import 'package:spiceease/data/providers/current_user_provider.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 
 /// A repository layer that abstracts subtask-related database operations.
 ///
@@ -21,7 +21,7 @@ class SubtaskRepository {
   /// Queries the database for all documents in the subtasks collection.
   /// Each document is converted from a map to a [SubtaskModel] instance.
   Future<List<SubtaskModel>> getAllSubtasks() async {
-    final user = await _ref.read(currentUserProvider.future);
+    final user = await _ref.read(unifiedAuthProvider).value;
     if (user == null) return [];
 
     final results = await _db.query(
@@ -78,7 +78,7 @@ class SubtaskRepository {
 
   /// Get subtasks for a specific task
   Future<List<SubtaskModel>> getSubtasksForTask(String taskId) async {
-    final user = await _ref.read(currentUserProvider.future);
+    final user = await _ref.read(unifiedAuthProvider).value;
     if (user == null) return [];
 
     final subtasks = await _db.query(

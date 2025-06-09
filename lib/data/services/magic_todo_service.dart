@@ -1,7 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
-import 'package:spiceease/data/providers/current_user_provider.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 
 /// Provides an instance of [MagicTodoService] to the app.
@@ -70,13 +70,16 @@ class MagicTodoService {
         ),
       );
 
+      // Get current user from unified auth provider
+      final currentUser = ref.watch(unifiedAuthProvider).value;
+
       // If the API returns a List, map each item to a SubtaskModel.
       if (response.data is List) {
         print("Goblin API returned a List: ${response.data}");
         return (response.data as List).map((subtaskTitle) {
           return SubtaskModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(), // temporary ID
-            userId: ref.watch(currentUserProvider).value?.uid ?? '',
+            userId: currentUser?.uid ?? '',
             taskId: '', // will be set when main task is created
             title: subtaskTitle.toString(),
             order: response.data.indexOf(subtaskTitle),
@@ -95,7 +98,7 @@ class MagicTodoService {
         return subtasks.map((subtaskTitle) {
           return SubtaskModel(
             id: DateTime.now().millisecondsSinceEpoch.toString(),
-            userId: ref.watch(currentUserProvider).value?.uid ?? '',
+            userId: currentUser?.uid ?? '',
             taskId: '',
             title: subtaskTitle.trim(),
             order: subtasks.toList().indexOf(subtaskTitle),

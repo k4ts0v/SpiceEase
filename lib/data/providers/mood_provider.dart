@@ -40,6 +40,6 @@ final todayMoodsProvider = FutureProvider<List<MoodModel>>((ref) async {
 final moodStateNotifierProvider = StateNotifierProvider.autoDispose
     .family<MoodStateNotifier, List<MoodModel>, DateTime>((ref, date) {
   final service = ref.read(moodServiceProvider);
-  return MoodStateNotifier(service, date);
+  return MoodStateNotifier(service, date, ref);
 });
 

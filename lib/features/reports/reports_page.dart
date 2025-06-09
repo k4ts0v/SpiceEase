@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/app/app_initializer.dart';
 import 'package:spiceease/components/app_header.dart';
-import 'package:spiceease/data/providers/current_user_provider.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/features/reports/metrics_data.dart';
 import 'package:spiceease/features/reports/pie_data.dart';
 import 'package:spiceease/features/reports/reports_controller.dart';
@@ -66,8 +66,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         await ref.read(appInitializerProvider.future);
 
         // Only then fetch reports if user is authenticated
-        final isSignedIn = await ref.read(isUserSignedInProvider.future);
-        if (isSignedIn && mounted) {
+        final isAuthenticated = await ref.read(isAuthenticatedProvider);
+        if (isAuthenticated && mounted) {
           final controller = ref.read(reportsControllerProvider.notifier);
           await controller.fetchReportsForTimeRange(_selectedRange, selectedDate);
         }

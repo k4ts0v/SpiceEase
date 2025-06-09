@@ -1,36 +1,81 @@
 import 'package:flutter/material.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:spiceease/core/auth/user_model.dart';
 import 'package:spiceease/features/reports/reports_page.dart';
-import 'package:spiceease/features/settings/settings_page.dart';
 import 'package:spiceease/features/settings/settings_page.dart';
 import 'package:spiceease/features/time_management/time_management.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_screen.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 
-class NavBar extends StatefulWidget {
-  const NavBar({Key? key}) : super(key: key);
+final navigationIndexProvider = StateProvider<int>((ref) => 0);
+
+class NavBar extends ConsumerStatefulWidget {
+  const NavBar({super.key});
 
   @override
-  State<NavBar> createState() => _NavBarState();
+  ConsumerState<NavBar> createState() => _NavBarState();
 }
 
-class _NavBarState extends State<NavBar> {
-  int _selectedIndex = 0;
+class _NavBarState extends ConsumerState<NavBar> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(navigationIndexProvider.notifier).state = 0;
+    
+    ref.listenManual<AsyncValue<AppUser?>>(
+      unifiedAuthProvider,
+      (_, next) {
+        final user = next.value;
+        if (user == null) {
+          ref.read(navigationIndexProvider.notifier).state = 0;
+        }
+      },
+    );
+  }
 
-  final List<Widget> _screens = const [
-    TrackerScreen(),
-    TimeManagementPage(),
-    ReportsPage(),
-    SettingsPage(),
-  ];
+  Widget _getScreen(int index) {
+    try {
+      switch (index) {
+        case 0:
+          return const TrackerScreen();
+        case 1:
+          return const TimeManagementPage();
+        case 2:
+          return const ReportsPage();
+        case 3:
+          return const SettingsPage();
+        default:
+          return const TrackerScreen();
+      }
+    } catch (e, stack) {
+      return _ErrorScreen(
+        screenName: _getScreenName(index),
+        error: e.toString(),
+        onRetry: () {
+          setState(() {});
+        },
+      );
+    }
+  }
+
+  String _getScreenName(int index) {
+    switch (index) {
+      case 0: return 'Tracker';
+      case 1: return 'Time Management';
+      case 2: return 'Reports';
+      case 3: return 'Settings';
+      default: return 'Unknown';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final selectedIndex = ref.watch(navigationIndexProvider);
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final localizations = AppLocalizations.of(context)!;
 
-    // Define navigation items inside build to access localizations
     final navBarItems = [
       _NavBarItem(
         icon: Icons.home_outlined,
@@ -54,68 +99,57 @@ class _NavBarState extends State<NavBar> {
       ),
     ];
 
-    return Material(
-      child: Scaffold(
-        body: _screens[_selectedIndex],
-        bottomNavigationBar: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-          decoration: BoxDecoration(
-            color: colorScheme.surface,
-            boxShadow: [
-              BoxShadow(
-                color: colorScheme.shadow.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: List.generate(navBarItems.length, (index) {
-              final item = navBarItems[index];
-              final isSelected = _selectedIndex == index;
-              return Expanded(
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(16),
-                  onTap: () {
-                    setState(() {
-                      _selectedIndex = index;
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 6),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          isSelected ? item.selectedIcon : item.icon,
-                          color: isSelected
-                              ? colorScheme.primary
-                              : colorScheme.onSurface.withOpacity(0.6),
-                          size: 28,
-                        ),
-                        // Uncomment if you want to show labels
-                        // const SizedBox(height: 4),
-                        // Text(
-                        //   item.label,
-                        //   style: TextStyle(
-                        //     fontSize: 12,
-                        //     fontWeight: isSelected
-                        //         ? FontWeight.bold
-                        //         : FontWeight.normal,
-                        //     color: isSelected
-                        //         ? colorScheme.primary
-                        //         : colorScheme.onSurface.withOpacity(0.6),
-                        //   ),
-                        //   textAlign: TextAlign.center,
-                        // ),
-                      ],
-                    ),
+    return Scaffold(
+      body: IndexedStack(
+        index: selectedIndex,
+        children: [
+          _getScreen(0),
+          _getScreen(1),
+          _getScreen(2),
+          _getScreen(3),
+        ],
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+        decoration: BoxDecoration(
+          color: colorScheme.surface,
+          boxShadow: [
+            BoxShadow(
+              color: colorScheme.shadow.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(navBarItems.length, (index) {
+            final item = navBarItems[index];
+            final isSelected = selectedIndex == index;
+            return Expanded(
+              child: InkWell(
+                borderRadius: BorderRadius.circular(16),
+                onTap: () {
+                  ref.read(navigationIndexProvider.notifier).state = index;
+                },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        isSelected ? item.selectedIcon : item.icon,
+                        color: isSelected
+                            ? colorScheme.primary
+                            : colorScheme.onSurface.withValues(alpha: 0.6),
+                        size: 28,
+                      ),
+                    ],
                   ),
                 ),
-              );
-            }),
-          ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -132,4 +166,78 @@ class _NavBarItem {
     required this.selectedIcon,
     required this.label,
   });
+}
+
+class _ErrorScreen extends StatelessWidget {
+  final String screenName;
+  final String error;
+  final VoidCallback onRetry;
+
+  const _ErrorScreen({
+    required this.screenName,
+    required this.error,
+    required this.onRetry,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('$screenName - Error'),
+        backgroundColor: Theme.of(context).colorScheme.errorContainer,
+        foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Error loading $screenName',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  error,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontFamily: 'monospace',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
