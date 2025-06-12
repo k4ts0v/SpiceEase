@@ -37,7 +37,7 @@ import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/main.dart'; // Assuming MyApp is your root widget
 import 'package:spiceease/core/database/database_service.dart';
 import 'package:spiceease/data/models/mood_model.dart'; // For ListModal<MoodModel>
-import 'package:spiceease/features/tracker/presentation/modals.dart'; // For MoodLevelEditorModal
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart'; // For MoodLevelEditorModal
 import 'package:spiceease/features/tracker/presentation/widgets/list_modal.dart'; // For ListModal
 
 import '../tracker_mood_test.mocks.dart';

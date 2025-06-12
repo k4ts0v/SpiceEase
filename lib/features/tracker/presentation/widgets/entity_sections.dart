@@ -10,9 +10,10 @@ import 'package:spiceease/data/providers/medication_provider.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
-import 'package:spiceease/features/tracker/presentation/modals.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/entity_section.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/subtask_list.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 class EntitySections extends ConsumerWidget {
@@ -20,10 +21,10 @@ class EntitySections extends ConsumerWidget {
   final DateTime selectedDate;
 
   const EntitySections({
-    Key? key,
+    super.key,
     required this.showModal,
     required this.selectedDate,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -35,25 +36,22 @@ class EntitySections extends ConsumerWidget {
     final theme = Theme.of(context);
 
     // Extract data, loading status, and errors manually
-    List<SymptomModel> symptomsList =
-        symptoms is List<SymptomModel> ? symptoms : [];
+    List<SymptomModel> symptomsList = symptoms;
     bool symptomsLoading = false;
     String? symptomsError;
 
-    List<MedicationModel> medicationsList =
-        medications is List<MedicationModel> ? medications : [];
+    List<MedicationModel> medicationsList = medications;
     bool medicationsLoading = false;
     String? medicationsError;
 
-    List<TaskModel> tasksList = tasks is List<TaskModel> ? tasks : [];
+    List<TaskModel> tasksList = tasks;
     bool tasksLoading = false;
     String? tasksError;
 
-    List<HabitModel> habitsList = habits is List<HabitModel> ? habits : [];
+    List<HabitModel> habitsList = habits;
     bool habitsLoading = false;
     String? habitsError;
 
-    final today = DateTime.now();
     final localizations = AppLocalizations.of(context)!;
 
     return Column(
@@ -90,8 +88,7 @@ class EntitySections extends ConsumerWidget {
           ),
           onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
           itemBuilder: (medication) {
-            final selectedDate =
-                ref.watch(selectedDateProvider) ?? DateTime.now();
+            final selectedDate = ref.watch(selectedDateProvider);
             final takenCount = medication.getTakenCountForDate(selectedDate);
             final timesPerDay = medication.timesPerDay;
 
@@ -117,9 +114,13 @@ class EntitySections extends ConsumerWidget {
                               );
                             } catch (e) {
                               setState(() {});
-                              debugPrint('Failed to update: $e');
+                              SnackBar(
+                                  content: Text(
+                                      '${localizations.failedToUpdate}: $e'));
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to update: $e')),
+                                SnackBar(
+                                    content: Text(
+                                        '${localizations.failedToUpdate}: $e')),
                               );
                             }
                           },
@@ -134,7 +135,8 @@ class EntitySections extends ConsumerWidget {
                             Icons.remove_circle_outline,
                             color: takenCount > 0
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface.withOpacity(0.3),
+                                : theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.3),
                           ),
                           onPressed: takenCount > 0
                               ? () async {
@@ -161,7 +163,8 @@ class EntitySections extends ConsumerWidget {
                             Icons.add_circle_outline,
                             color: takenCount < timesPerDay
                                 ? theme.colorScheme.primary
-                                : theme.colorScheme.onSurface.withOpacity(0.3),
+                                : theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.3),
                           ),
                           onPressed: takenCount < timesPerDay
                               ? () async {
@@ -208,7 +211,7 @@ class EntitySections extends ConsumerWidget {
                         leading: Icon(
                           Icons.task_alt,
                           color: isCompleted
-                              ? theme.colorScheme.primary.withOpacity(0.7)
+                              ? theme.colorScheme.primary.withValues(alpha: 0.7)
                               : theme.colorScheme.primary,
                         ),
                         title: Text(
@@ -217,7 +220,8 @@ class EntitySections extends ConsumerWidget {
                             decoration:
                                 isCompleted ? TextDecoration.lineThrough : null,
                             color: isCompleted
-                                ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                ? theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6)
                                 : theme.colorScheme.onSurface,
                           ),
                         ),
@@ -225,7 +229,8 @@ class EntitySections extends ConsumerWidget {
                           '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${_getLocalizedStatus(task.status, localizations)}',
                           style: TextStyle(
                             color: isCompleted
-                                ? theme.colorScheme.onSurface.withOpacity(0.6)
+                                ? theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.6)
                                 : theme.colorScheme.onSurface,
                           ),
                         ),
@@ -269,7 +274,9 @@ class EntitySections extends ConsumerWidget {
                               });
 
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to update: $e')),
+                                SnackBar(
+                                    content: Text(
+                                        '${localizations.failedToUpdate}: $e')),
                               );
                             }
                           },
@@ -321,8 +328,7 @@ class EntitySections extends ConsumerWidget {
           onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
           itemBuilder: (habit) {
             final selectedDate = ref.watch(selectedDateProvider);
-            final today = DateTime.now();
-            final displayDate = selectedDate ?? today;
+            final displayDate = selectedDate;
 
             // Check if habit is completed for the display date
             final isCompleted = habit.completedDates.any((d) =>
@@ -349,7 +355,7 @@ class EntitySections extends ConsumerWidget {
               leading: Icon(
                 Icons.sync_rounded,
                 color: isCompleted
-                    ? theme.colorScheme.primary.withOpacity(0.7)
+                    ? theme.colorScheme.primary.withValues(alpha: 0.7)
                     : theme.colorScheme.primary,
               ),
               title: Text(
@@ -357,7 +363,7 @@ class EntitySections extends ConsumerWidget {
                 style: TextStyle(
                   decoration: isCompleted ? TextDecoration.lineThrough : null,
                   color: isCompleted
-                      ? theme.colorScheme.onSurface.withOpacity(0.6)
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
                       : theme.colorScheme.onSurface,
                 ),
               ),
@@ -386,7 +392,9 @@ class EntitySections extends ConsumerWidget {
                         // Revert on error
                         setState(() {});
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to update: $e')),
+                          SnackBar(
+                              content:
+                                  Text('${localizations.failedToUpdate}: $e')),
                         );
                       }
                     },

@@ -32,7 +32,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:spiceease/core/auth/firebase_auth_rest.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 
-import 'auth_service_tests.mocks.dart'; // Generated mock file
+import 'auth_service_rest_tests.mocks.dart'; // Generated mock file
 
 @GenerateMocks([
   Dio,

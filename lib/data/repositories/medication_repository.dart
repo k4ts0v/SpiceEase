@@ -18,8 +18,7 @@ class MedicationRepository {
   /// Each document is converted from a map to a [MedicationModel] instance.
   Future<List<MedicationModel>> getAllMedications() async {
     final results = await _db.query(
-        collection: DatabaseService
-            .medications); // Querying the medications collection.
+        collection: DatabaseService.medications); // Querying the medications collection.
     return results
         .map((e) => MedicationModel.fromMap(e))
         .toList(); // Converting maps to MedicationModel instances.
@@ -42,8 +41,8 @@ class MedicationRepository {
   /// Takes a [MedicationModel] instance, converts it to a map, and sends it
   /// to the database. The response is then converted back to a [MedicationModel].
   Future<MedicationModel> createMedication(MedicationModel medication) async {
-    final data = await _db.createDocument(DatabaseService.medications,
-        medication.toMap()); // Creating a new document.
+    final data = await _db.createDocument(
+        DatabaseService.medications, medication.toMap()); // Creating a new document.
     return MedicationModel.fromMap(
         data); // Returning the created medication as a MedicationModel.
   }

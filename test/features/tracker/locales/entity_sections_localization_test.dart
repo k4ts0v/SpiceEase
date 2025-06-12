@@ -67,6 +67,7 @@ class MockSymptomService extends Mock implements SymptomService {
           name: 'Headache',
           category: 'Neurological',
           severity: 7,
+          notes: 'Test notes',
           createdAt: DateTime.now(),
           userId: 'test-user',
         ),
@@ -166,40 +167,40 @@ class MockTrackerController extends Mock implements TrackerController {
 
 class MockSymptomStateNotifier extends SymptomStateNotifier {
   MockSymptomStateNotifier(
-    SymptomService service,
-    DateTime date,
+    super.service,
+    super.date,
     List<SymptomModel> initialState,
-  ) : super(service, date) {
+  ) {
     state = initialState;
   }
 }
 
 class MockMedicationStateNotifier extends MedicationStateNotifier {
   MockMedicationStateNotifier(
-    MedicationService service,
-    DateTime date,
+    super.service,
+    super.date,
     List<MedicationModel> initialState,
-  ) : super(service, date) {
+  ) {
     state = initialState;
   }
 }
 
 class MockTaskStateNotifier extends TaskStateNotifier {
   MockTaskStateNotifier(
-    TaskService service,
-    DateTime date,
+    super.service,
+    super.date,
     List<TaskModel> initialState,
-  ) : super(service, date) {
+  ) {
     state = initialState;
   }
 }
 
 class MockHabitStateNotifier extends HabitStateNotifier {
   MockHabitStateNotifier(
-    HabitService service,
-    DateTime date,
+    super.service,
+    super.date,
     List<HabitModel> initialState,
-  ) : super(service, date) {
+  ) {
     state = initialState;
   }
 }
@@ -219,6 +220,7 @@ void main() {
           name: 'Headache',
           category: 'Neurological',
           severity: 7,
+          notes: 'Test notes',
           createdAt: DateTime.now(),
           userId: 'test-user')
     ];

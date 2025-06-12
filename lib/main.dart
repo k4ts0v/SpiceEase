@@ -6,13 +6,11 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:spiceease/core/database/firebase_options.dart';
 import 'package:spiceease/app/app_wrapper.dart';
-import 'package:spiceease/app/splash_screen.dart';
 import 'package:spiceease/app/theme/app_theme.dart';
 import 'package:spiceease/app/theme/theme_provider.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/l10n/l10n.dart';
 import 'package:spiceease/l10n/locale_provider.dart';
-import 'package:spiceease/data/providers/unified_auth_provider.dart';
 
 /// Create a global navigator key to allow navigation from anywhere
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -30,12 +28,12 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print("✅ Firebase initialized successfully");
+    debugPrint("✅ Firebase initialized successfully");
   } catch (e) {
-    print("❌ Firebase initialization failed: $e");
+    debugPrint("❌ Firebase initialization failed: $e");
   }
 
-  print("🚀 Starting SpiceEase app...");
+  debugPrint("🚀 Starting SpiceEase app...");
 
   // Wrap the root widget with ProviderScope to enable Riverpod state management
   runApp(const ProviderScope(child: MyApp()));
@@ -71,7 +69,7 @@ class MyApp extends ConsumerWidget {
       darkTheme: darkTheme,
       themeMode: themeState.themeMode,
       debugShowCheckedModeBanner: false,
-      
+
       // Add the navigator key to enable navigation from anywhere
       navigatorKey: navigatorKey,
 

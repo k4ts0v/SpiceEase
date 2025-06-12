@@ -1,4 +1,3 @@
-
 /// This file tests the localization functionality of the ReportsPage widget.
 ///
 /// # Testing Strategy
@@ -82,9 +81,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mockito/annotations.dart';
+import 'package:spiceease/app/app_initializer.dart';
+import 'package:spiceease/core/auth/auth_provider.dart';
+import 'package:spiceease/core/auth/auth_service.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 // import 'package:mockito/mockito.dart'; // Mockito is used via generated mocks
-import 'package:spiceease/features/reports/metrics_data.dart';
-import 'package:spiceease/features/reports/pie_data.dart';
+import 'package:spiceease/features/reports/data_models/metrics_data.dart';
+import 'package:spiceease/features/reports/data_models/pie_data.dart';
 import 'package:spiceease/features/reports/reports_page.dart';
 import 'package:spiceease/features/reports/reports_controller.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
@@ -169,6 +172,33 @@ class TestReportsController extends ReportsController {
   }
 }
 
+/// Observador de providers para registrar errores
+class _ProviderLogger extends ProviderObserver {
+  @override
+  void providerDidFail(
+    ProviderBase provider,
+    Object error,
+    StackTrace stackTrace,
+    ProviderContainer container,
+  ) {
+    print('Provider ${provider.name ?? provider.runtimeType} error: $error');
+    print('Stack trace: $stackTrace');
+  }
+}
+
+/// Mock AuthService class for testing
+class MockAuthService implements AuthService {
+  @override
+  Future<String?> getCurrentUserId() async => 'test-user-id';
+
+  @override
+  Future<bool> isAuthenticated() async => true;
+
+  // Implement other methods with minimal test implementations
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 /// Generates mock implementations for all services used by [ReportsController].
 /// These mocks are used to satisfy the controller's dependencies without needing
 /// real implementations or external connections (like Firebase).
@@ -213,30 +243,48 @@ void main() {
   /// The page is wrapped in a [SizedBox] to constrain its size and a [MaterialApp]
   /// to provide localization context.
   Future<void> pumpReportsPage(WidgetTester tester, String localeCode) async {
+    // Create a completed future for app initialization
+    final appInitFuture = Future.value();
+
+    // Envolver en un ProviderContainer con registro de errores personalizado
+    final container = ProviderContainer(
+      overrides: [
+        // Override auth-related providers
+        authServiceProvider.overrideWithValue(MockAuthService()),
+        isAuthenticatedProvider.overrideWithValue(true),
+
+        // Override app initializer with a completed future
+        appInitializerProvider.overrideWith((_) => appInitFuture),
+
+        // Existing overrides
+        selectedDateProvider.overrideWith((ref) => DateTime(2025, 6, 1)),
+        reportsControllerProvider.overrideWith(
+          (_) => TestReportsController(
+            initialReportsState,
+            taskService: mockTaskService,
+            subtaskService: mockSubtaskService,
+            moodService: mockMoodService,
+            habitService: mockHabitService,
+            symptomsService: mockSymptomService,
+            energyService: mockEnergyService,
+            flowmodoroService: mockFlowmodoroService,
+            medicationService: mockMedicationService,
+          ),
+        ),
+      ],
+      observers: [
+        _ProviderLogger(), // Añadir un observador para registrar errores
+      ],
+    );
+
     await tester.pumpWidget(
       SizedBox(
-        width: 800, // Define a virtual screen width for the test.
-        height: 2000, // Define a virtual screen height, ample for scrolling.
-        child: ProviderScope(
-          overrides: [
-            selectedDateProvider.overrideWith((ref) => DateTime(2025, 6, 1)),
-            reportsControllerProvider.overrideWith(
-              (_) => TestReportsController(
-                initialReportsState, // Use predefined state for consistency.
-                // Pass mock services to the controller.
-                taskService: mockTaskService,
-                subtaskService: mockSubtaskService,
-                moodService: mockMoodService,
-                habitService: mockHabitService,
-                symptomsService: mockSymptomService,
-                energyService: mockEnergyService,
-                flowmodoroService: mockFlowmodoroService,
-                medicationService: mockMedicationService,
-              ),
-            ),
-          ],
+        width: 800,
+        height: 2000,
+        child: UncontrolledProviderScope(
+          container: container,
           child: MaterialApp(
-            locale: Locale(localeCode), // Set the locale for this test instance.
+            locale: Locale(localeCode),
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: const ReportsPage(),
@@ -244,7 +292,6 @@ void main() {
         ),
       ),
     );
-    // `pumpAndSettle` waits for all animations and microtasks to complete.
     await tester.pumpAndSettle();
   }
 

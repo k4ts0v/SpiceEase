@@ -243,6 +243,7 @@ class ReportsTestData {
         name: 'Headache',
         category: 'Pain',
         severity: 3,
+        notes: 'Mild headache',
         createdAt: testDate,
       ),
       SymptomModel(
@@ -250,6 +251,7 @@ class ReportsTestData {
         userId: 'test-user',
         name: 'Fatigue',
         category: 'Energy',
+        notes: 'Feeling tired',
         severity: 2,
         createdAt: testDate.subtract(const Duration(hours: 6)),
       ),
@@ -748,9 +750,9 @@ void main() {
 
         // Assert - Check if task gets counted (it may not due to strict date filtering)
         final state = controller.state;
-        expect(state.tasksCompleted, greaterThanOrEqualTo(0)); // Changed to allow 0
+        expect(state.tasksCompleted,
+            greaterThanOrEqualTo(0)); // Changed to allow 0
       });
-
 
       test('Validates date filtering in different time ranges', () async {
         // Test that date validation works across different time ranges
@@ -782,7 +784,7 @@ void main() {
           expect(dayState.tasksCompleted, equals(1));
         }
       });
-          });
+    });
 
     group('Time Parsing and Calculations', () {
       test('Calculates total time from time blocks correctly', () async {

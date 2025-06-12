@@ -22,7 +22,7 @@ class _NavBarState extends ConsumerState<NavBar> {
   void initState() {
     super.initState();
     ref.read(navigationIndexProvider.notifier).state = 0;
-    
+
     ref.listenManual<AsyncValue<AppUser?>>(
       unifiedAuthProvider,
       (_, next) {
@@ -48,7 +48,7 @@ class _NavBarState extends ConsumerState<NavBar> {
         default:
           return const TrackerScreen();
       }
-    } catch (e, stack) {
+    } catch (e) {
       return _ErrorScreen(
         screenName: _getScreenName(index),
         error: e.toString(),
@@ -61,11 +61,16 @@ class _NavBarState extends ConsumerState<NavBar> {
 
   String _getScreenName(int index) {
     switch (index) {
-      case 0: return 'Tracker';
-      case 1: return 'Time Management';
-      case 2: return 'Reports';
-      case 3: return 'Settings';
-      default: return 'Unknown';
+      case 0:
+        return 'Tracker';
+      case 1:
+        return 'Time Management';
+      case 2:
+        return 'Reports';
+      case 3:
+        return 'Settings';
+      default:
+        return 'Unknown';
     }
   }
 
@@ -199,32 +204,32 @@ class _ErrorScreen extends StatelessWidget {
                 color: Theme.of(context).colorScheme.error,
               ),
               const SizedBox(height: 16),
-              
               Text(
                 'Error loading $screenName',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                      fontWeight: FontWeight.bold,
+                    ),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 16),
-              
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .errorContainer
+                      .withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   error,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontFamily: 'monospace',
-                  ),
+                        fontFamily: 'monospace',
+                      ),
                   textAlign: TextAlign.center,
                 ),
               ),
               const SizedBox(height: 24),
-              
               ElevatedButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),

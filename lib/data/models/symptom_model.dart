@@ -11,6 +11,7 @@ class SymptomModel {
   String _category; // Mutable field with setter
   String _name; // Mutable field with setter
   int _severity; // Mutable field with setter
+  String? _notes; // Optional field for additional notes
   final DateTime _createdAt; // Immutable field (Timestamp of onset)
   DateTime _updatedAt;
 
@@ -20,6 +21,7 @@ class SymptomModel {
   String get category => _category;
   String get name => _name;
   int get severity => _severity;
+  String? get notes => _notes;
   DateTime get createdAt => _createdAt;
   DateTime get updatedAt => _updatedAt;
 
@@ -58,6 +60,17 @@ class SymptomModel {
     }
   }
 
+  /// Sets the notes for the symptom.
+  ///
+  /// Throws an exception if the notes is not between 1 and 10.
+  set notes(String? newNotes) {
+    if (newNotes != null && newNotes.length <= 1000) {
+      _notes = newNotes;
+    } else {
+      throw Exception("Severity must be between 1 and 10.");
+    }
+  }
+
   /// Sets the updatedAt of the symptom.
   ///
   /// Throws an exception if the severity is not between 1 and 10.
@@ -76,6 +89,7 @@ class SymptomModel {
     required String category,
     required String name,
     required int severity,
+    required String? notes,
     required DateTime createdAt,
     DateTime? updatedAt,
   })  : _id = id,
@@ -83,6 +97,7 @@ class SymptomModel {
         _category = category,
         _name = name,
         _severity = severity,
+        _notes = notes,
         _createdAt = createdAt,
         _updatedAt = updatedAt ?? createdAt;
 
@@ -101,7 +116,8 @@ class SymptomModel {
       name: map['name'] ?? '',
       severity: (map['severity'] is int)
           ? map['severity']
-          : int.tryParse(map['severity'].toString()) ?? 1,
+          : int.tryParse(map['severity'].toString()) ?? 0,
+      notes: map['notes'] as String?,
       createdAt: FirestoreDateAdapter.fromFirestore(map['created_at'])!,
       updatedAt: FirestoreDateAdapter.fromFirestore(map['updated_at']),
     );
@@ -119,6 +135,7 @@ class SymptomModel {
       'category_id': _category,
       'name': _name,
       'severity': _severity,
+      'notes': _notes,
       'created_at': FirestoreDateAdapter.toTimestamp(_createdAt),
       'updated_at': FirestoreDateAdapter.toTimestamp(_updatedAt),
     };
@@ -130,6 +147,7 @@ class SymptomModel {
     String? name,
     String? category,
     int? severity,
+    String? notes,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -139,6 +157,7 @@ class SymptomModel {
       name: name ?? this.name,
       category: category ?? this.category,
       severity: severity ?? this.severity,
+      notes: notes ?? this.notes,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

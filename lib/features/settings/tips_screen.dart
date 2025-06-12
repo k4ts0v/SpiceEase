@@ -46,7 +46,8 @@ class TipsScreen extends ConsumerWidget {
                     padding:
                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     child: Card(
-                      color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
+                      color: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.3),
                       child: Padding(
                         padding: const EdgeInsets.all(12),
                         child: Column(

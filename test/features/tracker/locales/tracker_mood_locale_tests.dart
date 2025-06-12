@@ -9,7 +9,7 @@ import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/l10n/locale_provider.dart';
 import 'package:spiceease/main.dart';
 import 'package:intl/intl.dart';
-import 'package:spiceease/features/tracker/presentation/calendar_widget.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/calendar_widget.dart';
 import 'package:spiceease/core/database/database_provider.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
@@ -18,7 +18,7 @@ import 'package:mockito/mockito.dart';
 import 'package:spiceease/core/auth/user_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
 
-import 'ui/tracker_screen_ui_test.mocks.dart';
+import '../ui/tracker_screen_ui_test.mocks.dart';
 
 class MockAuthService extends Mock implements AuthService {
   @override

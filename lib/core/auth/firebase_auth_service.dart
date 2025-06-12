@@ -1,10 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/auth/user_model.dart';
-import 'package:spiceease/core/database/firebase_options.dart';
 
 /// A service class to handle user authentication using Firebase.
 ///
@@ -225,7 +223,7 @@ class FirebaseAuthService implements AuthService {
       case 'USERNAME_REQUIRED':
         return 'username_required';
       default:
-        // Print for debugging and return the original code for transparency
+        // DebugPrint for debugging and return the original code for transparency
         debugPrint('Firebase Auth Error - Unmapped code: $code');
         return code.toLowerCase();
     }
@@ -250,7 +248,6 @@ class FirebaseAuthService implements AuthService {
     }
   }
 
-  
   /// Updates the user's password
   ///
   /// - Parameters:
@@ -265,19 +262,21 @@ class FirebaseAuthService implements AuthService {
         throw AuthException('not_signed_in');
       }
 
-      print('DEBUG: Starting password update process...');
-      
+      debugPrint('DEBUG: Starting password update process...');
+
       // Check if user needs recent authentication first
       try {
         // Try updating password directly first (in case recent auth is still valid)
-        print('DEBUG: Attempting direct password update...');
-        await user.updatePassword(newPassword)
+        debugPrint('DEBUG: Attempting direct password update...');
+        await user
+            .updatePassword(newPassword)
             .timeout(const Duration(seconds: 15));
-        print('DEBUG: Direct password update successful!');
+        debugPrint('DEBUG: Direct password update successful!');
         return;
       } on FirebaseAuthException catch (e) {
         if (e.code == 'requires-recent-login') {
-          print('DEBUG: Recent login required, proceeding with re-authentication...');
+          debugPrint(
+              'DEBUG: Recent login required, proceeding with re-authentication...');
           // Continue to re-authentication below
         } else {
           throw AuthException(_parseError(e));
@@ -290,28 +289,30 @@ class FirebaseAuthService implements AuthService {
         password: currentPassword,
       );
 
-      print('DEBUG: Re-authenticating user with extended timeout...');
-      
+      debugPrint('DEBUG: Re-authenticating user with extended timeout...');
+
       // Use a more aggressive retry strategy with longer individual timeouts
       await _withRetryAdvanced(() async {
-        await user.reauthenticateWithCredential(credential)
+        await user
+            .reauthenticateWithCredential(credential)
             .timeout(const Duration(seconds: 30)); // Increased from 20 to 30
       });
-      
-      print('DEBUG: Re-authentication successful, updating password...');
-      
+
+      debugPrint('DEBUG: Re-authentication successful, updating password...');
+
       // Update password with retry
       await _withRetryAdvanced(() async {
-        await user.updatePassword(newPassword)
+        await user
+            .updatePassword(newPassword)
             .timeout(const Duration(seconds: 20));
       });
-      
-      print('DEBUG: Password update completed successfully');
+
+      debugPrint('DEBUG: Password update completed successfully');
     } on FirebaseAuthException catch (e) {
-      print('DEBUG: Firebase auth exception: ${e.code} - ${e.message}');
+      debugPrint('DEBUG: Firebase auth exception: ${e.code} - ${e.message}');
       throw AuthException(_parseError(e));
     } catch (e) {
-      print('DEBUG: General exception in updatePassword: $e');
+      debugPrint('DEBUG: General exception in updatePassword: $e');
       if (e.toString().contains('TimeoutException')) {
         throw AuthException('operation_timeout');
       }
@@ -323,7 +324,8 @@ class FirebaseAuthService implements AuthService {
   Future<T> _withRetryAdvanced<T>(
     Future<T> Function() operation, {
     int maxRetries = 3, // Increased from 2 to 3
-    Duration initialDelay = const Duration(seconds: 2), // Increased initial delay
+    Duration initialDelay =
+        const Duration(seconds: 2), // Increased initial delay
   }) async {
     int retryCount = 0;
     Duration delay = initialDelay;
@@ -333,24 +335,32 @@ class FirebaseAuthService implements AuthService {
         return await operation();
       } catch (e) {
         if (retryCount == maxRetries) {
-          print('DEBUG: All retry attempts exhausted, throwing error: $e');
+          debugPrint('DEBUG: All retry attempts exhausted, throwing error: $e');
           rethrow;
         }
 
         // Don't retry on authentication errors
         if (e is FirebaseAuthException) {
           final code = e.code.replaceAll('-', '_').toUpperCase();
-          if (['WRONG_PASSWORD', 'INVALID_CREDENTIAL', 'INVALID_LOGIN_CREDENTIALS', 'USER_NOT_FOUND'].contains(code)) {
-            print('DEBUG: Authentication error, not retrying: ${e.code}');
+          if ([
+            'WRONG_PASSWORD',
+            'INVALID_CREDENTIAL',
+            'INVALID_LOGIN_CREDENTIALS',
+            'USER_NOT_FOUND'
+          ].contains(code)) {
+            debugPrint('DEBUG: Authentication error, not retrying: ${e.code}');
             rethrow;
           }
         }
 
-        print('DEBUG: Retry attempt ${retryCount + 1}/${maxRetries} after error: $e');
-        print('DEBUG: Waiting ${delay.inSeconds} seconds before retry...');
-        
+        debugPrint(
+            'DEBUG: Retry attempt ${retryCount + 1}/$maxRetries after error: $e');
+        debugPrint('DEBUG: Waiting ${delay.inSeconds} seconds before retry...');
+
         await Future.delayed(delay);
-        delay = Duration(seconds: (delay.inSeconds * 1.5).round()); // Slower exponential backoff
+        delay = Duration(
+            seconds:
+                (delay.inSeconds * 1.5).round()); // Slower exponential backoff
         retryCount++;
       }
     }
@@ -362,8 +372,8 @@ class FirebaseAuthService implements AuthService {
   @override
   Future<void> reauthenticate(String email, String password) async {
     try {
-      print('DEBUG: Starting reauthentication...');
-      
+      debugPrint('DEBUG: Starting reauthentication...');
+
       // Get current user
       final user = auth.currentUser;
       if (user == null) {
@@ -378,16 +388,18 @@ class FirebaseAuthService implements AuthService {
 
       // Re-authenticate with enhanced retry
       await _withRetryAdvanced(() async {
-        await user.reauthenticateWithCredential(credential)
+        await user
+            .reauthenticateWithCredential(credential)
             .timeout(const Duration(seconds: 30));
       });
-      
-      print('DEBUG: Reauthentication completed successfully');
+
+      debugPrint('DEBUG: Reauthentication completed successfully');
     } on FirebaseAuthException catch (e) {
-      print('DEBUG: Firebase auth exception in reauthenticate: ${e.code} - ${e.message}');
+      debugPrint(
+          'DEBUG: Firebase auth exception in reauthenticate: ${e.code} - ${e.message}');
       throw AuthException(_parseError(e));
     } catch (e) {
-      print('DEBUG: General exception in reauthenticate: $e');
+      debugPrint('DEBUG: General exception in reauthenticate: $e');
       if (e.toString().contains('TimeoutException')) {
         throw AuthException('operation_timeout');
       }
@@ -395,26 +407,25 @@ class FirebaseAuthService implements AuthService {
     }
   }
 
-
   @override
   Future<String?> getAccessToken() {
     return Future.value(null);
   }
 
   /// Sends email verification to current user
-@override
-Future<void> sendEmailVerification() async {
-  try {
-    final user = auth.currentUser;
-    if (user == null) {
-      throw AuthException('not_signed_in');
-    }
+  @override
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = auth.currentUser;
+      if (user == null) {
+        throw AuthException('not_signed_in');
+      }
 
-    await user.sendEmailVerification();
-  } on FirebaseAuthException catch (e) {
-    throw AuthException(_parseError(e));
-  } catch (e) {
-    rethrow;
+      await user.sendEmailVerification();
+    } on FirebaseAuthException catch (e) {
+      throw AuthException(_parseError(e));
+    } catch (e) {
+      rethrow;
+    }
   }
-}
 }

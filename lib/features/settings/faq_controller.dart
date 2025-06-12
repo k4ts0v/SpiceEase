@@ -139,6 +139,14 @@ class FAQController extends StateNotifier<FAQState> {
             questionKey: 'faqDeleteApp',
             answerKey: 'faqDeleteAppAnswer',
           ),
+          FAQ(
+            questionKey: 'faqEmailChangeProcess',
+            answerKey: 'faqEmailChangeProcessAnswer',
+          ),
+          FAQ(
+            questionKey: 'faqPasswordChangeProcess',
+            answerKey: 'faqPasswordChangeProcessAnswer',
+          ),
         ],
       ),
       const FAQCategory(
@@ -155,6 +163,14 @@ class FAQController extends StateNotifier<FAQState> {
           FAQ(
             questionKey: 'faqFeatureMissing',
             answerKey: 'faqFeatureMissingAnswer',
+          ),
+          FAQ(
+            questionKey: 'faqEmailNotUpdating',
+            answerKey: 'faqEmailNotUpdatingAnswer',
+          ),
+          FAQ(
+            questionKey: 'faqPasswordNotWorking',
+            answerKey: 'faqPasswordNotWorkingAnswer',
           ),
         ],
       ),
@@ -259,12 +275,18 @@ class FAQController extends StateNotifier<FAQState> {
         return localizations.faqMultipleDevices;
       case 'faqDeleteApp':
         return localizations.faqDeleteApp;
+      case 'faqEmailChangeProcess':
+        return localizations.faqEmailChangeProcess;
       case 'faqDataMissing':
         return localizations.faqDataMissing;
       case 'faqAppSlow':
         return localizations.faqAppSlow;
       case 'faqFeatureMissing':
         return localizations.faqFeatureMissing;
+      case 'faqEmailNotUpdating':
+        return localizations.faqEmailNotUpdating;
+      case 'faqPasswordNotWorking':
+        return localizations.faqPasswordNotWorking;
       default:
         return questionKey;
     }
@@ -302,10 +324,16 @@ class FAQController extends StateNotifier<FAQState> {
         return localizations.faqDeleteAppAnswer;
       case 'faqDataMissingAnswer':
         return localizations.faqDataMissingAnswer;
+      case 'faqEmailChangeProcessAnswer':
+        return localizations.faqEmailChangeProcessAnswer;
       case 'faqAppSlowAnswer':
         return localizations.faqAppSlowAnswer;
       case 'faqFeatureMissingAnswer':
         return localizations.faqFeatureMissingAnswer;
+      case 'faqEmailNotUpdatingAnswer':
+        return localizations.faqEmailNotUpdatingAnswer;
+      case 'faqPasswordNotWorkingAnswer':
+        return localizations.faqPasswordNotWorkingAnswer;
       default:
         return answerKey;
     }
@@ -313,6 +341,7 @@ class FAQController extends StateNotifier<FAQState> {
 }
 
 // Provider
-final faqControllerProvider = StateNotifierProvider<FAQController, FAQState>((ref) {
+final faqControllerProvider =
+    StateNotifierProvider<FAQController, FAQState>((ref) {
   return FAQController();
 });

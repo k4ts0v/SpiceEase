@@ -13,12 +13,16 @@
 ///
 /// # How to run
 /// - Run with `flutter test test/features/reports/reports_ui_test.dart`
+library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
+import 'package:spiceease/app/app_initializer.dart';
+import 'package:spiceease/core/auth/auth_provider.dart';
+import 'package:spiceease/core/auth/auth_service.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/components/calendar_week_selector.dart';
 import 'package:spiceease/data/models/energy_model.dart';
 import 'package:spiceease/data/models/flowmodoro_model.dart';
@@ -37,12 +41,25 @@ import 'package:spiceease/data/services/mood_service.dart';
 import 'package:spiceease/data/services/subtask_service.dart';
 import 'package:spiceease/data/services/symptom_service.dart';
 import 'package:spiceease/data/services/task_service.dart';
-import 'package:spiceease/features/reports/metrics_data.dart';
-import 'package:spiceease/features/reports/pie_data.dart';
+import 'package:spiceease/features/reports/data_models/metrics_data.dart';
+import 'package:spiceease/features/reports/data_models/pie_data.dart';
 import 'package:spiceease/features/reports/reports_controller.dart';
 import 'package:spiceease/features/reports/reports_page.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
+
+import 'reports_ui_test.mocks.dart';
+
+// Mock AuthService class for testing
+class MockAuthService implements AuthService {
+  Future<String?> getCurrentUserId() async => 'test-user-id';
+
+  Future<bool> isAuthenticated() async => true;
+
+  // Implement other methods with minimal test implementations
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 // Generate mocks for all services
 @GenerateMocks([
@@ -55,7 +72,6 @@ import 'package:syncfusion_flutter_charts/charts.dart';
   FlowmodoroService,
   MedicationService,
 ])
-import 'reports_ui_test.mocks.dart';
 
 // --------------------------------------------------------------------------
 // STANDARDIZED TEST SCREEN SIZES - MUST MATCH ACROSS ALL UI TESTS
@@ -265,6 +281,7 @@ class ReportsUITestData {
             '${symptoms[index % symptoms.length]} with Detailed Description $index',
         category: categories[index % categories.length],
         severity: (index % 5) + 1,
+        notes: 'Comprehensive symptom entry $index with extensive notes about triggers, duration, and impact on daily life. This note is designed to test how the reports UI handles long text content in symptom data.',
         createdAt: forDate.subtract(Duration(hours: index * 4)),
       );
     });
@@ -513,9 +530,20 @@ void main() {
       await tester.binding.setSurfaceSize(screenSize);
     }
 
+    // Create a completed future for app initialization
+    final appInitFuture = Future.value();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // Override auth-related providers
+          authServiceProvider.overrideWithValue(MockAuthService()),
+          isAuthenticatedProvider.overrideWithValue(true),
+
+          // Override app initializer with a completed future
+          appInitializerProvider.overrideWith((_) => appInitFuture),
+
+          // Existing overrides
           selectedDateProvider.overrideWith((ref) => testSelectedDate),
           reportsControllerProvider.overrideWith((ref) => controller),
         ],

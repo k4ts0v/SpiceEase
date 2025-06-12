@@ -3,15 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
-import 'package:spiceease/l10n/app_localizations.dart';
 
 class CalendarWidget extends ConsumerWidget {
-  const CalendarWidget({Key? key}) : super(key: key);
+  const CalendarWidget({super.key});
 
   @override
   Widget build(BuildContext ctx, WidgetRef ref) {
     final selectedDate = ref.watch(selectedDateProvider);
-    final localizations = AppLocalizations.of(ctx)!;
     final locale = Localizations.localeOf(ctx).languageCode;
     final theme = Theme.of(ctx);
 
@@ -120,13 +118,13 @@ class CalendarWidget extends ConsumerWidget {
 
         // Weekend styling
         weekendTextStyle: TextStyle(
-          color: theme.colorScheme.primary.withOpacity(0.8),
+          color: theme.colorScheme.primary.withValues(alpha: 0.8),
           fontSize: 16.0, // Standard calendar day font size
         ),
 
         // Outside days styling (days from other months)
         outsideTextStyle: TextStyle(
-          color: theme.colorScheme.onSurface.withOpacity(0.4),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
           fontSize: 16.0, // Standard calendar day font size
         ),
 

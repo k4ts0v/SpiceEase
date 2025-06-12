@@ -179,7 +179,8 @@ class TrackerController {
   }
 
   // Symptoms - updated with unified refresh
-  Future<void> addSymptom(String name, String category, int severity) async {
+  Future<void> addSymptom(
+      String name, String category, int severity, String? notes) async {
     final selectedDate = ref.read(selectedDateProvider);
     final now = DateTime.now();
 
@@ -200,6 +201,7 @@ class TrackerController {
       name: name,
       category: category,
       severity: severity,
+      notes: notes,
       createdAt: dateWithCurrentTime,
       updatedAt: dateWithCurrentTime,
     ));
@@ -207,7 +209,7 @@ class TrackerController {
   }
 
   Future<void> updateSymptom(
-      String id, String name, String category, int severity) async {
+      String id, String name, String category, int severity, String? notes) async {
     final service = ref.read(symptomServiceProvider);
     final now = DateTime.now();
 
@@ -220,6 +222,7 @@ class TrackerController {
       name: name,
       category: category,
       severity: severity,
+      notes: notes,
       updatedAt: now,
     );
 
@@ -428,7 +431,7 @@ class TrackerController {
   }
 
   Future<void> createSubtask(String taskId, String title,
-      {String? rawTimeValue}) async {
+      String? rawTimeValue, int? order) async {
     final taskService = ref.read(taskServiceProvider);
     final subtaskService = ref.read(subtaskServiceProvider);
     final userId = await taskService.getCurrentUserId();
@@ -525,9 +528,9 @@ class TrackerController {
     try {
       await service.deleteHabit(id);
       _refreshAllProviders(selectedDate);
-      print('Habit $id deleted successfully');
+      debugPrint('Habit $id deleted successfully');
     } catch (e) {
-      print('Error deleting habit: $e');
+      debugPrint('Error deleting habit: $e');
       rethrow;
     }
   }
@@ -614,9 +617,6 @@ class TrackerController {
       MedicationModel medication, bool isCompleted) async {
     final service = ref.read(medicationServiceProvider);
     final selectedDate = ref.read(selectedDateProvider);
-
-    final newTakenTimes = isCompleted ? medication.timesPerDay : 0;
-    final lastCompletedDate = isCompleted ? selectedDate : null;
 
     DateTime? nextDueDate;
     if (isCompleted) {

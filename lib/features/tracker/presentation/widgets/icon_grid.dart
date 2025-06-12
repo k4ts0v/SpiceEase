@@ -14,7 +14,7 @@ import 'package:spiceease/data/providers/medication_provider.dart';
 import 'package:spiceease/data/providers/mood_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
-import 'package:spiceease/features/tracker/presentation/modals.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/icon_list_launcher.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
@@ -25,11 +25,11 @@ class IconGrid extends ConsumerWidget {
   final WidgetRef ref;
 
   const IconGrid({
-    Key? key,
+    super.key,
     required this.showModal,
     required this.selectedDate,
     required this.ref,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -49,7 +49,7 @@ class IconGrid extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.onSurface.withOpacity(0.05),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.05),
             blurRadius: 10,
             spreadRadius: 0,
             offset: const Offset(0, 2),
@@ -79,15 +79,15 @@ class IconGrid extends ConsumerWidget {
                 energy.isEmpty ? '—' : '${energy.last.energyLevel}/10',
           ),
           IconListLauncher<MoodModel>(
-          title: localizations.mood,
-          icon: Icon(FontAwesomeIcons.faceSmile,
-              color: theme.colorScheme.primary),
-          items: moods,
-          onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
-          // onAddEmpty: () => showModal(context, MoodLevelEditorModal(ref: ref)), // Consider if you need a specific onAddEmpty for mood
-          onTap: (mood) => showModal(
-              context, MoodLevelEditorModal(ref: ref, existing: mood)),
-          itemBuilder: (e) => '${e.moodLevel}',
+            title: localizations.mood,
+            icon: Icon(FontAwesomeIcons.faceSmile,
+                color: theme.colorScheme.primary),
+            items: moods,
+            onAdd: () => showModal(context, MoodLevelEditorModal(ref: ref)),
+            // onAddEmpty: () => showModal(context, MoodLevelEditorModal(ref: ref)), // Consider if you need a specific onAddEmpty for mood
+            onTap: (mood) => showModal(
+                context, MoodLevelEditorModal(ref: ref, existing: mood)),
+            itemBuilder: (e) => '${e.moodLevel}',
             additionalTextBuilder: (e) =>
                 '${localizations.additionalNotes}: ${e.notes}',
             onDelete: (e) =>
@@ -98,46 +98,46 @@ class IconGrid extends ConsumerWidget {
                 moods.isEmpty ? '—' : '${moods.last.moodLevel}/10',
           ),
           IconListLauncher<MedicationModel>(
-  title: localizations.medication,
-  icon: Icon(Icons.medication, color: theme.colorScheme.primary),
-  items: medication,
-  onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
-  onTap: (med) => showModal(
-      context, MedicationEditorModal(ref: ref, existing: med)),
-  itemBuilder: (m) => m.name,
-  additionalTextBuilder: (m) =>
-      '${localizations.dose}: ${m.dose} ${m.unit}',
-  onDelete: (m) =>
-      ref.read(trackerControllerProvider).deleteMedication(m.id),
-  onEdit: (m) => showModal(
-      context, MedicationEditorModal(ref: ref, existing: m)),
-  statsLabelBuilder: () {
-    if (medication.isEmpty) return '—';
+            title: localizations.medication,
+            icon: Icon(Icons.medication, color: theme.colorScheme.primary),
+            items: medication,
+            onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+            onTap: (med) => showModal(
+                context, MedicationEditorModal(ref: ref, existing: med)),
+            itemBuilder: (m) => m.name,
+            additionalTextBuilder: (m) =>
+                '${localizations.dose}: ${m.dose} ${m.unit}',
+            onDelete: (m) =>
+                ref.read(trackerControllerProvider).deleteMedication(m.id),
+            onEdit: (m) => showModal(
+                context, MedicationEditorModal(ref: ref, existing: m)),
+            statsLabelBuilder: () {
+              if (medication.isEmpty) return '—';
 
-    final today = DateTime.now();
-    int takenCount = 0;
+              final today = DateTime.now();
+              int takenCount = 0;
 
-    for (final med in medication) {
-      // Count how many times this medication was taken today
-      final countToday = med.getTakenCountForDate(today);
+              for (final med in medication) {
+                // Count how many times this medication was taken today
+                final countToday = med.getTakenCountForDate(today);
 
-      bool isCounted = false;
-      if (med.timesPerDay == 1) {
-        // For single-dose meds, count if taken at least once today
-        isCounted = countToday > 0;
-      } else {
-        // For multi-dose meds, count if all doses are taken today
-        isCounted = countToday >= med.timesPerDay;
-      }
+                bool isCounted = false;
+                if (med.timesPerDay == 1) {
+                  // For single-dose meds, count if taken at least once today
+                  isCounted = countToday > 0;
+                } else {
+                  // For multi-dose meds, count if all doses are taken today
+                  isCounted = countToday >= med.timesPerDay;
+                }
 
-      if (isCounted) {
-        takenCount++;
-      }
-    }
+                if (isCounted) {
+                  takenCount++;
+                }
+              }
 
-    return '$takenCount/${medication.length}';
-  },
-),
+              return '$takenCount/${medication.length}';
+            },
+          ),
           IconListLauncher<SymptomModel>(
             title: localizations.symptoms,
             icon: Icon(Icons.healing, color: theme.colorScheme.primary),
@@ -191,7 +191,7 @@ class IconGrid extends ConsumerWidget {
             additionalTextBuilder: (h) {
               final dueDate = h.nextDueDate;
               final duePart = (dueDate == null)
-                  ? '${localizations.noDueDate}'
+                  ? localizations.noDueDate
                   : '${localizations.due}: ${DateFormat('EEE, d MMMM', localizations.localeName).format(dueDate.toLocal())}';
               return '$duePart | ${localizations.description}: ${h.description}';
             },

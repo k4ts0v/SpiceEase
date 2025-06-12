@@ -62,8 +62,7 @@ import 'app_localizations_es.dart';
 /// be consistent with the languages listed in the AppLocalizations.supportedLocales
 /// property.
 abstract class AppLocalizations {
-  AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+  AppLocalizations(String locale) : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -71,8 +70,7 @@ abstract class AppLocalizations {
     return Localizations.of<AppLocalizations>(context, AppLocalizations);
   }
 
-  static const LocalizationsDelegate<AppLocalizations> delegate =
-      _AppLocalizationsDelegate();
+  static const LocalizationsDelegate<AppLocalizations> delegate = _AppLocalizationsDelegate();
 
   /// A list of this localizations delegate along with the default localizations
   /// delegates.
@@ -84,8 +82,7 @@ abstract class AppLocalizations {
   /// Additional delegates can be added by appending to this list in
   /// MaterialApp. This list does not have to be used at all if a custom list
   /// of delegates is preferred or required.
-  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
-      <LocalizationsDelegate<dynamic>>[
+  static const List<LocalizationsDelegate<dynamic>> localizationsDelegates = <LocalizationsDelegate<dynamic>>[
     delegate,
     GlobalMaterialLocalizations.delegate,
     GlobalCupertinoLocalizations.delegate,
@@ -277,6 +274,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Symptoms'**
   String get symptoms;
+
+  /// No description provided for @symptomNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe other sensations, location, severity, etc.'**
+  String get symptomNotesHint;
+
+  /// No description provided for @energyNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what affected your energy, activities, sleep quality, etc.'**
+  String get energyNotesHint;
+
+  /// No description provided for @moodNotesHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Describe what influenced your mood, events, triggers, coping strategies, etc.'**
+  String get moodNotesHint;
 
   /// No description provided for @task.
   ///
@@ -4411,10 +4426,309 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This operation is not allowed'**
   String get operationNotAllowed;
+
+  /// No description provided for @faqEmailChangeProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I change my email address?'**
+  String get faqEmailChangeProcess;
+
+  /// No description provided for @faqEmailChangeProcessAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'To change your email address: 1) Go to Settings > Account > Change Email, 2) Enter your new email address, 3) Check your new email inbox for a verification link, 4) Click the verification link to confirm your new email, 5) Once verified, you\'ll need to sign out and sign back in with your new email address. Your displayed email will remain unchanged until you complete verification and re-login.'**
+  String get faqEmailChangeProcessAnswer;
+
+  /// No description provided for @faqEmailNotUpdating.
+  ///
+  /// In en, this message translates to:
+  /// **'My email address isn\'t updating after I changed it'**
+  String get faqEmailNotUpdating;
+
+  /// No description provided for @faqEmailNotUpdatingAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'This is normal behavior for security reasons. After changing your email address, you must: 1) Check your new email inbox for a verification email, 2) Click the verification link in that email, 3) Sign out of the app completely, 4) Sign back in using your new email address. Your displayed email will only update after you complete verification and re-login with the new credentials.'**
+  String get faqEmailNotUpdatingAnswer;
+
+  /// No description provided for @sendVerificationEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Verification Email'**
+  String get sendVerificationEmail;
+
+  /// No description provided for @verifyYourEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email address'**
+  String get verifyYourEmailAddress;
+
+  /// No description provided for @updateYourAccountPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Update your account password'**
+  String get updateYourAccountPassword;
+
+  /// No description provided for @signOutOfYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of your account'**
+  String get signOutOfYourAccount;
+
+  /// No description provided for @emailVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Verified'**
+  String get emailVerified;
+
+  /// No description provided for @yourAccountIsFullyVerifiedAndSecure.
+  ///
+  /// In en, this message translates to:
+  /// **'Your account is fully verified and secure'**
+  String get yourAccountIsFullyVerifiedAndSecure;
+
+  /// No description provided for @emailNotVerified.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Not Verified'**
+  String get emailNotVerified;
+
+  /// No description provided for @verifyYourEmailToSecureYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify your email to secure your account'**
+  String get verifyYourEmailToSecureYourAccount;
+
+  /// No description provided for @verify.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify'**
+  String get verify;
+
+  /// No description provided for @currentEmailColon.
+  ///
+  /// In en, this message translates to:
+  /// **'Current email: {email}'**
+  String currentEmailColon(String email);
+
+  /// No description provided for @newEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'New Email Address'**
+  String get newEmailAddress;
+
+  /// No description provided for @updateEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Email'**
+  String get updateEmail;
+
+  /// No description provided for @emailChangeInitiated.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Change Initiated'**
+  String get emailChangeInitiated;
+
+  /// No description provided for @aVerificationEmailHasBeenSentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'A verification email has been sent to:'**
+  String get aVerificationEmailHasBeenSentTo;
+
+  /// No description provided for @importantSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'Important Steps:'**
+  String get importantSteps;
+
+  /// No description provided for @emailChangeSteps.
+  ///
+  /// In en, this message translates to:
+  /// **'1. Check your new email inbox for the verification link\n2. Click the verification link to confirm your new email\n3. Once verified, you\'ll need to sign out and sign back in with your new email address'**
+  String get emailChangeSteps;
+
+  /// No description provided for @yourDisplayedEmailWillRemainUnchanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Your displayed email will remain unchanged until you complete verification and re-login.'**
+  String get yourDisplayedEmailWillRemainUnchanged;
+
+  /// No description provided for @resendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Resend Email'**
+  String get resendEmail;
+
+  /// No description provided for @verificationEmailResentTo.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email resent to {email}'**
+  String verificationEmailResentTo(String email);
+
+  /// No description provided for @failedToResendEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to resend email: {error}'**
+  String failedToResendEmail(String error);
+
+  /// No description provided for @updatingPasswordPleaseWait.
+  ///
+  /// In en, this message translates to:
+  /// **'Updating password, please wait...'**
+  String get updatingPasswordPleaseWait;
+
+  /// No description provided for @thisMayTakeUpTo2Minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'This may take up to 2 minutes due to security checks...'**
+  String get thisMayTakeUpTo2Minutes;
+
+  /// No description provided for @verifyingCurrentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying current password...'**
+  String get verifyingCurrentPassword;
+
+  /// No description provided for @authenticatingWithFirebase.
+  ///
+  /// In en, this message translates to:
+  /// **'Authenticating with Firebase...'**
+  String get authenticatingWithFirebase;
+
+  /// No description provided for @processingSecurityChecks.
+  ///
+  /// In en, this message translates to:
+  /// **'Processing security checks...'**
+  String get processingSecurityChecks;
+
+  /// No description provided for @finalizingChanges.
+  ///
+  /// In en, this message translates to:
+  /// **'Finalizing changes...'**
+  String get finalizingChanges;
+
+  /// No description provided for @pleaseWaitTakingLonger.
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait, this is taking longer than usual...'**
+  String get pleaseWaitTakingLonger;
+
+  /// No description provided for @updatePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Password'**
+  String get updatePassword;
+
+  /// No description provided for @areYouSureYouWantToSignOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out?'**
+  String get areYouSureYouWantToSignOut;
+
+  /// No description provided for @pleaseEnterADifferentEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a different email address'**
+  String get pleaseEnterADifferentEmailAddress;
+
+  /// No description provided for @pleaseEnterAValidEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address'**
+  String get pleaseEnterAValidEmailAddress;
+
+  /// No description provided for @emailUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Email update failed: {error}'**
+  String emailUpdateFailed(String error);
+
+  /// No description provided for @verificationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent! Please check your inbox.'**
+  String get verificationEmailSent;
+
+  /// No description provided for @failedToSendVerificationEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send verification email: {error}'**
+  String failedToSendVerificationEmail(String error);
+
+  /// No description provided for @verifyYourAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Verify Your Account'**
+  String get verifyYourAccount;
+
+  /// No description provided for @pleaseVerifyYourEmailAddress.
+  ///
+  /// In en, this message translates to:
+  /// **'Please verify your email address to secure your account and access all features.'**
+  String get pleaseVerifyYourEmailAddress;
+
+  /// No description provided for @later.
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get later;
+
+  /// No description provided for @securityVerification.
+  ///
+  /// In en, this message translates to:
+  /// **'Security Verification'**
+  String get securityVerification;
+
+  /// No description provided for @pleaseEnterYourCurrentPasswordToContinue.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your current password to continue.'**
+  String get pleaseEnterYourCurrentPasswordToContinue;
+
+  /// No description provided for @authenticationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Authentication failed: {error}'**
+  String authenticationFailed(String error);
+
+  /// No description provided for @passwordUpdateFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Password update failed: {error}'**
+  String passwordUpdateFailed(String error);
+
+  /// No description provided for @faqPasswordChangeProcess.
+  ///
+  /// In en, this message translates to:
+  /// **'How do I change my password?'**
+  String get faqPasswordChangeProcess;
+
+  /// No description provided for @faqPasswordChangeProcessAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'To change your password: 1) Go to Settings > Account > Change Password, 2) Enter your current password for verification, 3) Enter your new password (must be at least 6 characters), 4) Confirm your new password by typing it again, 5) Tap \'Update Password\' and wait for the process to complete. The update may take up to 2 minutes due to security checks. Your password will be changed immediately upon successful completion.'**
+  String get faqPasswordChangeProcessAnswer;
+
+  /// No description provided for @faqPasswordNotWorking.
+  ///
+  /// In en, this message translates to:
+  /// **'My new password isn\'t working after I changed it'**
+  String get faqPasswordNotWorking;
+
+  /// No description provided for @faqPasswordNotWorkingAnswer.
+  ///
+  /// In en, this message translates to:
+  /// **'If your new password isn\'t working: 1) Make sure you\'re using the exact password you set (passwords are case-sensitive), 2) Wait a few minutes and try again, as changes may take time to propagate, 3) Check if you received any error messages during the password change process, 4) If the issue persists, try changing your password again or use the \'Forgot Password\' option to reset it completely.'**
+  String get faqPasswordNotWorkingAnswer;
+
+  /// No description provided for @failedToUpdate.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update: {error}'**
+  String failedToUpdate(String error);
 }
 
-class _AppLocalizationsDelegate
-    extends LocalizationsDelegate<AppLocalizations> {
+class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {
   const _AppLocalizationsDelegate();
 
   @override
@@ -4423,25 +4737,25 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['en', 'es'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>['en', 'es'].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
 }
 
 AppLocalizations lookupAppLocalizations(Locale locale) {
+
+
   // Lookup logic when only language code is specified.
   switch (locale.languageCode) {
-    case 'en':
-      return AppLocalizationsEn();
-    case 'es':
-      return AppLocalizationsEs();
+    case 'en': return AppLocalizationsEn();
+    case 'es': return AppLocalizationsEs();
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.'
+  );
 }

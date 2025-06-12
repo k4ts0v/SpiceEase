@@ -30,6 +30,9 @@
   "username_required": "Username is required.",
   "symptom": "Symptom",
   "symptoms": "Symptoms",
+  "symptomNotesHint":"Describe other sensations, location, severity, etc.",
+  "energyNotesHint":"Describe what affected your energy, activities, sleep quality, etc.",
+  "moodNotesHint":"Describe what influenced your mood, events, triggers, coping strategies, etc.",
   "task": "Task",
   "tasks": "Tasks",
   "habit": "Habit",
@@ -768,5 +771,112 @@
   "failedToSendVerification": "Failed to send verification email",
   "sendVerification": "Send Verification",
   "emailVerificationRequired": "Email verification is required before changing email address",
-  "operationNotAllowed": "This operation is not allowed"
+  "operationNotAllowed": "This operation is not allowed",
+  "faqEmailChangeProcess": "How do I change my email address?",
+  "faqEmailChangeProcessAnswer": "To change your email address: 1) Go to Settings > Account > Change Email, 2) Enter your new email address, 3) Check your new email inbox for a verification link, 4) Click the verification link to confirm your new email, 5) Once verified, you'll need to sign out and sign back in with your new email address. Your displayed email will remain unchanged until you complete verification and re-login.",
+  "faqEmailNotUpdating": "My email address isn't updating after I changed it",
+  "faqEmailNotUpdatingAnswer": "This is normal behavior for security reasons. After changing your email address, you must: 1) Check your new email inbox for a verification email, 2) Click the verification link in that email, 3) Sign out of the app completely, 4) Sign back in using your new email address. Your displayed email will only update after you complete verification and re-login with the new credentials.",
+  "sendVerificationEmail": "Send Verification Email",
+  "verifyYourEmailAddress": "Verify your email address",
+  "updateYourAccountPassword": "Update your account password",
+  "signOutOfYourAccount": "Sign out of your account",
+  "emailVerified": "Email Verified",
+  "yourAccountIsFullyVerifiedAndSecure": "Your account is fully verified and secure",
+  "emailNotVerified": "Email Not Verified",
+  "verifyYourEmailToSecureYourAccount": "Verify your email to secure your account",
+  "verify": "Verify",
+  "currentEmailColon": "Current email: {email}",
+  "@currentEmailColon": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "newEmailAddress": "New Email Address",
+  "updateEmail": "Update Email",
+  "emailChangeInitiated": "Email Change Initiated",
+  "aVerificationEmailHasBeenSentTo": "A verification email has been sent to:",
+  "importantSteps": "Important Steps:",
+  "emailChangeSteps": "1. Check your new email inbox for the verification link\n2. Click the verification link to confirm your new email\n3. Once verified, you'll need to sign out and sign back in with your new email address",
+  "yourDisplayedEmailWillRemainUnchanged": "Your displayed email will remain unchanged until you complete verification and re-login.",
+  "resendEmail": "Resend Email",
+  "verificationEmailResentTo": "Verification email resent to {email}",
+  "@verificationEmailResentTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToResendEmail": "Failed to resend email: {error}",
+  "@failedToResendEmail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updatingPasswordPleaseWait": "Updating password, please wait...",
+  "thisMayTakeUpTo2Minutes": "This may take up to 2 minutes due to security checks...",
+  "verifyingCurrentPassword": "Verifying current password...",
+  "authenticatingWithFirebase": "Authenticating with Firebase...",
+  "processingSecurityChecks": "Processing security checks...",
+  "finalizingChanges": "Finalizing changes...",
+  "pleaseWaitTakingLonger": "Please wait, this is taking longer than usual...",
+  "updatePassword": "Update Password",
+  "areYouSureYouWantToSignOut": "Are you sure you want to sign out?",
+  "pleaseEnterADifferentEmailAddress": "Please enter a different email address",
+  "pleaseEnterAValidEmailAddress": "Please enter a valid email address",
+  "emailUpdateFailed": "Email update failed: {error}",
+  "@emailUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "verificationEmailSent": "Verification email sent! Please check your inbox.",
+  "failedToSendVerificationEmail": "Failed to send verification email: {error}",
+  "@failedToSendVerificationEmail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyYourAccount": "Verify Your Account",
+  "pleaseVerifyYourEmailAddress": "Please verify your email address to secure your account and access all features.",
+  "later": "Later",
+  "securityVerification": "Security Verification",
+  "pleaseEnterYourCurrentPasswordToContinue": "Please enter your current password to continue.",
+  "authenticationFailed": "Authentication failed: {error}",
+  "@authenticationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordUpdateFailed": "Password update failed: {error}",
+  "@passwordUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "faqPasswordChangeProcess": "How do I change my password?",
+  "faqPasswordChangeProcessAnswer": "To change your password: 1) Go to Settings > Account > Change Password, 2) Enter your current password for verification, 3) Enter your new password (must be at least 6 characters), 4) Confirm your new password by typing it again, 5) Tap 'Update Password' and wait for the process to complete. The update may take up to 2 minutes due to security checks. Your password will be changed immediately upon successful completion.",
+  "faqPasswordNotWorking": "My new password isn't working after I changed it",
+  "faqPasswordNotWorkingAnswer": "If your new password isn't working: 1) Make sure you're using the exact password you set (passwords are case-sensitive), 2) Wait a few minutes and try again, as changes may take time to propagate, 3) Check if you received any error messages during the password change process, 4) If the issue persists, try changing your password again or use the 'Forgot Password' option to reset it completely.",
+"failedToUpdate": "Failed to update: {error}",
+  "@failedToUpdate": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

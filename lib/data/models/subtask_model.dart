@@ -28,7 +28,7 @@ class SubtaskModel {
     DateTime? startTime,
     DateTime? endTime,
     DateTime? createdAt,
-    DateTime? updatedAt,
+    DateTime? updatedAt
   })  : _id = id,
         _taskId = taskId,
         _userId = userId,

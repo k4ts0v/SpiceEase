@@ -408,21 +408,19 @@ class TutorialsController extends StateNotifier<TutorialsState> {
   String getCategoryTitle(String categoryKey, AppLocalizations localizations) {
     switch (categoryKey) {
       case 'tutorialCategoryGettingStarted':
-        return localizations.tutorialCategoryGettingStarted ??
-            'Getting Started';
+        return localizations.tutorialCategoryGettingStarted;
       case 'tutorialCategoryTasks':
-        return localizations.tutorialCategoryTasks ?? 'Tasks';
+        return localizations.tutorialCategoryTasks;
       case 'tutorialCategoryHabits':
-        return localizations.tutorialCategoryHabits ?? 'Habits';
+        return localizations.tutorialCategoryHabits;
       case 'tutorialCategoryHealth':
-        return localizations.tutorialCategoryHealth ?? 'Health';
+        return localizations.tutorialCategoryHealth;
       case 'tutorialCategoryTimeManagement':
-        return localizations.tutorialCategoryTimeManagement ??
-            'Time Management';
+        return localizations.tutorialCategoryTimeManagement;
       case 'tutorialCategoryReports':
-        return localizations.tutorialCategoryReports ?? 'Reports';
+        return localizations.tutorialCategoryReports;
       case 'tutorialCategorySettings':
-        return localizations.tutorialCategorySettings ?? 'Settings';
+        return localizations.tutorialCategorySettings;
       default:
         return categoryKey;
     }
@@ -431,61 +429,43 @@ class TutorialsController extends StateNotifier<TutorialsState> {
   String getTutorialTitle(String titleKey, AppLocalizations localizations) {
     switch (titleKey) {
       case 'tutorialUnderstandingIconGrid':
-        return localizations.tutorialUnderstandingIconGrid ??
-            'Understanding the Icon Grid';
+        return localizations.tutorialUnderstandingIconGrid;
       case 'tutorialUnderstandingListView':
-        return localizations.tutorialUnderstandingListView ??
-            'Understanding the List View';
+        return localizations.tutorialUnderstandingListView;
       case 'tutorialCreatingFirstTask':
-        return localizations.tutorialCreatingFirstTask ??
-            'Creating Your First Task';
+        return localizations.tutorialCreatingFirstTask;
       case 'tutorialEditingDeletingTasks':
-        return localizations.tutorialEditingDeletingTasks ??
-            'Editing and Deleting Tasks';
+        return localizations.tutorialEditingDeletingTasks;
       case 'tutorialWorkingWithSubtasks':
-        return localizations.tutorialWorkingWithSubtasks ??
-            'Working with Subtasks';
+        return localizations.tutorialWorkingWithSubtasks;
       case 'tutorialTaskEstimationTimePlanning':
-        return localizations.tutorialTaskEstimationTimePlanning ??
-            'Task Estimation and Time Planning';
+        return localizations.tutorialTaskEstimationTimePlanning;
       case 'tutorialSettingUpDailyHabits':
-        return localizations.tutorialSettingUpDailyHabits ??
-            'Setting Up Daily Habits';
+        return localizations.tutorialSettingUpDailyHabits;
       case 'tutorialManagingHabitStreaks':
-        return localizations.tutorialManagingHabitStreaks ??
-            'Managing Habit Streaks';
+        return localizations.tutorialManagingHabitStreaks;
       case 'tutorialTrackingHealthSymptoms':
-        return localizations.tutorialTrackingHealthSymptoms ??
-            'Tracking Health Symptoms';
+        return localizations.tutorialTrackingHealthSymptoms;
       case 'tutorialAddingMedicationTracking':
-        return localizations.tutorialAddingMedicationTracking ??
-            'Adding Medication Tracking';
+        return localizations.tutorialAddingMedicationTracking;
       case 'tutorialRecordingMoodEntries':
-        return localizations.tutorialRecordingMoodEntries ??
-            'Recording Mood Entries';
+        return localizations.tutorialRecordingMoodEntries;
       case 'tutorialRecordingEnergyEntries':
-        return localizations.tutorialRecordingEnergyEntries ??
-            'Recording Energy Entries';
+        return localizations.tutorialRecordingEnergyEntries;
       case 'tutorialUsingFlowmodoroTechnique':
-        return localizations.tutorialUsingFlowmodoroTechnique ??
-            'Using the Flowmodoro Technique';
+        return localizations.tutorialUsingFlowmodoroTechnique;
       case 'tutorialManagingKanbanBoard':
-        return localizations.tutorialManagingKanbanBoard ??
-            'Managing Your Kanban Board';
+        return localizations.tutorialManagingKanbanBoard;
       case 'tutorialSchedulingTimeBlocks':
-        return localizations.tutorialSchedulingTimeBlocks ??
-            'Scheduling with Time Blocks';
+        return localizations.tutorialSchedulingTimeBlocks;
       case 'tutorialUnderstandingReportsCharts':
-        return localizations.tutorialUnderstandingReportsCharts ??
-            'Understanding Reports and Charts';
+        return localizations.tutorialUnderstandingReportsCharts;
       case 'tutorialCustomizingReportViews':
-        return localizations.tutorialCustomizingReportViews ??
-            'Customizing Report Views';
+        return localizations.tutorialCustomizingReportViews;
       case 'tutorialPersonalizingSettings':
-        return localizations.tutorialPersonalizingSettings ??
-            'Personalizing Your Settings';
+        return localizations.tutorialPersonalizingSettings;
       case 'tutorialManagingAccount':
-        return localizations.tutorialManagingAccount ?? 'Managing Your Account';
+        return localizations.tutorialManagingAccount;
       default:
         return titleKey;
     }
@@ -494,13 +474,13 @@ class TutorialsController extends StateNotifier<TutorialsState> {
   String getDuration(String durationKey, AppLocalizations localizations) {
     switch (durationKey) {
       case 'tutorial2Min':
-        return localizations.tutorial2Min ?? '2 min';
+        return localizations.tutorial2Min;
       case 'tutorial3Min':
-        return localizations.tutorial3Min ?? '3 min';
+        return localizations.tutorial3Min;
       case 'tutorial4Min':
-        return localizations.tutorial4Min ?? '4 min';
+        return localizations.tutorial4Min;
       case 'tutorial5Min':
-        return localizations.tutorial5Min ?? '5 min';
+        return localizations.tutorial5Min;
       default:
         return durationKey;
     }
@@ -509,11 +489,11 @@ class TutorialsController extends StateNotifier<TutorialsState> {
   String getDifficulty(String difficultyKey, AppLocalizations localizations) {
     switch (difficultyKey) {
       case 'tutorialBeginner':
-        return localizations.tutorialBeginner ?? 'Beginner';
+        return localizations.tutorialBeginner;
       case 'tutorialIntermediate':
-        return localizations.tutorialIntermediate ?? 'Intermediate';
+        return localizations.tutorialIntermediate;
       case 'tutorialAdvanced':
-        return localizations.tutorialAdvanced ?? 'Advanced';
+        return localizations.tutorialAdvanced;
       default:
         return difficultyKey;
     }
@@ -523,415 +503,293 @@ class TutorialsController extends StateNotifier<TutorialsState> {
     switch (stepKey) {
       // Icon Grid Tutorial Steps
       case 'tutorialIconGridStep1':
-        return localizations.tutorialIconGridStep1 ??
-            'The main screen shows an icon grid with different categories';
+        return localizations.tutorialIconGridStep1;
       case 'tutorialIconGridStep2':
-        return localizations.tutorialIconGridStep2 ??
-            'Each icon represents a different type of data you can track';
+        return localizations.tutorialIconGridStep2;
       case 'tutorialIconGridStep3':
-        return localizations.tutorialIconGridStep3 ??
-            'Tap any icon to see your existing entries for that category';
+        return localizations.tutorialIconGridStep3;
       case 'tutorialIconGridStep4':
-        return localizations.tutorialIconGridStep4 ??
-            'Use the "+" button within each category to add new entries';
+        return localizations.tutorialIconGridStep4;
       case 'tutorialIconGridStep5':
-        return localizations.tutorialIconGridStep5 ??
-            'Alternatively, for habits, medications, tasks or symptoms, use the "Add [Item]" buttons for quick access';
+        return localizations.tutorialIconGridStep5;
       case 'tutorialIconGridStep6':
-        return localizations.tutorialIconGridStep6 ??
-            'The grid layout makes it easy to see all your tracking options';
+        return localizations.tutorialIconGridStep6;
 
       // List View Tutorial Steps
       case 'tutorialListViewStep1':
-        return localizations.tutorialListViewStep1 ??
-            'Tap the list icon in the bottom navigation to switch to list view';
+        return localizations.tutorialListViewStep1;
       case 'tutorialListViewStep2':
-        return localizations.tutorialListViewStep2 ??
-            'The list shows all your items grouped by type (tasks, habits, etc.)';
+        return localizations.tutorialListViewStep2;
       case 'tutorialListViewStep3':
-        return localizations.tutorialListViewStep3 ??
-            'Items are color-coded by category for easy identification';
+        return localizations.tutorialListViewStep3;
       case 'tutorialListViewStep4':
-        return localizations.tutorialListViewStep4 ??
-            'You can see completion status and due dates at a glance';
+        return localizations.tutorialListViewStep4;
       case 'tutorialListViewStep5':
-        return localizations.tutorialListViewStep5 ??
-            'Tap any item to view details or mark as complete';
+        return localizations.tutorialListViewStep5;
       case 'tutorialListViewStep6':
-        return localizations.tutorialListViewStep6 ??
-            'Use the filter and sort options to organize your view';
+        return localizations.tutorialListViewStep6;
       case 'tutorialListViewStep7':
-        return localizations.tutorialListViewStep7 ??
-            'Switch back to grid view anytime using the grid icon';
+        return localizations.tutorialListViewStep7;
 
       // First Task Tutorial Steps
       case 'tutorialFirstTaskStep1':
-        return localizations.tutorialFirstTaskStep1 ??
-            'Go to the tracker screen';
+        return localizations.tutorialFirstTaskStep1;
       case 'tutorialFirstTaskStep2':
-        return localizations.tutorialFirstTaskStep2 ??
-            'Choose the task icon from the icon grid OR tap "Add Task" button';
+        return localizations.tutorialFirstTaskStep2;
       case 'tutorialFirstTaskStep3':
-        return localizations.tutorialFirstTaskStep3 ??
-            'If using icon grid: tap the "+" button in the top-right corner';
+        return localizations.tutorialFirstTaskStep3;
       case 'tutorialFirstTaskStep4':
-        return localizations.tutorialFirstTaskStep4 ??
-            'Enter a title and description for your task';
+        return localizations.tutorialFirstTaskStep4;
       case 'tutorialFirstTaskStep5':
-        return localizations.tutorialFirstTaskStep5 ??
-            'Set a due date if desired and a priority level';
+        return localizations.tutorialFirstTaskStep5;
       case 'tutorialFirstTaskStep6':
-        return localizations.tutorialFirstTaskStep6 ??
-            'Add subtasks if needed by pressing the "Divide into subtasks" button';
+        return localizations.tutorialFirstTaskStep6;
       case 'tutorialFirstTaskStep7':
-        return localizations.tutorialFirstTaskStep7 ??
-            'Tap "Save" to create your task';
+        return localizations.tutorialFirstTaskStep7;
 
       // Edit Task Tutorial Steps
       case 'tutorialEditTaskStep1':
-        return localizations.tutorialEditTaskStep1 ??
-            'Navigate to the task icon in the grid';
+        return localizations.tutorialEditTaskStep1;
       case 'tutorialEditTaskStep2':
-        return localizations.tutorialEditTaskStep2 ??
-            'Tap on any existing task to open it';
+        return localizations.tutorialEditTaskStep2;
       case 'tutorialEditTaskStep3':
-        return localizations.tutorialEditTaskStep3 ??
-            'To edit: tap the edit button and modify any field';
+        return localizations.tutorialEditTaskStep3;
       case 'tutorialEditTaskStep4':
-        return localizations.tutorialEditTaskStep4 ??
-            'You can change title, description, due date or priority';
+        return localizations.tutorialEditTaskStep4;
       case 'tutorialEditTaskStep5':
-        return localizations.tutorialEditTaskStep5 ??
-            'To delete: tap the delete button and confirm';
+        return localizations.tutorialEditTaskStep5;
       case 'tutorialEditTaskStep6':
-        return localizations.tutorialEditTaskStep6 ??
-            'Save changes when editing';
+        return localizations.tutorialEditTaskStep6;
 
       // Subtasks Tutorial Steps
       case 'tutorialSubtasksStep1':
-        return localizations.tutorialSubtasksStep1 ??
-            'When creating or editing a task, tap "Divide into subtasks"';
+        return localizations.tutorialSubtasksStep1;
       case 'tutorialSubtasksStep2':
-        return localizations.tutorialSubtasksStep2 ??
-            'This generates a list of subtasks under the main task automatically';
+        return localizations.tutorialSubtasksStep2;
       case 'tutorialSubtasksStep3':
-        return localizations.tutorialSubtasksStep3 ??
-            'Each subtask can be marked complete independently and has its own estimated time';
+        return localizations.tutorialSubtasksStep3;
       case 'tutorialSubtasksStep4':
-        return localizations.tutorialSubtasksStep4 ??
-            'The main task shows progress based on completed subtasks';
+        return localizations.tutorialSubtasksStep4;
       case 'tutorialSubtasksStep5':
-        return localizations.tutorialSubtasksStep5 ??
-            'Subtasks help break down complex tasks into manageable steps';
+        return localizations.tutorialSubtasksStep5;
       case 'tutorialSubtasksStep6':
-        return localizations.tutorialSubtasksStep6 ??
-            'You can add, edit, or delete subtasks at any time';
+        return localizations.tutorialSubtasksStep6;
       case 'tutorialSubtasksStep7':
-        return localizations.tutorialSubtasksStep7 ??
-            'The main task is completed when all subtasks are done';
+        return localizations.tutorialSubtasksStep7;
 
       // Estimation Tutorial Steps
       case 'tutorialEstimationStep1':
-        return localizations.tutorialEstimationStep1 ??
-            'When creating or editing a task, look for the "Estimate task" button';
+        return localizations.tutorialEstimationStep1;
       case 'tutorialEstimationStep2':
-        return localizations.tutorialEstimationStep2 ??
-            'Your current energy level directly impacts task estimation';
+        return localizations.tutorialEstimationStep2;
       case 'tutorialEstimationStep3':
-        return localizations.tutorialEstimationStep3 ??
-            'Higher energy levels suggest shorter completion times and less subdivision needed';
+        return localizations.tutorialEstimationStep3;
       case 'tutorialEstimationStep4':
-        return localizations.tutorialEstimationStep4 ??
-            'Lower energy levels may require breaking tasks into smaller, more manageable chunks';
+        return localizations.tutorialEstimationStep4;
       case 'tutorialEstimationStep5':
-        return localizations.tutorialEstimationStep5 ??
-            'The app considers your energy patterns when suggesting time estimates';
+        return localizations.tutorialEstimationStep5;
       case 'tutorialEstimationStep6':
-        return localizations.tutorialEstimationStep6 ??
-            'Estimated times help with scheduling and time blocking';
+        return localizations.tutorialEstimationStep6;
 
       // Habits Tutorial Steps
       case 'tutorialHabitsStep1':
-        return localizations.tutorialHabitsStep1 ?? 'Go to the tracker screen';
+        return localizations.tutorialHabitsStep1;
       case 'tutorialHabitsStep2':
-        return localizations.tutorialHabitsStep2 ??
-            'Choose the habit icon from the icon grid OR tap "Add Habit" button';
+        return localizations.tutorialHabitsStep2;
       case 'tutorialHabitsStep3':
-        return localizations.tutorialHabitsStep3 ??
-            'If using icon grid: tap the "+" button in the top-right corner';
+        return localizations.tutorialHabitsStep3;
       case 'tutorialHabitsStep4':
-        return localizations.tutorialHabitsStep4 ??
-            'Enter the habit name (e.g., "Drink 8 glasses of water")';
+        return localizations.tutorialHabitsStep4;
       case 'tutorialHabitsStep5':
-        return localizations.tutorialHabitsStep5 ??
-            'Choose the frequency: daily, weekly, or custom';
+        return localizations.tutorialHabitsStep5;
       case 'tutorialHabitsStep6':
-        return localizations.tutorialHabitsStep6 ??
-            'For custom frequency, select specific days of the week';
+        return localizations.tutorialHabitsStep6;
       case 'tutorialHabitsStep7':
-        return localizations.tutorialHabitsStep7 ??
-            'Set target times per day if applicable';
+        return localizations.tutorialHabitsStep7;
       case 'tutorialHabitsStep8':
-        return localizations.tutorialHabitsStep8 ??
-            'Add a description if desired';
+        return localizations.tutorialHabitsStep8;
       case 'tutorialHabitsStep9':
-        return localizations.tutorialHabitsStep9 ??
-            'Save your habit and mark it complete each day you do it';
+        return localizations.tutorialHabitsStep9;
 
       // Streaks Tutorial Steps
       case 'tutorialStreaksStep1':
-        return localizations.tutorialStreaksStep1 ??
-            'View your habits in the grid or list';
+        return localizations.tutorialStreaksStep1;
       case 'tutorialStreaksStep2':
-        return localizations.tutorialStreaksStep2 ??
-            'Each habit shows if it was completed today';
+        return localizations.tutorialStreaksStep2;
       case 'tutorialStreaksStep3':
-        return localizations.tutorialStreaksStep3 ??
-            'Tap a habit\'s checkbox to mark it complete for the day';
+        return localizations.tutorialStreaksStep3;
       case 'tutorialStreaksStep4':
-        return localizations.tutorialStreaksStep4 ??
-            'Mark habits complete daily to maintain streaks';
+        return localizations.tutorialStreaksStep4;
       case 'tutorialStreaksStep5':
-        return localizations.tutorialStreaksStep5 ??
-            'Streaks reset if you miss a day (based on your frequency)';
+        return localizations.tutorialStreaksStep5;
       case 'tutorialStreaksStep6':
-        return localizations.tutorialStreaksStep6 ??
-            'Use the reports screen to see your habit history';
+        return localizations.tutorialStreaksStep6;
       case 'tutorialStreaksStep7':
-        return localizations.tutorialStreaksStep7 ??
-            'Aim for consistency rather than perfection';
+        return localizations.tutorialStreaksStep7;
       case 'tutorialStreaksStep8':
-        return localizations.tutorialStreaksStep8 ??
-            'Celebrate milestone streaks to stay motivated';
+        return localizations.tutorialStreaksStep8;
 
       // Symptoms Tutorial Steps
       case 'tutorialSymptomsStep1':
-        return localizations.tutorialSymptomsStep1 ??
-            'Go to the tracker screen';
+        return localizations.tutorialSymptomsStep1;
       case 'tutorialSymptomsStep2':
-        return localizations.tutorialSymptomsStep2 ??
-            'Choose the symptom icon from the icon grid OR tap "Add Symptom" button';
+        return localizations.tutorialSymptomsStep2;
       case 'tutorialSymptomsStep3':
-        return localizations.tutorialSymptomsStep3 ??
-            'If using icon grid: tap the "+" button in the top-right corner';
+        return localizations.tutorialSymptomsStep3;
       case 'tutorialSymptomsStep4':
-        return localizations.tutorialSymptomsStep4 ??
-            'Choose from common categories or add a custom one';
+        return localizations.tutorialSymptomsStep4;
       case 'tutorialSymptomsStep5':
-        return localizations.tutorialSymptomsStep5 ??
-            'Rate the severity on a scale of 1-10 (use Mankoski scale if preferred)';
+        return localizations.tutorialSymptomsStep5;
       case 'tutorialSymptomsStep6':
-        return localizations.tutorialSymptomsStep6 ??
-            'Add notes about triggers, context, or treatments tried';
+        return localizations.tutorialSymptomsStep6;
       case 'tutorialSymptomsStep7':
-        return localizations.tutorialSymptomsStep7 ??
-            'Include location on body if applicable';
+        return localizations.tutorialSymptomsStep7;
       case 'tutorialSymptomsStep8':
-        return localizations.tutorialSymptomsStep8 ??
-            'Save the entry to track patterns over time';
+        return localizations.tutorialSymptomsStep8;
 
       // Medication Tutorial Steps
       case 'tutorialMedicationStep1':
-        return localizations.tutorialMedicationStep1 ??
-            'Go to the tracker screen';
+        return localizations.tutorialMedicationStep1;
       case 'tutorialMedicationStep2':
-        return localizations.tutorialMedicationStep2 ??
-            'Choose the medication icon from the icon grid';
+        return localizations.tutorialMedicationStep2;
       case 'tutorialMedicationStep3':
-        return localizations.tutorialMedicationStep3 ??
-            'Tap the "+" button in the top-right corner';
+        return localizations.tutorialMedicationStep3;
       case 'tutorialMedicationStep4':
-        return localizations.tutorialMedicationStep4 ??
-            'Enter the medication name and dosage amount';
+        return localizations.tutorialMedicationStep4;
       case 'tutorialMedicationStep5':
-        return localizations.tutorialMedicationStep5 ??
-            'Select the unit (mg, ml, tablets, etc.)';
+        return localizations.tutorialMedicationStep5;
       case 'tutorialMedicationStep6':
-        return localizations.tutorialMedicationStep6 ??
-            'Set the frequency: daily, weekly, as needed, or custom schedule';
+        return localizations.tutorialMedicationStep6;
       case 'tutorialMedicationStep7':
-        return localizations.tutorialMedicationStep7 ??
-            'Save the medication and mark as taken when you take your dose';
+        return localizations.tutorialMedicationStep7;
 
       // Mood Tutorial Steps
       case 'tutorialMoodStep1':
-        return localizations.tutorialMoodStep1 ?? 'Go to the tracker screen';
+        return localizations.tutorialMoodStep1;
       case 'tutorialMoodStep2':
-        return localizations.tutorialMoodStep2 ??
-            'Choose the mood icon from the icon grid';
+        return localizations.tutorialMoodStep2;
       case 'tutorialMoodStep3':
-        return localizations.tutorialMoodStep3 ??
-            'Tap the "+" button in the top-right corner';
+        return localizations.tutorialMoodStep3;
       case 'tutorialMoodStep4':
-        return localizations.tutorialMoodStep4 ??
-            'Select your current mood level on a scale of 1-10';
+        return localizations.tutorialMoodStep4;
       case 'tutorialMoodStep5':
-        return localizations.tutorialMoodStep5 ??
-            'Add notes about what influenced your mood';
+        return localizations.tutorialMoodStep5;
       case 'tutorialMoodStep6':
-        return localizations.tutorialMoodStep6 ??
-            'Include any relevant triggers, events, or circumstances';
+        return localizations.tutorialMoodStep6;
       case 'tutorialMoodStep7':
-        return localizations.tutorialMoodStep7 ??
-            'Note any coping strategies used';
+        return localizations.tutorialMoodStep7;
       case 'tutorialMoodStep8':
-        return localizations.tutorialMoodStep8 ??
-            'Save the mood entry to track patterns over time';
+        return localizations.tutorialMoodStep8;
 
       // Energy Tutorial Steps
       case 'tutorialEnergyStep1':
-        return localizations.tutorialEnergyStep1 ?? 'Go to the tracker screen';
+        return localizations.tutorialEnergyStep1;
       case 'tutorialEnergyStep2':
-        return localizations.tutorialEnergyStep2 ??
-            'Choose the energy icon from the icon grid';
+        return localizations.tutorialEnergyStep2;
       case 'tutorialEnergyStep3':
-        return localizations.tutorialEnergyStep3 ??
-            'Tap the "+" button in the top-right corner';
+        return localizations.tutorialEnergyStep3;
       case 'tutorialEnergyStep4':
-        return localizations.tutorialEnergyStep4 ??
-            'Select your current energy level on a scale of 1-10';
+        return localizations.tutorialEnergyStep4;
       case 'tutorialEnergyStep5':
-        return localizations.tutorialEnergyStep5 ??
-            'Add notes about what influenced your energy';
+        return localizations.tutorialEnergyStep5;
       case 'tutorialEnergyStep6':
-        return localizations.tutorialEnergyStep6 ??
-            'Include any relevant triggers, events, or circumstances';
+        return localizations.tutorialEnergyStep6;
 
       // Flowmodoro Tutorial Steps
       case 'tutorialFlowmodoroStep1':
-        return localizations.tutorialFlowmodoroStep1 ??
-            'Navigate to the Time Management page';
+        return localizations.tutorialFlowmodoroStep1;
       case 'tutorialFlowmodoroStep2':
-        return localizations.tutorialFlowmodoroStep2 ?? 'Tap on "Flowmodoro"';
+        return localizations.tutorialFlowmodoroStep2;
       case 'tutorialFlowmodoroStep3':
-        return localizations.tutorialFlowmodoroStep3 ??
-            'Choose a task to work on from your task list';
+        return localizations.tutorialFlowmodoroStep3;
       case 'tutorialFlowmodoroStep4':
-        return localizations.tutorialFlowmodoroStep4 ??
-            'Set your work duration (start with 25 minutes if unsure)';
+        return localizations.tutorialFlowmodoroStep4;
       case 'tutorialFlowmodoroStep5':
-        return localizations.tutorialFlowmodoroStep5 ??
-            'Set your break duration (typically 5-15 minutes)';
+        return localizations.tutorialFlowmodoroStep5;
       case 'tutorialFlowmodoroStep6':
-        return localizations.tutorialFlowmodoroStep6 ??
-            'Tap "Start" to begin the work timer';
+        return localizations.tutorialFlowmodoroStep6;
       case 'tutorialFlowmodoroStep7':
-        return localizations.tutorialFlowmodoroStep7 ??
-            'Work focused on your task until the timer ends';
+        return localizations.tutorialFlowmodoroStep7;
       case 'tutorialFlowmodoroStep8':
-        return localizations.tutorialFlowmodoroStep8 ??
-            'Take the break when prompted - step away from work';
+        return localizations.tutorialFlowmodoroStep8;
       case 'tutorialFlowmodoroStep9':
-        return localizations.tutorialFlowmodoroStep9 ??
-            'After break, start another work session or finish';
+        return localizations.tutorialFlowmodoroStep9;
       case 'tutorialFlowmodoroStep10':
-        return localizations.tutorialFlowmodoroStep10 ??
-            'Track your completed sessions for productivity insights';
+        return localizations.tutorialFlowmodoroStep10;
 
       // Kanban Tutorial Steps
       case 'tutorialKanbanStep1':
-        return localizations.tutorialKanbanStep1 ??
-            'Go to Time Management and select "Kanban"';
+        return localizations.tutorialKanbanStep1;
       case 'tutorialKanbanStep2':
-        return localizations.tutorialKanbanStep2 ??
-            'Your tasks are organized in columns: To Do, In Progress, Done';
+        return localizations.tutorialKanbanStep2;
       case 'tutorialKanbanStep3':
-        return localizations.tutorialKanbanStep3 ??
-            'Drag tasks between columns to update their status';
+        return localizations.tutorialKanbanStep3;
       case 'tutorialKanbanStep4':
-        return localizations.tutorialKanbanStep4 ??
-            'Add new tasks directly to the To Do column';
+        return localizations.tutorialKanbanStep4;
       case 'tutorialKanbanStep5':
-        return localizations.tutorialKanbanStep5 ??
-            'Move tasks to In Progress when you start working on them';
+        return localizations.tutorialKanbanStep5;
       case 'tutorialKanbanStep6':
-        return localizations.tutorialKanbanStep6 ??
-            'Complete tasks by moving them to Done';
+        return localizations.tutorialKanbanStep6;
       case 'tutorialKanbanStep7':
-        return localizations.tutorialKanbanStep7 ??
-            'Use filters to show only specific categories or priorities';
+        return localizations.tutorialKanbanStep7;
       case 'tutorialKanbanStep8':
-        return localizations.tutorialKanbanStep8 ??
-            'Customize columns and workflow to match your needs';
+        return localizations.tutorialKanbanStep8;
 
       // Time Blocks Tutorial Steps
       case 'tutorialTimeBlocksStep1':
-        return localizations.tutorialTimeBlocksStep1 ??
-            'Navigate to Time Management and tap "Time Blocks"';
+        return localizations.tutorialTimeBlocksStep1;
       case 'tutorialTimeBlocksStep2':
-        return localizations.tutorialTimeBlocksStep2 ??
-            'View your calendar with existing scheduled items';
+        return localizations.tutorialTimeBlocksStep2;
       case 'tutorialTimeBlocksStep3':
-        return localizations.tutorialTimeBlocksStep3 ??
-            'To schedule a task: set a start time and an end time, or set a start time only if the task has a time estimate';
+        return localizations.tutorialTimeBlocksStep3;
       case 'tutorialTimeBlocksStep4':
-        return localizations.tutorialTimeBlocksStep4 ??
-            'To unschedule: press the x button on top of the scheduled item';
+        return localizations.tutorialTimeBlocksStep4;
       case 'tutorialTimeBlocksStep5':
-        return localizations.tutorialTimeBlocksStep5 ??
-            'Color coding helps distinguish the priorities of tasks';
+        return localizations.tutorialTimeBlocksStep5;
 
       // Reports Tutorial Steps
       case 'tutorialReportsStep1':
-        return localizations.tutorialReportsStep1 ??
-            'Navigate to the Reports section';
+        return localizations.tutorialReportsStep1;
       case 'tutorialReportsStep2':
-        return localizations.tutorialReportsStep2 ??
-            'Choose your time range: day, week, month or year';
+        return localizations.tutorialReportsStep2;
       case 'tutorialReportsStep3':
-        return localizations.tutorialReportsStep3 ??
-            'If there is any data that you don\'t want to see, click it in the legend to hide it';
+        return localizations.tutorialReportsStep3;
       case 'tutorialReportsStep4':
-        return localizations.tutorialReportsStep4 ??
-            'Charts automatically update based on your selections';
+        return localizations.tutorialReportsStep4;
       case 'tutorialReportsStep5':
-        return localizations.tutorialReportsStep5 ??
-            'Hover or tap data points for detailed information';
+        return localizations.tutorialReportsStep5;
       case 'tutorialReportsStep6':
-        return localizations.tutorialReportsStep6 ??
-            'Use charts to identify patterns and trends in your data';
+        return localizations.tutorialReportsStep6;
 
       // Custom Reports Tutorial Steps
       case 'tutorialCustomReportsStep1':
-        return localizations.tutorialCustomReportsStep1 ??
-            'In the Reports section, look for the legend below charts';
+        return localizations.tutorialCustomReportsStep1;
       case 'tutorialCustomReportsStep2':
-        return localizations.tutorialCustomReportsStep2 ??
-            'Tap on any item in the legend to hide/show that data series';
+        return localizations.tutorialCustomReportsStep2;
       case 'tutorialCustomReportsStep3':
-        return localizations.tutorialCustomReportsStep3 ??
-            'Hidden items appear grayed out in the legend';
+        return localizations.tutorialCustomReportsStep3;
       case 'tutorialCustomReportsStep4':
-        return localizations.tutorialCustomReportsStep4 ??
-            'This lets you focus on specific data points';
+        return localizations.tutorialCustomReportsStep4;
       case 'tutorialCustomReportsStep5':
-        return localizations.tutorialCustomReportsStep5 ??
-            'For example, hide the habits to see other items more clearly';
+        return localizations.tutorialCustomReportsStep5;
       case 'tutorialCustomReportsStep6':
-        return localizations.tutorialCustomReportsStep6 ??
-            'Combine with date filters for precise analysis';
+        return localizations.tutorialCustomReportsStep6;
 
       // Settings Tutorial Steps
       case 'tutorialSettingsStep1':
-        return localizations.tutorialSettingsStep1 ??
-            'Navigate to Settings from the main menu';
+        return localizations.tutorialSettingsStep1;
       case 'tutorialSettingsStep2':
-        return localizations.tutorialSettingsStep2 ??
-            'Customize your theme (light, dark, or system)';
+        return localizations.tutorialSettingsStep2;
       case 'tutorialSettingsStep3':
-        return localizations.tutorialSettingsStep3 ??
-            'Set your preferred language and region';
+        return localizations.tutorialSettingsStep3;
 
       // Account Tutorial Steps
       case 'tutorialAccountStep1':
-        return localizations.tutorialAccountStep1 ??
-            'Go to Settings and tap "Account"';
+        return localizations.tutorialAccountStep1;
       case 'tutorialAccountStep2':
-        return localizations.tutorialAccountStep2 ??
-            'View your account details and email address';
+        return localizations.tutorialAccountStep2;
       case 'tutorialAccountStep3':
-        return localizations.tutorialAccountStep3 ??
-            'Change your or email password if needed';
+        return localizations.tutorialAccountStep3;
 
       default:
         return stepKey;

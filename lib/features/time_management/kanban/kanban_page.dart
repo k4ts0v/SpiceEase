@@ -5,9 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spiceease/components/calendar_week_selector.dart';
 import 'package:spiceease/data/models/task_model.dart';
+import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_controller.dart';
-import 'package:spiceease/features/tracker/presentation/modals.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 /// A Kanban board page for managing tasks in a visual workflow.
@@ -21,7 +22,7 @@ import 'package:spiceease/l10n/app_localizations.dart';
 /// - Tasks without due dates shown in a separate horizontal scrollable section
 class KanbanPage extends ConsumerWidget {
   /// Creates a new [KanbanPage].
-  const KanbanPage({Key? key}) : super(key: key);
+  const KanbanPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -38,12 +39,18 @@ class KanbanPage extends ConsumerWidget {
       });
     }
 
-    // Extract task lists from the controller for easier access
+    // Extract task and subtask lists from the controller for easier access
     final todoTasks = controller.todoTasks;
     final inProgressTasks = controller.inProgressTasks;
     final doneTasks = controller.doneTasks;
+    final todoSubtasks = controller.todoSubtasks;
+    final inProgressSubtasks = controller.inProgressSubtasks;
+    final doneSubtasks = controller.doneSubtasks;
     final noDueDateTasks = controller.noDueDateTasks;
     final isLoading = controller.isLoading;
+
+    // Get subtasks that belong to tasks without due dates
+    final noDueDateSubtasks = _getNoDueDateSubtasks(controller);
 
     final locale = Localizations.localeOf(context).languageCode;
 
@@ -90,7 +97,7 @@ class KanbanPage extends ConsumerWidget {
           ),
         ],
       ),
-      backgroundColor: theme.colorScheme.background,
+      backgroundColor: theme.colorScheme.surface,
       body: SafeArea(
         child: Column(
           children: [
@@ -102,7 +109,7 @@ class KanbanPage extends ConsumerWidget {
                 color: theme.colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: theme.shadowColor.withOpacity(0.1),
+                    color: theme.shadowColor.withValues(alpha: 0.1),
                     spreadRadius: 1,
                     blurRadius: 5,
                     offset: const Offset(0, 2),
@@ -130,13 +137,33 @@ class KanbanPage extends ConsumerWidget {
                       todoTasks,
                       inProgressTasks,
                       doneTasks,
+                      todoSubtasks,
+                      inProgressSubtasks,
+                      doneSubtasks,
                       noDueDateTasks,
+                      noDueDateSubtasks,
+                      controller,
                     ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  /// Gets subtasks that belong to tasks without due dates
+  List<SubtaskModel> _getNoDueDateSubtasks(KanbanController controller) {
+    final allSubtasks = [
+      ...controller.todoSubtasks,
+      ...controller.inProgressSubtasks,
+      ...controller.doneSubtasks,
+    ];
+
+    return allSubtasks.where((subtask) {
+      final parentTask = controller.getParentTask(subtask);
+      // Include subtask if parent task has no due date
+      return parentTask?.dueDate == null;
+    }).toList();
   }
 
   /// Builds a centered loading indicator with message.
@@ -164,7 +191,7 @@ class KanbanPage extends ConsumerWidget {
             localizations.loading,
             style: TextStyle(
               fontWeight: FontWeight.w500,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -189,7 +216,12 @@ class KanbanPage extends ConsumerWidget {
     List<TaskModel> todoTasks,
     List<TaskModel> inProgressTasks,
     List<TaskModel> doneTasks,
+    List<SubtaskModel> todoSubtasks,
+    List<SubtaskModel> inProgressSubtasks,
+    List<SubtaskModel> doneSubtasks,
     List<TaskModel> noDueDateTasks,
+    List<SubtaskModel> noDueDateSubtasks,
+    KanbanController controller,
   ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -208,6 +240,10 @@ class KanbanPage extends ConsumerWidget {
             todoTasks,
             inProgressTasks,
             doneTasks,
+            todoSubtasks,
+            inProgressSubtasks,
+            doneSubtasks,
+            controller,
           ),
         ),
 
@@ -222,6 +258,8 @@ class KanbanPage extends ConsumerWidget {
           brightness,
           localizations,
           noDueDateTasks,
+          noDueDateSubtasks,
+          controller,
         ),
       ],
     );
@@ -246,7 +284,7 @@ class KanbanPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.secondary.withOpacity(0.1),
+              color: theme.colorScheme.secondary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -283,6 +321,10 @@ class KanbanPage extends ConsumerWidget {
     List<TaskModel> todoTasks,
     List<TaskModel> inProgressTasks,
     List<TaskModel> doneTasks,
+    List<SubtaskModel> todoSubtasks,
+    List<SubtaskModel> inProgressSubtasks,
+    List<SubtaskModel> doneSubtasks,
+    KanbanController controller,
   ) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -291,7 +333,7 @@ class KanbanPage extends ConsumerWidget {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             blurRadius: 10,
             spreadRadius: 1,
             offset: const Offset(0, 3),
@@ -309,9 +351,11 @@ class KanbanPage extends ConsumerWidget {
               ref,
               'todo',
               todoTasks,
+              todoSubtasks,
               theme.colorScheme.surfaceContainerLowest,
               theme.colorScheme.onSurface,
               Icons.playlist_add_check_outlined,
+              controller,
             ),
             const SizedBox(width: 12),
             // In Progress column
@@ -320,9 +364,11 @@ class KanbanPage extends ConsumerWidget {
               ref,
               'in_progress',
               inProgressTasks,
+              inProgressSubtasks,
               theme.colorScheme.surfaceContainerHighest,
               theme.colorScheme.onSurface,
               Icons.timelapse_rounded,
+              controller,
             ),
             const SizedBox(width: 12),
             // Done column
@@ -331,11 +377,13 @@ class KanbanPage extends ConsumerWidget {
               ref,
               'done',
               doneTasks,
+              doneSubtasks,
               brightness == Brightness.dark
                   ? theme.colorScheme.surfaceContainerLow
                   : const Color(0xFFEDF7ED),
-              theme.colorScheme.tertiary ?? theme.colorScheme.secondary,
+              theme.colorScheme.tertiary,
               Icons.check_circle_outline,
+              controller,
             ),
           ],
         ),
@@ -355,7 +403,7 @@ class KanbanPage extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
@@ -390,8 +438,11 @@ class KanbanPage extends ConsumerWidget {
     Brightness brightness,
     AppLocalizations localizations,
     List<TaskModel> noDueDateTasks,
+    List<SubtaskModel> noDueDateSubtasks,
+    KanbanController controller,
   ) {
-    final controller = ref.watch(kanbanControllerProvider);
+    // Combine tasks and subtasks for the no-due-date section
+    final hasItems = noDueDateTasks.isNotEmpty || noDueDateSubtasks.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(12.0, 0.0, 12.0, 16.0),
@@ -406,7 +457,7 @@ class KanbanPage extends ConsumerWidget {
           ),
         ],
       ),
-      child: noDueDateTasks.isEmpty
+      child: !hasItems
           ? Padding(
               padding: const EdgeInsets.all(32.0),
               child: Text(
@@ -426,7 +477,11 @@ class KanbanPage extends ConsumerWidget {
                   children: [
                     // Show tasks without due dates
                     for (final task in noDueDateTasks)
-                      _buildNoDueDateTaskCard(context, task, theme),
+                      _buildNoDueDateTaskCard(context, ref, task, theme),
+                    // Show subtasks without due dates
+                    for (final subtask in noDueDateSubtasks)
+                      _buildNoDueDateSubtaskCard(
+                          context, ref, subtask, theme, controller),
                   ],
                 ),
               ),
@@ -434,167 +489,236 @@ class KanbanPage extends ConsumerWidget {
     );
   }
 
+  /// Builds a task card for the no-due-date section.
+  ///
+  /// This card is styled similarly to the Flowmodoro task selection cards.
+  Widget _buildNoDueDateTaskCard(
+    BuildContext context,
+    WidgetRef ref,
+    TaskModel task,
+    ThemeData theme,
+  ) {
+    final taskPriorityColor =
+        getTaskPriorityColor(task.priority, theme.brightness);
+    final pastelColor = getPastelColor(task.priority, theme.brightness);
 
-/// Builds a task card for the no-due-date section.
-///
-/// This card is styled similarly to the Flowmodoro task selection cards.
-Widget _buildNoDueDateTaskCard(
-  BuildContext context,
-  TaskModel task,
-  ThemeData theme,
-) {
-  final taskPriorityColor = getTaskPriorityColor(task.priority, theme.brightness);
-  final pastelColor = getPastelColor(task.priority, theme.brightness);
-
-  return GestureDetector(
-    onTap: () {
-      // Handle task selection logic here if needed
-    },
-    child: Container(
-      width: 180,
-      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      decoration: BoxDecoration(
-        color: pastelColor,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: taskPriorityColor.withAlpha(153)),
-        boxShadow: [
-          BoxShadow(
-            color: theme.shadowColor.withAlpha(13),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(12.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title section
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 4,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: taskPriorityColor,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    task.title,
-                    maxLines: 3,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                      color: theme.colorScheme.onSurface,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-
-            // Description section
-            if (task.description.isNotEmpty) ...[
-              Text(
-                task.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: theme.colorScheme.onSurface.withAlpha(153),
-                  height: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-            ],
-
-            // Spacer to push priority to bottom
-            const Spacer(),
-
-            // Priority row
-            Row(
-              children: [
-                Icon(
-                  Icons.flag_outlined,
-                  size: 12,
-                  color: taskPriorityColor,
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    _getPriorityLabel(context, task.priority),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: taskPriorityColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+    return GestureDetector(
+      onTap: () => _showTaskModal(context, ref, task),
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: pastelColor.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: taskPriorityColor.withAlpha(153)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withAlpha(13),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
-      ),
-    ),
-  );
-}
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title section
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 4,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: taskPriorityColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
 
-  /// Builds an empty state display for when there are no tasks without due dates.
-  ///
-  /// Shows an icon and descriptive text to indicate the section is empty.
-  Widget _buildEmptyNoDueDateState(
-      ThemeData theme, AppLocalizations localizations) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.event_busy_outlined,
-            color: theme.colorScheme.onSurface.withOpacity(0.3),
-            size: 24,
+              // Description section
+              if (task.description.isNotEmpty) ...[
+                Text(
+                  task.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurface.withAlpha(153),
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // Spacer to push priority to bottom
+              const Spacer(),
+
+              // Priority row
+              Row(
+                children: [
+                  Icon(
+                    Icons.flag_outlined,
+                    size: 12,
+                    color: taskPriorityColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _getPriorityLabel(context, task.priority),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: taskPriorityColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          Text(
-            localizations.noTasksWithoutDueDate,
-            style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.5),
-              fontStyle: FontStyle.italic,
-              fontSize: 13,
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
 
-  /// Builds the horizontally scrollable list of tasks without due dates.
-  ///
-  /// Each task is displayed in a compact card format optimized for horizontal scrolling.
-  Widget _buildNoDueDateTaskList(
-      BuildContext context, WidgetRef ref, List<TaskModel> noDueDateTasks) {
-    return ListView.builder(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-      itemCount: noDueDateTasks.length,
-      itemBuilder: (context, index) {
-        // Use a more compact card layout for horizontal scrolling
-        return SizedBox(
-          width: 180,
-          child: _buildDraggableTaskCard(
-            context,
-            ref,
-            noDueDateTasks[index],
-            '',
-          ),
-        );
+  /// Builds a subtask card for the no-due-date section.
+  Widget _buildNoDueDateSubtaskCard(
+    BuildContext context,
+    WidgetRef ref,
+    SubtaskModel subtask,
+    ThemeData theme,
+    KanbanController controller,
+  ) {
+    final parentTask = controller.getParentTask(subtask);
+    final priority = parentTask?.priority ?? 3;
+    final taskPriorityColor = getTaskPriorityColor(priority, theme.brightness);
+    final pastelColor = getPastelColor(priority, theme.brightness);
+    final localizations = AppLocalizations.of(context)!;
+
+    return GestureDetector(
+      onTap: () {
+        if (parentTask != null) {
+          _showTaskModal(context, ref, parentTask);
+        }
       },
+      child: Container(
+        width: 180,
+        margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        decoration: BoxDecoration(
+          color: pastelColor.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: taskPriorityColor.withAlpha(102)),
+          boxShadow: [
+            BoxShadow(
+              color: theme.shadowColor.withAlpha(13),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Subtask indicator
+              _buildSubtaskIndicator(theme, localizations),
+              const SizedBox(height: 6),
+
+              // Title section
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 3,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: taskPriorityColor,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      subtask.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        color: theme.colorScheme.onSurface,
+                        height: 1.2,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+
+              // Parent task reference
+              if (parentTask != null) ...[
+                Text(
+                  parentTask.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // Spacer to push priority to bottom
+              const Spacer(),
+
+              // Priority row (inherited from parent)
+              Row(
+                children: [
+                  Icon(
+                    Icons.flag_outlined,
+                    size: 12,
+                    color: taskPriorityColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      _getPriorityLabel(context, priority),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: taskPriorityColor,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -630,20 +754,27 @@ Widget _buildNoDueDateTaskCard(
   /// The [ref] parameter is used to access providers for task updates.
   /// The [code] parameter is the internal status code ('todo', 'in_progress', 'done').
   /// The [tasks] parameter is the list of tasks to display in this column.
+  /// The [subtasks] parameter is the list of subtasks to display in this column.
   /// The [color] parameter is the background color for the column.
   /// The [textColor] parameter is the text color for the column header.
   /// The [headerIcon] parameter is the icon to display in the column header.
+  /// The [controller] parameter provides access to parent task information.
   Widget _buildColumn(
     BuildContext context,
     WidgetRef ref,
     String code, // Internal status code: 'todo', 'in_progress', 'done'
     List<TaskModel> tasks,
+    List<SubtaskModel> subtasks,
     Color color,
     Color textColor,
     IconData headerIcon,
+    KanbanController controller,
   ) {
     final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+
+    // Show all subtasks in the Kanban columns regardless of due date
+    final filteredSubtasks = subtasks;
 
     // Map internal status code to localized display title
     String title;
@@ -658,16 +789,19 @@ Widget _buildNoDueDateTaskCard(
         title = localizations.todo;
     }
 
+    // Calculate total items (tasks + filtered subtasks)
+    final totalItems = tasks.length + filteredSubtasks.length;
+
     return Expanded(
       child: Column(
         children: [
           // Column header with consistent height and task count badge
-          _buildColumnHeader(theme, title, headerIcon, textColor, tasks.length),
+          _buildColumnHeader(theme, title, headerIcon, textColor, totalItems),
 
           // Task list area with drag-and-drop functionality
           Expanded(
-            child: _buildColumnContent(
-                context, ref, theme, localizations, tasks, code, color),
+            child: _buildColumnContent(context, ref, theme, localizations,
+                tasks, filteredSubtasks, code, color, controller),
           ),
         ],
       ),
@@ -694,7 +828,7 @@ Widget _buildNoDueDateTaskCard(
         ),
         boxShadow: [
           BoxShadow(
-            color: theme.shadowColor.withOpacity(0.1),
+            color: theme.shadowColor.withValues(alpha: 0.1),
             blurRadius: 2,
             offset: const Offset(0, 1),
           ),
@@ -726,11 +860,11 @@ Widget _buildNoDueDateTaskCard(
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
               decoration: BoxDecoration(
-                color: theme.colorScheme.surface.withOpacity(0.8),
+                color: theme.colorScheme.surface.withValues(alpha: 0.8),
                 borderRadius: BorderRadius.circular(10),
                 boxShadow: [
                   BoxShadow(
-                    color: theme.shadowColor.withOpacity(0.1),
+                    color: theme.shadowColor.withValues(alpha: 0.1),
                     blurRadius: 2,
                   ),
                 ],
@@ -760,17 +894,19 @@ Widget _buildNoDueDateTaskCard(
     ThemeData theme,
     AppLocalizations localizations,
     List<TaskModel> tasks,
+    List<SubtaskModel> subtasks,
     String code,
     Color color,
+    KanbanController controller,
   ) {
-    return DragTarget<TaskModel>(
+    return DragTarget<Object>(
       builder: (context, candidateData, rejectedData) {
         return AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           decoration: BoxDecoration(
             color: candidateData.isNotEmpty
-                ? color.withOpacity(0.8)
-                : color.withOpacity(0.7),
+                ? color.withValues(alpha: 0.8)
+                : color.withValues(alpha: 0.7),
             borderRadius: const BorderRadius.only(
               bottomLeft: Radius.circular(12),
               bottomRight: Radius.circular(12),
@@ -778,22 +914,35 @@ Widget _buildNoDueDateTaskCard(
           ),
           child: LayoutBuilder(
             builder: (context, constraints) {
-              if (tasks.isEmpty) {
+              final totalItems = tasks.length + subtasks.length;
+              if (totalItems == 0) {
                 return _buildEmptyColumnState(
                     theme, localizations, constraints);
               }
-              // Build list of tasks for this column
+              // Build list of tasks and subtasks for this column
               return ListView.builder(
                 padding: const EdgeInsets.all(6),
-                itemCount: tasks.length,
+                itemCount: totalItems,
                 itemBuilder: (context, index) {
-                  return _buildDraggableTaskCard(
-                    context,
-                    ref,
-                    tasks[index],
-                    code,
-                    false,
-                  );
+                  // Show tasks first, then subtasks
+                  if (index < tasks.length) {
+                    return _buildDraggableTaskCard(
+                      context,
+                      ref,
+                      tasks[index],
+                      code,
+                      false,
+                    );
+                  } else {
+                    final subtaskIndex = index - tasks.length;
+                    return _buildDraggableSubtaskCard(
+                      context,
+                      ref,
+                      subtasks[subtaskIndex],
+                      code,
+                      controller,
+                    );
+                  }
                 },
               );
             },
@@ -802,12 +951,19 @@ Widget _buildNoDueDateTaskCard(
       },
       onWillAcceptWithDetails: (_) => true,
       onAcceptWithDetails: (details) {
-        // Handle dropping a task into this column
-        TaskModel task = details.data;
+        // Handle dropping a task or subtask into this column
+        final item = details.data;
         String newStatus = code; // Use the internal status code
-        ref
-            .read(kanbanControllerProvider)
-            .updateTaskStatus(task, newStatus, context);
+
+        if (item is TaskModel) {
+          ref
+              .read(kanbanControllerProvider)
+              .updateTaskStatus(item, newStatus, context);
+        } else if (item is SubtaskModel) {
+          ref
+              .read(kanbanControllerProvider)
+              .updateSubtaskStatus(item, newStatus, context);
+        }
       },
     );
   }
@@ -828,7 +984,7 @@ Widget _buildNoDueDateTaskCard(
       // Minimal empty state for very constrained spaces
       return Center(
         child: Icon(Icons.inbox_outlined,
-            size: 16, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+            size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
       );
     }
 
@@ -840,13 +996,13 @@ Widget _buildNoDueDateTaskCard(
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.inbox_outlined,
-                size: 20, color: theme.colorScheme.onSurface.withOpacity(0.3)),
+                size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 4),
             Flexible(
               child: Text(
                 localizations.noTasks,
                 style: TextStyle(
-                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   fontStyle: FontStyle.italic,
                   fontSize: 11,
                 ),
@@ -860,7 +1016,7 @@ Widget _buildNoDueDateTaskCard(
               child: Text(
                 localizations.dragTasksHere,
                 style: TextStyle(
-                  color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.5),
                   fontSize: 9,
                 ),
                 textAlign: TextAlign.center,
@@ -940,9 +1096,10 @@ Widget _buildNoDueDateTaskCard(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Subtask indicator for tasks that are actually subtasks
-                  if (task.parentTaskId != null)
-                    _buildSubtaskIndicator(theme, localizations),
+                  // Task indicator for tasks with subtasks
+                  if (task.hasSubtasks)
+                    _buildTaskWithSubtasksIndicator(
+                        Theme.of(context), AppLocalizations.of(context)!),
 
                   // Task title allowing up to 3 lines with ellipsis overflow
                   Text(
@@ -967,7 +1124,7 @@ Widget _buildNoDueDateTaskCard(
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         height: 1.0,
                       ),
                     ),
@@ -992,7 +1149,7 @@ Widget _buildNoDueDateTaskCard(
     Widget card = Card(
       elevation: 2,
       margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 2),
-      color: pastelColor,
+      color: pastelColor.withValues(alpha: 0.3),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(10),
         side: BorderSide(color: taskPriorityColor.withAlpha(153), width: 1),
@@ -1008,6 +1165,151 @@ Widget _buildNoDueDateTaskCard(
     return card;
   }
 
+  /// Builds a visual subtask card displaying subtask information.
+  ///
+  /// Creates a styled card showing task details including title, description,
+  /// priority, estimated time, and special indicators for subtasks or no-due-date tasks.
+  ///
+  /// The [context] parameter provides the widget context.
+  /// The [ref] parameter is used to access providers.
+  /// The [subtask] parameter contains the subtask data to display.
+  /// The [controller] parameter provides access to parent task information.
+  ///
+  Widget _buildSubtaskCard(BuildContext context, WidgetRef ref,
+      SubtaskModel subtask, KanbanController controller) {
+    final theme = Theme.of(context);
+    final localizations = AppLocalizations.of(context)!;
+
+    // Get parent task for context
+    final parentTask = controller.getParentTask(subtask);
+
+    // Use parent task priority for color, fallback to medium priority
+    final priority = parentTask?.priority ?? 3;
+    final brightness = theme.brightness;
+    final taskPriorityColor = getTaskPriorityColor(priority, brightness);
+    final pastelColor = getPastelColor(priority, brightness);
+
+    // Build the main card content
+    Widget cardContent = InkWell(
+      onTap: () {
+        // Show subtask edit modal if needed
+        // For now, just show parent task modal
+        if (parentTask != null) {
+          _showTaskModal(context, ref, parentTask);
+        }
+      },
+      borderRadius: BorderRadius.circular(10),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Priority color bar (thinner for subtasks)
+            Container(
+              width: 3,
+              height: min(50, 10.0 * (subtask.title.length / 10).ceil()),
+              decoration: BoxDecoration(
+                color: taskPriorityColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // Main content area
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Subtask indicator
+                  _buildSubtaskIndicator(theme, localizations),
+
+                  // Subtask title
+                  Text(
+                    subtask.title,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                      fontSize: 12,
+                      height: 1.1,
+                    ),
+                  ),
+
+                  const SizedBox(height: 4),
+
+                  // Parent task reference
+                  if (parentTask != null)
+                    Text(
+                      parentTask.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        fontStyle: FontStyle.italic,
+                      ),
+                    ),
+
+                  const SizedBox(height: 6),
+
+                  // Time estimate if available
+                  if (subtask.rawTimeValue != null)
+                    _buildTimeEstimateRow(theme, subtask.rawTimeValue!),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    // Create the styled card container (slightly smaller for subtasks)
+    return Card(
+      elevation: 1,
+      margin: const EdgeInsets.symmetric(vertical: 3, horizontal: 2),
+      color: pastelColor.withValues(alpha: 0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: taskPriorityColor.withAlpha(102), width: 1),
+      ),
+      child: cardContent,
+    );
+  }
+
+  /// Builds a subtle indicator showing that this task has subtasks.
+  Widget _buildTaskWithSubtasksIndicator(
+      ThemeData theme, AppLocalizations localizations) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 2.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.account_tree_outlined,
+            size: 10,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          const SizedBox(width: 2),
+          Flexible(
+            child: Text(
+              localizations.subtasks,
+              style: TextStyle(
+                fontSize: 9,
+                fontStyle: FontStyle.italic,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                height: 1.0,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Builds a subtle indicator showing that this task is actually a subtask.
   ///
   /// Displays a small arrow icon and "Subtask" label to provide context.
@@ -1016,20 +1318,25 @@ Widget _buildNoDueDateTaskCard(
     return Padding(
       padding: const EdgeInsets.only(bottom: 2.0),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(
             Icons.subdirectory_arrow_right,
             size: 10,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 2),
-          Text(
-            localizations.subtask,
-            style: TextStyle(
-              fontSize: 9,
-              fontStyle: FontStyle.italic,
-              color: theme.colorScheme.onSurface.withOpacity(0.6),
-              height: 1.0,
+          Flexible(
+            child: Text(
+              localizations.subtask,
+              style: TextStyle(
+                fontSize: 9,
+                fontStyle: FontStyle.italic,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                height: 1.0,
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
         ],
@@ -1074,7 +1381,7 @@ Widget _buildNoDueDateTaskCard(
           Icon(
             Icons.timer_outlined,
             size: 10,
-            color: theme.colorScheme.onSurface.withOpacity(0.6),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
           ),
           const SizedBox(width: 3),
           Flexible(
@@ -1085,7 +1392,7 @@ Widget _buildNoDueDateTaskCard(
               style: TextStyle(
                 fontSize: 9,
                 height: 1.1,
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ),
@@ -1111,7 +1418,7 @@ Widget _buildNoDueDateTaskCard(
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.2),
+                  color: theme.shadowColor.withValues(alpha: 0.2),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 ),
@@ -1196,6 +1503,70 @@ Widget _buildNoDueDateTaskCard(
     );
   }
 
+  /// Builds a draggable subtask card that can be moved between Kanban columns.
+  Widget _buildDraggableSubtaskCard(BuildContext context, WidgetRef ref,
+      SubtaskModel subtask, String columnId, KanbanController controller) {
+    final theme = Theme.of(context);
+
+    // Get parent task for context
+    final parentTask = controller.getParentTask(subtask);
+    final priority = parentTask?.priority ?? 3;
+    final taskPriorityColor = getTaskPriorityColor(priority, theme.brightness);
+    final pastelColor = getPastelColor(priority, theme.brightness);
+
+    return Draggable<SubtaskModel>(
+      data: subtask,
+      // Visual feedback shown while dragging
+      feedback: Material(
+        elevation: 4.0,
+        borderRadius: BorderRadius.circular(8.0),
+        child: Container(
+          width: 160,
+          padding: const EdgeInsets.all(6.0),
+          decoration: BoxDecoration(
+            color: pastelColor.withValues(alpha: 0.7),
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(color: taskPriorityColor, width: 1.0),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Simplified priority color bar for drag feedback
+              Container(
+                width: 3,
+                height: min(40, 8.0 * (subtask.title.length / 10).ceil()),
+                decoration: BoxDecoration(
+                  color: taskPriorityColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Flexible(
+                child: Text(
+                  subtask.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+      // Card appearance while being dragged (semi-transparent)
+      childWhenDragging: Opacity(
+        opacity: 0.5,
+        child: _buildSubtaskCard(context, ref, subtask, controller),
+      ),
+      // Normal card appearance
+      child: _buildSubtaskCard(context, ref, subtask, controller),
+    );
+  }
+
   /// Returns the appropriate color for a task based on its priority level.
   ///
   /// Uses different color palettes for light and dark themes to ensure
@@ -1251,17 +1622,17 @@ Widget _buildNoDueDateTaskCard(
     if (brightness == Brightness.dark) {
       switch (priority) {
         case 1:
-          return const Color(0xFF0D47A1).withOpacity(0.3); // Dark blue pastel
+          return const Color(0xFF0D47A1).withValues(alpha: 0.3); // Dark blue pastel
         case 2:
-          return const Color(0xFF1B5E20).withOpacity(0.3); // Dark green pastel
+          return const Color(0xFF1B5E20).withValues(alpha: 0.3); // Dark green pastel
         case 3:
-          return const Color(0xFFF57F17).withOpacity(0.3); // Dark yellow pastel
+          return const Color(0xFFF57F17).withValues(alpha: 0.3); // Dark yellow pastel
         case 4:
-          return const Color(0xFFE65100).withOpacity(0.3); // Dark orange pastel
+          return const Color(0xFFE65100).withValues(alpha: 0.3); // Dark orange pastel
         case 5:
-          return const Color(0xFFB71C1C).withOpacity(0.3); // Dark red pastel
+          return const Color(0xFFB71C1C).withValues(alpha: 0.3); // Dark red pastel
         default:
-          return const Color(0xFF424242).withOpacity(0.3); // Dark grey pastel
+          return const Color(0xFF424242).withValues(alpha: 0.3); // Dark grey pastel
       }
     }
 
@@ -1288,7 +1659,7 @@ Widget _buildNoDueDateTaskCard(
   /// The [priority] parameter should be an integer from 1-5.
   String _getPriorityLabel(BuildContext context, int priority) {
     final localizations = AppLocalizations.of(context)!;
-    
+
     switch (priority) {
       case 1:
         return localizations.lowestPriority;

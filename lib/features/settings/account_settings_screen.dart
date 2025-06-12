@@ -1,10 +1,8 @@
-import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/components/settings/settings_option_tile.dart';
 import 'package:spiceease/components/settings/settings_section.dart';
-import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/features/settings/account_settings_controller.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/features/auth/presentation/auth_screen.dart';
@@ -97,9 +95,9 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               SettingsOptionTile(
                 icon: Icons.email_outlined,
                 title: localizations.changeEmail,
-                subtitle: _emailController.text.isNotEmpty 
-                    ? _emailController.text 
-                    : 'Loading...',
+                subtitle: _emailController.text.isNotEmpty
+                    ? _emailController.text
+                    : localizations.loading,
                 onTap: () => _showChangeEmailDialog(),
                 trailing: state.isUpdatingEmail
                     ? const SizedBox(
@@ -111,8 +109,8 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               ),
               SettingsOptionTile(
                 icon: Icons.mark_email_read_outlined,
-                title: 'Send Verification Email',
-                subtitle: 'Verify your email address',
+                title: localizations.sendVerificationEmail,
+                subtitle: localizations.verifyYourEmailAddress,
                 onTap: () => _sendVerificationEmail(),
               ),
             ],
@@ -127,7 +125,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               SettingsOptionTile(
                 icon: Icons.lock_outline,
                 title: localizations.changePassword,
-                subtitle: 'Update your account password',
+                subtitle: localizations.updateYourAccountPassword,
                 onTap: () => _showChangePasswordDialog(),
                 trailing: state.isUpdatingPassword
                     ? const SizedBox(
@@ -144,12 +142,12 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
 
           // Account Actions Section
           SettingsSection(
-            title: 'Account Actions',
+            title: localizations.accountActions,
             children: [
               SettingsOptionTile(
                 icon: Icons.logout_outlined,
                 title: localizations.signOut,
-                subtitle: 'Sign out of your account',
+                subtitle: localizations.signOutOfYourAccount,
                 onTap: () => _showSignOutConfirmation(),
               ),
             ],
@@ -160,8 +158,12 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   }
 
   Widget _buildVerificationStatusCard(ThemeData theme) {
+    final localizations = AppLocalizations.of(context)!;
+
     return FutureBuilder<bool>(
-      future: ref.read(accountSettingsControllerProvider.notifier).isCurrentEmailVerified(),
+      future: ref
+          .read(accountSettingsControllerProvider.notifier)
+          .isCurrentEmailVerified(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const SizedBox.shrink();
@@ -181,21 +183,21 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.verified, color: Colors.green),
+                  const Icon(Icons.verified, color: Colors.green),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Email Verified',
+                          localizations.emailVerified,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.green,
                           ),
                         ),
                         Text(
-                          'Your account is fully verified and secure',
+                          localizations.yourAccountIsFullyVerifiedAndSecure,
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -217,21 +219,21 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.warning, color: Colors.orange),
+                  const Icon(Icons.warning, color: Colors.orange),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Email Not Verified',
+                          localizations.emailNotVerified,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             color: Colors.orange,
                           ),
                         ),
                         Text(
-                          'Verify your email to secure your account',
+                          localizations.verifyYourEmailToSecureYourAccount,
                           style: theme.textTheme.bodySmall,
                         ),
                       ],
@@ -243,7 +245,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                       backgroundColor: Colors.orange,
                       foregroundColor: Colors.white,
                     ),
-                    child: const Text('Verify'),
+                    child: Text(localizations.verify),
                   ),
                 ],
               ),
@@ -257,7 +259,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   void _showChangeEmailDialog() {
     final localizations = AppLocalizations.of(context)!;
     final newEmailController = TextEditingController();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -266,12 +268,12 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Current email: ${_emailController.text}'),
+            Text(localizations.currentEmailColon(_emailController.text)),
             const SizedBox(height: 16),
             TextField(
               controller: newEmailController,
               decoration: InputDecoration(
-                labelText: 'New Email Address',
+                labelText: localizations.newEmailAddress,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -290,202 +292,215 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
               Navigator.pop(context);
               await _updateEmail(newEmailController.text);
             },
-            child: const Text('Update Email'),
+            child: Text(localizations.updateEmail),
           ),
         ],
       ),
     );
   }
 
-  
-    void _showChangePasswordDialog() {
-      final localizations = AppLocalizations.of(context)!;
-      final currentPasswordController = TextEditingController();
-      final newPasswordController = TextEditingController();
-      final confirmPasswordController = TextEditingController();
-      bool isCurrentPasswordVisible = false;
-      bool isNewPasswordVisible = false;
-      bool isConfirmPasswordVisible = false;
-      bool isUpdating = false;
-      String progressMessage = '';
-      Timer? progressTimer;
-      
-      showDialog(
-        context: context,
-        builder: (context) => StatefulBuilder(
-          builder: (context, setState) => AlertDialog(
-            title: Text(localizations.changePassword),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isUpdating) ...[
-                  const LinearProgressIndicator(),
-                  const SizedBox(height: 16),
-                  Text(progressMessage.isNotEmpty 
-                      ? progressMessage 
-                      : 'Updating password, please wait...'),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'This may take up to 2 minutes due to security checks...',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                TextField(
-                  controller: currentPasswordController,
-                  enabled: !isUpdating,
-                  decoration: InputDecoration(
-                    labelText: localizations.currentPassword,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(isCurrentPasswordVisible 
-                          ? Icons.visibility_off 
-                          : Icons.visibility),
-                      onPressed: isUpdating ? null : () {
-                        setState(() {
-                          isCurrentPasswordVisible = !isCurrentPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  obscureText: !isCurrentPasswordVisible,
+  void _showChangePasswordDialog() {
+    final localizations = AppLocalizations.of(context)!;
+    final currentPasswordController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmPasswordController = TextEditingController();
+    bool isCurrentPasswordVisible = false;
+    bool isNewPasswordVisible = false;
+    bool isConfirmPasswordVisible = false;
+    bool isUpdating = false;
+    String progressMessage = '';
+    Timer? progressTimer;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Text(localizations.changePassword),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (isUpdating) ...[
+                const LinearProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(progressMessage.isNotEmpty
+                    ? progressMessage
+                    : localizations.updatingPasswordPleaseWait),
+                const SizedBox(height: 8),
+                Text(
+                  localizations.thisMayTakeUpTo2Minutes,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: newPasswordController,
-                  enabled: !isUpdating,
-                  decoration: InputDecoration(
-                    labelText: localizations.newPassword,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    helperText: localizations.passwordRequirements,
-                    suffixIcon: IconButton(
-                      icon: Icon(isNewPasswordVisible 
-                          ? Icons.visibility_off 
-                          : Icons.visibility),
-                      onPressed: isUpdating ? null : () {
-                        setState(() {
-                          isNewPasswordVisible = !isNewPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  obscureText: !isNewPasswordVisible,
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: confirmPasswordController,
-                  enabled: !isUpdating,
-                  decoration: InputDecoration(
-                    labelText: localizations.confirmPassword,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(isConfirmPasswordVisible 
-                          ? Icons.visibility_off 
-                          : Icons.visibility),
-                      onPressed: isUpdating ? null : () {
-                        setState(() {
-                          isConfirmPasswordVisible = !isConfirmPasswordVisible;
-                        });
-                      },
-                    ),
-                  ),
-                  obscureText: !isConfirmPasswordVisible,
-                ),
               ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: isUpdating ? null : () {
-                  progressTimer?.cancel();
-                  Navigator.pop(context);
-                },
-                child: Text(localizations.cancel),
+              TextField(
+                controller: currentPasswordController,
+                enabled: !isUpdating,
+                decoration: InputDecoration(
+                  labelText: localizations.currentPassword,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(isCurrentPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: isUpdating
+                        ? null
+                        : () {
+                            setState(() {
+                              isCurrentPasswordVisible =
+                                  !isCurrentPasswordVisible;
+                            });
+                          },
+                  ),
+                ),
+                obscureText: !isCurrentPasswordVisible,
               ),
-              ElevatedButton(
-                onPressed: isUpdating ? null : () async {
-                  setState(() {
-                    isUpdating = true;
-                    progressMessage = 'Verifying current password...';
-                  });
-                  
-                  // Update progress messages periodically
-                  progressTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-                    if (!isUpdating || !mounted) {
-                      timer.cancel();
-                      return;
-                    }
-                    
-                    setState(() {
-                      switch (timer.tick) {
-                        case 1:
-                          progressMessage = 'Authenticating with Firebase...';
-                          break;
-                        case 2:
-                          progressMessage = 'Processing security checks...';
-                          break;
-                        case 3:
-                          progressMessage = 'Updating password...';
-                          break;
-                        case 4:
-                          progressMessage = 'Finalizing changes...';
-                          break;
-                        default:
-                          progressMessage = 'Please wait, this is taking longer than usual...';
-                      }
-                    });
-                  });
-                  
-                  try {
-                    await _updatePasswordFromDialog(
-                      currentPasswordController.text,
-                      newPasswordController.text,
-                      confirmPasswordController.text,
-                    );
-                    
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                    }
-                  } finally {
-                    progressTimer?.cancel();
-                    if (mounted) {
-                      setState(() {
-                        isUpdating = false;
-                        progressMessage = '';
-                      });
-                    }
-                  }
-                },
-                child: isUpdating 
-                    ? const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text('Update Password'),
+              const SizedBox(height: 16),
+              TextField(
+                controller: newPasswordController,
+                enabled: !isUpdating,
+                decoration: InputDecoration(
+                  labelText: localizations.newPassword,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  helperText: localizations.passwordRequirements,
+                  suffixIcon: IconButton(
+                    icon: Icon(isNewPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: isUpdating
+                        ? null
+                        : () {
+                            setState(() {
+                              isNewPasswordVisible = !isNewPasswordVisible;
+                            });
+                          },
+                  ),
+                ),
+                obscureText: !isNewPasswordVisible,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: confirmPasswordController,
+                enabled: !isUpdating,
+                decoration: InputDecoration(
+                  labelText: localizations.confirmPassword,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(isConfirmPasswordVisible
+                        ? Icons.visibility_off
+                        : Icons.visibility),
+                    onPressed: isUpdating
+                        ? null
+                        : () {
+                            setState(() {
+                              isConfirmPasswordVisible =
+                                  !isConfirmPasswordVisible;
+                            });
+                          },
+                  ),
+                ),
+                obscureText: !isConfirmPasswordVisible,
               ),
             ],
           ),
-        ),
-      );
-    }
-  
-  // ...existing code...
+          actions: [
+            TextButton(
+              onPressed: isUpdating
+                  ? null
+                  : () {
+                      progressTimer?.cancel();
+                      Navigator.pop(context);
+                    },
+              child: Text(localizations.cancel),
+            ),
+            ElevatedButton(
+              onPressed: isUpdating
+                  ? null
+                  : () async {
+                      setState(() {
+                        isUpdating = true;
+                        progressMessage =
+                            localizations.verifyingCurrentPassword;
+                      });
 
+                      // Update progress messages periodically
+                      progressTimer =
+                          Timer.periodic(const Duration(seconds: 10), (timer) {
+                        if (!isUpdating || !mounted) {
+                          timer.cancel();
+                          return;
+                        }
+
+                        setState(() {
+                          switch (timer.tick) {
+                            case 1:
+                              progressMessage =
+                                  localizations.authenticatingWithFirebase;
+                              break;
+                            case 2:
+                              progressMessage =
+                                  localizations.processingSecurityChecks;
+                              break;
+                            case 3:
+                              progressMessage = localizations.updatingPassword;
+                              break;
+                            case 4:
+                              progressMessage = localizations.finalizingChanges;
+                              break;
+                            default:
+                              progressMessage =
+                                  localizations.pleaseWaitTakingLonger;
+                          }
+                        });
+                      });
+
+                      try {
+                        await _updatePasswordFromDialog(
+                          currentPasswordController.text,
+                          newPasswordController.text,
+                          confirmPasswordController.text,
+                        );
+
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      } finally {
+                        progressTimer?.cancel();
+                        if (mounted) {
+                          setState(() {
+                            isUpdating = false;
+                            progressMessage = '';
+                          });
+                        }
+                      }
+                    },
+              child: isUpdating
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(localizations.updatePassword),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _showSignOutConfirmation() {
     final localizations = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: Text(localizations.signOut),
-        content: const Text('Are you sure you want to sign out?'),
+        content: Text(localizations.areYouSureYouWantToSignOut),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -508,17 +523,20 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
   }
 
   Future<void> _updateEmail(String newEmail) async {
+    final localizations = AppLocalizations.of(context)!;
+
     try {
       final controller = ref.read(accountSettingsControllerProvider.notifier);
       final currentEmail = await controller.getCurrentUserEmail();
 
       if (newEmail == currentEmail) {
-        _showErrorSnackbar('Please enter a different email address');
+        _showErrorSnackbar(localizations.pleaseEnterADifferentEmailAddress);
         return;
       }
 
-      if (newEmail.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(newEmail)) {
-        _showErrorSnackbar('Please enter a valid email address');
+      if (newEmail.isEmpty ||
+          !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(newEmail)) {
+        _showErrorSnackbar(localizations.pleaseEnterAValidEmailAddress);
         return;
       }
 
@@ -527,13 +545,8 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       if (!mounted) return;
 
       if (result.isSuccess) {
-        // Update the displayed email immediately
-        setState(() {
-          _emailController.text = newEmail;
-        });
-        
+        // Show email verification dialog with re-login requirement
         _showEmailChangeVerificationDialog(newEmail);
-        // Remove the _loadUserEmail() call since we've already updated the display
       } else if (result.retryAction != null) {
         _showReAuthDialog(context, result.retryAction!);
       } else {
@@ -541,75 +554,30 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _showErrorSnackbar('Email update failed: ${e.toString()}');
-      }
-    }
-  }
-
-  Future<void> _updatePasswordFromDialog(String currentPassword, String newPassword, String confirmPassword) async {
-    print('DEBUG: Screen - _updatePasswordFromDialog called');
-    print('DEBUG: Current password provided: ${currentPassword.isNotEmpty}');
-    print('DEBUG: New password provided: ${newPassword.isNotEmpty}');
-    print('DEBUG: Confirm password provided: ${confirmPassword.isNotEmpty}');
-
-    try {
-      final controller = ref.read(accountSettingsControllerProvider.notifier);
-      final result = await controller.updatePassword(
-        currentPassword,
-        newPassword,
-        confirmPassword,
-      );
-
-      if (!mounted) return;
-
-      print('DEBUG: Screen - Password update result: ${result.isSuccess}');
-      print('DEBUG: Screen - Result message: ${result.message}');
-
-      if (result.isSuccess) {
-        _showSuccessSnackbar(result.message);
-      } else if (result.retryAction != null) {
-        _showReAuthDialog(context, result.retryAction!);
-      } else {
-        _showErrorSnackbar(result.message);
-      }
-    } catch (e) {
-      print('DEBUG: Screen - Exception in _updatePasswordFromDialog: $e');
-      if (mounted) {
-        _showErrorSnackbar('Password update failed: ${e.toString()}');
-      }
-    }
-  }
-
-  Future<void> _sendVerificationEmail() async {
-    try {
-      final controller = ref.read(accountSettingsControllerProvider.notifier);
-      await controller.sendEmailVerification();
-      if (mounted) {
-        _showSuccessSnackbar('Verification email sent! Please check your inbox.');
-      }
-    } catch (e) {
-      if (mounted) {
-        _showErrorSnackbar('Failed to send verification email: ${e.toString()}');
+        _showErrorSnackbar(localizations.emailUpdateFailed(e.toString()));
       }
     }
   }
 
   void _showEmailChangeVerificationDialog(String newEmail) {
+    final localizations = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.mark_email_read, color: Theme.of(context).colorScheme.primary, size: 28),
+            Icon(Icons.mark_email_read,
+                color: Theme.of(context).colorScheme.primary, size: 28),
             const SizedBox(width: 12),
-            const Expanded(child: Text('Verify New Email')),
+            Expanded(child: Text(localizations.emailChangeInitiated)),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('A verification email has been sent to:'),
+            Text(localizations.aVerificationEmailHasBeenSentTo),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
@@ -617,58 +585,161 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                 color: Theme.of(context).colorScheme.surfaceContainer,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Text(newEmail, style: const TextStyle(fontWeight: FontWeight.bold)),
+              child: Text(newEmail,
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
             ),
             const SizedBox(height: 16),
-            const Text('Click the verification link in the email to complete your email change.'),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          localizations.importantSteps,
+                          style: const TextStyle(
+                              fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    localizations.emailChangeSteps,
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      localizations.yourDisplayedEmailWillRemainUnchanged,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
+          TextButton(
+            onPressed: () async {
+              try {
+                final controller =
+                    ref.read(accountSettingsControllerProvider.notifier);
+                await controller.sendEmailVerification();
+                if (mounted) {
+                  _showSuccessSnackbar(
+                      localizations.verificationEmailResentTo(newEmail));
+                }
+              } catch (e) {
+                if (mounted) {
+                  _showErrorSnackbar(
+                      localizations.failedToResendEmail(e.toString()));
+                }
+              }
+            },
+            child: Text(localizations.resendEmail),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got It'),
+            child: Text(localizations.gotIt),
           ),
         ],
       ),
     );
   }
 
+  Future<void> _sendVerificationEmail() async {
+    final localizations = AppLocalizations.of(context)!;
+
+    try {
+      final controller = ref.read(accountSettingsControllerProvider.notifier);
+      await controller.sendEmailVerification();
+      if (mounted) {
+        _showSuccessSnackbar(localizations.verificationEmailSent);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackbar(
+            localizations.failedToSendVerificationEmail(e.toString()));
+      }
+    }
+  }
+
   void _showAccountVerificationDialog() {
+    final localizations = AppLocalizations.of(context)!;
+
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.verified_user_outlined, color: Theme.of(context).colorScheme.primary, size: 28),
+            Icon(Icons.verified_user_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 28),
             const SizedBox(width: 12),
-            const Expanded(child: Text('Verify Your Account')),
+            Expanded(child: Text(localizations.verifyYourAccount)),
           ],
         ),
-        content: const Text('Please verify your email address to secure your account and access all features.'),
+        content: Text(localizations.pleaseVerifyYourEmailAddress),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Later'),
+            child: Text(localizations.later),
           ),
           ElevatedButton.icon(
             onPressed: () async {
               try {
-                final controller = ref.read(accountSettingsControllerProvider.notifier);
+                final controller =
+                    ref.read(accountSettingsControllerProvider.notifier);
                 await controller.sendEmailVerification();
                 if (mounted) {
                   Navigator.pop(context);
-                  _showSuccessSnackbar('Verification email sent! Please check your inbox.');
+                  _showSuccessSnackbar(localizations.verificationEmailSent);
                 }
               } catch (e) {
                 if (mounted) {
                   Navigator.pop(context);
-                  _showErrorSnackbar('Failed to send verification email: ${e.toString()}');
+                  _showErrorSnackbar(localizations
+                      .failedToSendVerificationEmail(e.toString()));
                 }
               }
             },
             icon: const Icon(Icons.mark_email_read),
-            label: const Text('Send Verification'),
+            label: Text(localizations.sendVerification),
           ),
         ],
       ),
@@ -679,6 +750,7 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
     BuildContext context,
     Future<AccountSettingsResult> Function() retryAction,
   ) async {
+    final localizations = AppLocalizations.of(context)!;
     final passwordController = TextEditingController();
     final controller = ref.read(accountSettingsControllerProvider.notifier);
     final email = await controller.getCurrentUserEmail();
@@ -689,20 +761,21 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
       barrierDismissible: false,
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: const Text('Security Verification'),
+          title: Text(localizations.securityVerification),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Please enter your current password to continue.'),
+              Text(localizations.pleaseEnterYourCurrentPasswordToContinue),
               const SizedBox(height: 16),
               TextField(
                 controller: passwordController,
                 decoration: InputDecoration(
-                  labelText: 'Current Password',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  labelText: localizations.currentPassword,
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8)),
                   suffixIcon: IconButton(
-                    icon: Icon(isPasswordVisible 
-                        ? Icons.visibility_off 
+                    icon: Icon(isPasswordVisible
+                        ? Icons.visibility_off
                         : Icons.visibility),
                     onPressed: () {
                       setState(() {
@@ -718,12 +791,13 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(localizations.cancel),
             ),
             ElevatedButton(
               onPressed: () async {
                 try {
-                  final authResult = await controller.reauthenticate(email ?? '', passwordController.text);
+                  final authResult = await controller.reauthenticate(
+                      email ?? '', passwordController.text);
                   if (!mounted) return;
 
                   if (authResult.isSuccess) {
@@ -741,16 +815,45 @@ class _AccountSettingsScreenState extends ConsumerState<AccountSettingsScreen> {
                   }
                 } catch (e) {
                   if (mounted) {
-                    _showErrorSnackbar('Authentication failed: ${e.toString()}');
+                    _showErrorSnackbar(
+                        localizations.authenticationFailed(e.toString()));
                   }
                 }
               },
-              child: const Text('Verify'),
+              child: Text(localizations.verify),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _updatePasswordFromDialog(String currentPassword,
+      String newPassword, String confirmPassword) async {
+    final localizations = AppLocalizations.of(context)!;
+
+    try {
+      final controller = ref.read(accountSettingsControllerProvider.notifier);
+      final result = await controller.updatePassword(
+        currentPassword,
+        newPassword,
+        confirmPassword,
+      );
+
+      if (!mounted) return;
+
+      if (result.isSuccess) {
+        _showSuccessSnackbar(result.message);
+      } else if (result.retryAction != null) {
+        _showReAuthDialog(context, result.retryAction!);
+      } else {
+        _showErrorSnackbar(result.message);
+      }
+    } catch (e) {
+      if (mounted) {
+        _showErrorSnackbar(localizations.passwordUpdateFailed(e.toString()));
+      }
+    }
   }
 
   void _signOut() async {

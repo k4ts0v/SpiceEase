@@ -15,15 +15,11 @@ class TaskModel {
   DateTime _updatedAt; // Mutable field
   bool _hasDueDate;
   bool _hasSubtasks; // Flag to indicate if task has subtasks
-  final String? _parentTaskId; // null for root tasks, populated for subtasks
+  // final String? _parentTaskId; // null for root tasks, populated for subtasks
   final bool _isSubtask; // flag to easily identify subtasks
-  final int _subtaskOrder; // position within parent's subtasks
+  // final int _subtaskOrder; // position within parent's subtasks
   DateTime? _startTime;
   DateTime? _endTime;
-  final bool _hasReminder;
-  final DateTime? _reminderDateTime;
-  final List<int>? _reminderDaysOfWeek; // For recurring reminders
-  final bool _isRecurringReminder;
 
   // Constructor
   TaskModel({
@@ -40,15 +36,11 @@ class TaskModel {
     required DateTime updatedAt,
     bool? hasDueDate,
     bool hasSubtasks = false,
-    final String? parentTaskId,
+    // final String? parentTaskId,
     final bool isSubtask = false,
-    final int subtaskOrder = 0,
+    // final int subtaskOrder = 0,
     DateTime? startTime,
     DateTime? endTime,
-    bool hasReminder = false,
-    DateTime? reminderDateTime,
-    List<int>? reminderDaysOfWeek,
-    bool isRecurringReminder = false,
   })  : _id = id,
         _userId = userId,
         _title = title,
@@ -62,15 +54,11 @@ class TaskModel {
         _updatedAt = updatedAt,
         _hasDueDate = dueDate != null,
         _hasSubtasks = hasSubtasks,
-        _parentTaskId = parentTaskId,
+        // _parentTaskId = parentTaskId,
         _isSubtask = isSubtask,
-        _subtaskOrder = subtaskOrder,
+        // _subtaskOrder = subtaskOrder,
         _startTime = startTime,
-        _endTime = endTime,
-        _hasReminder = hasReminder,
-        _reminderDateTime = reminderDateTime,
-        _reminderDaysOfWeek = reminderDaysOfWeek,
-        _isRecurringReminder = isRecurringReminder;
+        _endTime = endTime;
 
   // Getters
   String get id => _id;
@@ -86,15 +74,11 @@ class TaskModel {
   DateTime get updatedAt => _updatedAt;
   bool get hasDueDate => _hasDueDate;
   bool get hasSubtasks => _hasSubtasks;
-  String? get parentTaskId => _parentTaskId;
+  // String? get parentTaskId => _parentTaskId;
   bool get isSubtask => _isSubtask;
-  int get subtaskOrder => _subtaskOrder;
+  // int get subtaskOrder => _subtaskOrder;
   DateTime? get startTime => _startTime;
   DateTime? get endTime => _endTime;
-  bool get hasReminder => _hasReminder;
-  DateTime? get reminderDateTime => _reminderDateTime;
-  List<int>? get reminderDaysOfWeek => _reminderDaysOfWeek;
-  bool get isRecurringReminder => _isRecurringReminder;
 
   // Setters
   set title(String newTitle) {
@@ -176,19 +160,13 @@ class TaskModel {
       createdAt: _parseDynamicDate(map['created_at'])!,
       updatedAt: _parseDynamicDate(map['updated_at'])!,
       hasSubtasks: map['has_subtasks'] as bool? ?? false,
-      parentTaskId: map['parent_task_id'] as String?,
+      // parentTaskId: map['parent_task_id'] as String?,
       isSubtask: map['is_subtask'] as bool? ?? false,
-      subtaskOrder: map['subtask_order'] is double
-          ? (map['subtask_order'] as double).toInt()
-          : (map['subtask_order'] as int? ?? 0),
+      // subtaskOrder: map['subtask_order'] is double
+          // ? (map['subtask_order'] as double).toInt()
+          // : (map['subtask_order'] as int? ?? 0),
       startTime: _parseDynamicDate(map['start_time']),
       endTime: _parseDynamicDate(map['end_time']),
-      hasReminder: map['has_reminder'] as bool? ?? false,
-      reminderDateTime: _parseDynamicDate(map['reminder_date_time']),
-      reminderDaysOfWeek: (map['reminder_days_of_week'] as List<dynamic>?)
-          ?.map((e) => e as int)
-          .toList(),
-      isRecurringReminder: map['is_recurring_reminder'] as bool? ?? false,
     );
   }
 
@@ -207,15 +185,11 @@ class TaskModel {
       'updated_at': _updatedAt,
       'has_due_date': _hasDueDate,
       'has_subtasks': _hasSubtasks,
-      'parent_task_id': _parentTaskId,
+      // 'parent_task_id': _parentTaskId,
       'is_subtask': _isSubtask,
-      'subtask_order': _subtaskOrder,
+      // 'subtask_order': _subtaskOrder,
       'start_time': _startTime,
       'end_time': _endTime,
-      'has_reminder': _hasReminder,
-      'reminder_date_time': _reminderDateTime,
-      'reminder_days_of_week': _reminderDaysOfWeek,
-      'is_recurring_reminder': _isRecurringReminder,
     };
   }
 
@@ -267,20 +241,12 @@ class TaskModel {
       updatedAt: updatedAt ?? this.updatedAt,
       hasDueDate: hasDueDate ?? this.hasDueDate,
       hasSubtasks: hasSubtasks ?? this.hasSubtasks,
-      parentTaskId:
-          clearParentTaskId ? null : (parentTaskId ?? this.parentTaskId),
+      // parentTaskId:
+      //     clearParentTaskId ? null : (parentTaskId ?? this.parentTaskId),
       isSubtask: isSubtask ?? this.isSubtask,
-      subtaskOrder: subtaskOrder ?? this.subtaskOrder,
+      // subtaskOrder: subtaskOrder ?? this.subtaskOrder,
       startTime: clearStartTime ? null : (startTime ?? this.startTime),
-      endTime: clearEndTime ? null : (endTime ?? this.endTime),
-      hasReminder: hasReminder ?? this.hasReminder,
-      reminderDateTime: clearReminderDateTime
-          ? null
-          : (reminderDateTime ?? this.reminderDateTime),
-      reminderDaysOfWeek: clearReminderDaysOfWeek
-          ? null
-          : (reminderDaysOfWeek ?? this.reminderDaysOfWeek),
-      isRecurringReminder: isRecurringReminder ?? this.isRecurringReminder,
+      endTime: clearEndTime ? null : (endTime ?? this.endTime)
     );
   }
 

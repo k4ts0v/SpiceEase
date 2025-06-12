@@ -19,8 +19,8 @@ import 'package:spiceease/data/services/task_service.dart';
 import 'package:spiceease/data/services/mood_service.dart';
 import 'package:spiceease/data/services/habit_service.dart';
 import 'package:spiceease/data/services/energy_service.dart';
-import 'package:spiceease/features/reports/metrics_data.dart';
-import 'package:spiceease/features/reports/pie_data.dart';
+import 'package:spiceease/features/reports/data_models/metrics_data.dart';
+import 'package:spiceease/features/reports/data_models/pie_data.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 class ReportsState {
@@ -119,11 +119,6 @@ class ReportsController extends StateNotifier<ReportsState> {
     return date.isAfter(DateTime(1970, 1, 2));
   }
 
-  /// Safely extracts date from an object's field with validation
-  DateTime? _safeGetDate(dynamic obj, String fieldName) {
-    final date = FirestoreDateAdapter.fromFirestore(obj[fieldName]);
-    return _isValidDate(date) ? date : null;
-  }
 
   int _calculateTasksStreak(
       List tasks, List subtasks, DateTime rangeStart, DateTime rangeEnd) {
@@ -217,8 +212,8 @@ class ReportsController extends StateNotifier<ReportsState> {
 
     double focus = 0.0, breaks = 0.0;
     for (final session in validSessions) {
-      focus += ((session.focusMinutes ?? 0) * (session.pomoCount ?? 1)) / 60.0;
-      breaks += ((session.breakMinutes ?? 0) * (session.pomoCount ?? 1)) / 60.0;
+      focus += ((session.focusMinutes) * (session.pomoCount)) / 60.0;
+      breaks += ((session.breakMinutes) * (session.pomoCount)) / 60.0;
     }
     return (validSessions.length, focus, breaks, focus + breaks);
   }
@@ -481,8 +476,7 @@ class ReportsController extends StateNotifier<ReportsState> {
         .toDouble();
   }
 
-  double _countMedications(List medications, DateTime start, DateTime end,
-      {String timeRange = 'day'}) {
+  double _countMedications(List medications, DateTime start, DateTime end) {
     int count = 0;
     for (final m in medications) {
       if (m.completedDates != null && m.completedDates.isNotEmpty) {

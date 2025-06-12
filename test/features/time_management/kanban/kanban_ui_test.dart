@@ -87,7 +87,6 @@ class UITestTaskData {
           description:
               'Currently working on this comprehensive task. This description contains detailed progress notes, technical challenges encountered, solutions implemented, and remaining work items. It also includes references to external resources, code snippets, and implementation strategies that need to be considered during development.',
           estimatedTime: '2 hours 45 minutes',
-          parentTaskId: null,
           createdAt: DateTime.now().subtract(const Duration(days: 3)),
           userId: 'test-user',
           updatedAt: DateTime.now().subtract(const Duration(minutes: 15)),

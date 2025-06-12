@@ -10,7 +10,7 @@ import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart'; // Keep for getTaskById
 
 import 'package:spiceease/features/time_management/time_blocks/time_block_controller.dart';
-import 'package:spiceease/features/tracker/presentation/modals.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 final weekOffsetProvider = StateProvider<int>((ref) => 0);
@@ -54,7 +54,7 @@ class TimeBlocksPage extends ConsumerWidget {
 
     final locale = Localizations.localeOf(context).languageCode;
     final now = DateTime.now();
-    final firstDayOfWeek = now
+    now
         .subtract(Duration(days: now.weekday - 1))
         .add(Duration(days: weekOffset * 7));
 
@@ -104,7 +104,7 @@ class TimeBlocksPage extends ConsumerWidget {
                 color: theme.colorScheme.surface,
                 boxShadow: [
                   BoxShadow(
-                    color: theme.shadowColor.withOpacity(0.1),
+                    color: theme.shadowColor.withValues(alpha: 0.1),
                     spreadRadius: 1,
                     blurRadius: 5,
                     offset: const Offset(0, 2),
@@ -150,7 +150,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
                                   color: theme.colorScheme.primary
-                                      .withOpacity(0.1),
+                                      .withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(Icons.event,
@@ -180,7 +180,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                   .colorScheme.surface, // Was surfaceVariant
                               boxShadow: [
                                 BoxShadow(
-                                  color: theme.shadowColor.withOpacity(0.1),
+                                  color: theme.shadowColor.withValues(alpha: 0.1),
                                   blurRadius: 10,
                                   spreadRadius: 1,
                                   offset: const Offset(0, 3),
@@ -247,12 +247,12 @@ class TimeBlocksPage extends ConsumerWidget {
             height: 35, // Match schedule area header spacer
             padding: const EdgeInsets.symmetric(vertical: 8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
               boxShadow: [
                 BoxShadow(
-                  color: theme.shadowColor.withOpacity(0.1),
+                  color: theme.shadowColor.withValues(alpha: 0.1),
                   blurRadius: 2,
                   offset: const Offset(0, 1),
                 )
@@ -272,7 +272,7 @@ class TimeBlocksPage extends ConsumerWidget {
                 decoration: BoxDecoration(
                   border: Border(
                       top: BorderSide(
-                          color: theme.dividerColor.withOpacity(0.5),
+                          color: theme.dividerColor.withValues(alpha: 0.5),
                           width: 1)),
                 ),
                 child: Text(
@@ -280,7 +280,7 @@ class TimeBlocksPage extends ConsumerWidget {
                       2000, 1, 1, hour)), // Using DateFormat for localization
                   style: TextStyle(
                       fontSize: 10,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.bold),
                 ),
               );
@@ -295,10 +295,12 @@ class TimeBlocksPage extends ConsumerWidget {
     if (items.isEmpty) return 1;
 
     final validItems = items.where((item) {
-      if (item is TaskModel)
+      if (item is TaskModel) {
         return item.startTime != null && item.endTime != null;
-      if (item is SubtaskModel)
+      }
+      if (item is SubtaskModel) {
         return item.startTime != null && item.endTime != null;
+      }
       return false;
     }).toList();
 
@@ -353,7 +355,7 @@ class TimeBlocksPage extends ConsumerWidget {
             child: Stack(
               children: [
                 Column(children: [
-                  Container(height: 35, width: totalWidth), // Header spacer
+                  SizedBox(height: 35, width: totalWidth), // Header spacer
                   ...List.generate(24, (i) {
                     return Container(
                       height: hourHeight,
@@ -361,7 +363,7 @@ class TimeBlocksPage extends ConsumerWidget {
                       decoration: BoxDecoration(
                         border: Border(
                             top: BorderSide(
-                                color: theme.dividerColor.withOpacity(0.5),
+                                color: theme.dividerColor.withValues(alpha: 0.5),
                                 width: 1)),
                       ),
                     );
@@ -390,10 +392,12 @@ class TimeBlocksPage extends ConsumerWidget {
     if (items.isEmpty) return widgets;
 
     final sortedValidItems = items.where((item) {
-      if (item is TaskModel)
+      if (item is TaskModel) {
         return item.startTime != null && item.endTime != null;
-      if (item is SubtaskModel)
+      }
+      if (item is SubtaskModel) {
         return item.startTime != null && item.endTime != null;
+      }
       return false;
     }).toList()
       ..sort((a, b) {
@@ -421,10 +425,11 @@ class TimeBlocksPage extends ConsumerWidget {
             break;
           }
         }
-        if (overlap)
+        if (overlap) {
           assignedColumn++;
-        else
+        } else {
           foundColumn = true;
+        }
       }
       columns[item] = assignedColumn;
     }
@@ -497,7 +502,7 @@ class TimeBlocksPage extends ConsumerWidget {
       right: 0,
       child: Container(
         height: 2,
-        color: Colors.red.withOpacity(0.7),
+        color: Colors.red.withValues(alpha: 0.7),
         child: Align(
           alignment: Alignment.centerLeft,
           child: Container(
@@ -540,7 +545,7 @@ class TimeBlocksPage extends ConsumerWidget {
     final Color itemColor, borderColor;
     if (isSubtask) {
       // Use priority-based colors for subtasks, but with reduced opacity
-      itemColor = getPastelColor(priority, theme.brightness).withOpacity(0.7);
+      itemColor = getPastelColor(priority, theme.brightness).withValues(alpha: 0.7);
       borderColor = getTaskPriorityColor(priority, theme.brightness);
     } else {
       itemColor = getPastelColor(priority, theme.brightness);
@@ -618,7 +623,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                 Icons.subdirectory_arrow_right,
                                 size: 8, // Slightly bigger icon
                                 color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
+                                    .withValues(alpha: 0.6),
                               ),
                               const SizedBox(width: 2),
                               Flexible(
@@ -628,7 +633,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                     fontSize: 7, // Slightly bigger font
                                     fontStyle: FontStyle.italic,
                                     color: theme.colorScheme.onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                     height: 1.1,
                                   ),
                                   maxLines: 1,
@@ -647,7 +652,7 @@ class TimeBlocksPage extends ConsumerWidget {
                               // Calculate how many full lines of text can fit
                               final fontSize =
                                   isSubtask ? 10.0 : 11.0; // Bigger fonts
-                              final lineHeight =
+                              const lineHeight =
                                   1.2; // More line height for readability
                               final lineHeightPx = fontSize * lineHeight;
                               final availableHeight = constraints.maxHeight;
@@ -683,7 +688,7 @@ class TimeBlocksPage extends ConsumerWidget {
                               fontSize: 9, // Bigger font
                               height: 1.1,
                               color:
-                                  theme.colorScheme.onSurface.withOpacity(0.7),
+                                  theme.colorScheme.onSurface.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -728,7 +733,7 @@ class TimeBlocksPage extends ConsumerWidget {
                               Icon(Icons.timer_outlined,
                                   size: 8, // Bigger icon
                                   color: theme.colorScheme.onSurface
-                                      .withOpacity(0.6)),
+                                      .withValues(alpha: 0.6)),
                               const SizedBox(width: 2), // More spacing
                               Flexible(
                                 child: Text(
@@ -755,7 +760,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                     fontSize: 7, // Bigger font
                                     height: 1.1,
                                     color: theme.colorScheme.onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -780,7 +785,7 @@ class TimeBlocksPage extends ConsumerWidget {
                   child: Container(
                     padding: const EdgeInsets.all(1), // Slightly more padding
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceVariant.withOpacity(0.9),
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(3),
                     ),
                     child: Icon(Icons.close,
@@ -901,7 +906,7 @@ class TimeBlocksPage extends ConsumerWidget {
     // Use Kanban-style colors consistently
     final taskPriorityColor = getTaskPriorityColor(priority, theme.brightness);
     final itemColor =
-        getPastelColor(priority, theme.brightness).withOpacity(0.3);
+        getPastelColor(priority, theme.brightness).withValues(alpha: 0.3);
 
     return _buildUnscheduledCard(
         context,
@@ -983,7 +988,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                     Icons.subdirectory_arrow_right,
                                     size: 10,
                                     color: theme.colorScheme.onSurface
-                                        .withOpacity(0.6),
+                                        .withValues(alpha: 0.6),
                                   ),
                                   const SizedBox(width: 2),
                                   Text(
@@ -992,7 +997,7 @@ class TimeBlocksPage extends ConsumerWidget {
                                       fontSize: 9,
                                       fontStyle: FontStyle.italic,
                                       color: theme.colorScheme.onSurface
-                                          .withOpacity(0.6),
+                                          .withValues(alpha: 0.6),
                                       height: 1.0,
                                     ),
                                   ),
@@ -1026,7 +1031,7 @@ class TimeBlocksPage extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 11,
                                 color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7),
+                                    .withValues(alpha: 0.7),
                                 height: 1.0,
                               ),
                             ),
@@ -1075,7 +1080,7 @@ class TimeBlocksPage extends ConsumerWidget {
                         Icon(
                           Icons.timer_outlined,
                           size: 10,
-                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                          color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                         const SizedBox(width: 3),
                         Flexible(
@@ -1087,7 +1092,7 @@ class TimeBlocksPage extends ConsumerWidget {
                               fontSize: 9,
                               height: 1.1,
                               color:
-                                  theme.colorScheme.onSurface.withOpacity(0.6),
+                                  theme.colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                         ),
@@ -1107,17 +1112,17 @@ class TimeBlocksPage extends ConsumerWidget {
     if (brightness == Brightness.dark) {
       switch (priority) {
         case 1:
-          return const Color(0xFF0D47A1).withOpacity(0.3); // Dark blue pastel
+          return const Color(0xFF0D47A1).withValues(alpha: 0.3); // Dark blue pastel
         case 2:
-          return const Color(0xFF1B5E20).withOpacity(0.3); // Dark green pastel
+          return const Color(0xFF1B5E20).withValues(alpha: 0.3); // Dark green pastel
         case 3:
-          return const Color(0xFFF57F17).withOpacity(0.3); // Dark yellow pastel
+          return const Color(0xFFF57F17).withValues(alpha: 0.3); // Dark yellow pastel
         case 4:
-          return const Color(0xFFE65100).withOpacity(0.3); // Dark orange pastel
+          return const Color(0xFFE65100).withValues(alpha: 0.3); // Dark orange pastel
         case 5:
-          return const Color(0xFFB71C1C).withOpacity(0.3); // Dark red pastel
+          return const Color(0xFFB71C1C).withValues(alpha: 0.3); // Dark red pastel
         default:
-          return const Color(0xFF424242).withOpacity(0.3); // Dark grey pastel
+          return const Color(0xFF424242).withValues(alpha: 0.3); // Dark grey pastel
       }
     }
 

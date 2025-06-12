@@ -50,7 +50,8 @@ class AboutController extends StateNotifier<AsyncValue<PackageInfo?>> {
     }
   }
 
-  String createGitHubIssueUrl(String issueType, AppLocalizations localizations) {
+  String createGitHubIssueUrl(
+      String issueType, AppLocalizations localizations) {
     final packageInfo = state.value;
     String template = '';
     String title = '';
@@ -110,7 +111,8 @@ ${localizations.useCaseDescription}
     return 'https://github.com/k4ts0v/spiceease/issues/new?title=$encodedTitle&body=$encodedTemplate';
   }
 
-  Future<bool> launchGitHubIssue(String issueType, AppLocalizations localizations) async {
+  Future<bool> launchGitHubIssue(
+      String issueType, AppLocalizations localizations) async {
     try {
       final String issueUrl = createGitHubIssueUrl(issueType, localizations);
       return await launchUrlExternal(issueUrl);

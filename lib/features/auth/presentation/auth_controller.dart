@@ -65,9 +65,8 @@ class AuthState {
 class AuthController extends StateNotifier<AuthState> {
   final AuthService _authService;
   final UserService _userService;
-  final Ref _ref;
 
-  AuthController(this._authService, this._userService, this._ref)
+  AuthController(this._authService, this._userService)
       : super(AuthState.initial());
 
   void toggleAuthMode() {
@@ -96,7 +95,7 @@ class AuthController extends StateNotifier<AuthState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       await _authService.resetPassword(email.trim());
-      
+
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -121,7 +120,7 @@ class AuthController extends StateNotifier<AuthState> {
           ),
         );
       }
-      
+
       state = state.copyWith(
         isLoading: false,
         error: _parseError(e, context),
@@ -146,7 +145,7 @@ class AuthController extends StateNotifier<AuthState> {
     }
 
     state = state.copyWith(isLoading: true, error: null);
-    
+
     try {
       if (state.isLogin) {
         await _authService.signIn(email.trim(), password.trim());
@@ -161,7 +160,7 @@ class AuthController extends StateNotifier<AuthState> {
 
         final completer = Completer<void>();
         late StreamSubscription subscription;
-        
+
         subscription = _authService.authStateChanges().listen((user) async {
           if (user != null && !completer.isCompleted) {
             try {
@@ -170,15 +169,15 @@ class AuthController extends StateNotifier<AuthState> {
                 createdAt: DateTime.now(),
                 updatedAt: DateTime.now(),
               ));
-              
+
               subscription.cancel();
-              
+
               if (!completer.isCompleted) {
                 completer.complete();
               }
             } catch (e) {
               subscription.cancel();
-              
+
               if (!completer.isCompleted) {
                 completer.completeError(e);
               }
@@ -199,9 +198,8 @@ class AuthController extends StateNotifier<AuthState> {
           },
         );
       }
-      
+
       state = state.copyWith(isLoading: false, error: null);
-      
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -238,49 +236,53 @@ class AuthController extends StateNotifier<AuthState> {
       case 'wrong_password':
       case 'user_not_found':
       case 'invalid_credential':
-        return localizations?.invalidLoginCredentials ?? 'Invalid email or password';
-      
+        return localizations?.invalidLoginCredentials ??
+            'Invalid email or password';
+
       case 'email_already_in_use':
       case 'email_exists':
         return localizations?.emailAlreadyInUse ?? 'Email is already in use';
-      
+
       case 'missing_password':
         return localizations?.missingPassword ?? 'Password is required';
-      
+
       case 'password_mismatch':
         return localizations?.passwordMismatch ?? 'Passwords do not match';
-      
+
       case 'invalid_email':
         return localizations?.invalidEmail ?? 'Invalid email address';
-      
+
       case 'weak_password':
         return 'Password must be at least 6 characters long';
-      
+
       case 'session_expired':
       case 'token_expired':
       case 'expired_action_code':
-        return localizations?.sessionExpired ?? 'Session expired. Please try again';
-      
+        return localizations?.sessionExpired ??
+            'Session expired. Please try again';
+
       case 'network_request_failed':
         return 'Network error. Please check your connection';
-      
+
       case 'too_many_attempts':
         return 'Too many attempts. Please try again later';
-      
+
       case 'user_disabled':
         return 'This account has been disabled';
-      
+
       case 'requires_recent_login':
         return 'Please sign in again to continue';
-      
+
       case 'operation_not_allowed':
         return 'This operation is not allowed';
-      
+
       default:
         if (message.contains('firebase_auth/')) {
           return message.split('firebase_auth/')[1].replaceAll('-', ' ');
         }
-        return message.length > 100 ? 'Authentication failed. Please try again.' : message;
+        return message.length > 100
+            ? 'Authentication failed. Please try again.'
+            : message;
     }
   }
 }
@@ -289,5 +291,5 @@ final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {
   final authService = ref.read(authServiceProvider);
   final userService = ref.read(userServiceProvider);
-  return AuthController(authService, userService, ref);
+  return AuthController(authService, userService);
 });

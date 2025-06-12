@@ -17,12 +17,29 @@ library;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:spiceease/app/app_initializer.dart';
+import 'package:spiceease/core/auth/auth_provider.dart';
+import 'package:spiceease/core/auth/auth_service.dart';
+import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_controller.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_page.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
+
+// Mock AuthService class for testing
+class MockAuthService implements AuthService {
+  @override
+  Future<String?> getCurrentUserId() async => 'test-user-id';
+
+  @override
+  Future<bool> isAuthenticated() async => true;
+
+  // Implement other methods with minimal test implementations
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
 
 // --------------------------------------------------------------------------
 // STANDARDIZED TEST SCREEN SIZES - MATCHING OTHER UI TESTS
@@ -222,7 +239,7 @@ class UITestFlowmodoroController extends FlowmodoroController {
     this._allTasks,
     this._allSubtasks,
     this._currentDate,
-  ) : currentSelectedDate = _currentDate,
+  )   : currentSelectedDate = _currentDate,
         super(FakeRef()) {
     _categorizeTasksForDate(_currentDate);
   }
@@ -403,11 +420,22 @@ void main() {
       await tester.binding.setSurfaceSize(screenSize);
     }
 
+    // Create a completed future for app initialization
+    final appInitFuture = Future.value();
+
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // Override auth-related providers
+          authServiceProvider.overrideWithValue(MockAuthService()),
+          isAuthenticatedProvider.overrideWithValue(true),
+
+          // Override app initializer with a completed future
+          appInitializerProvider.overrideWith((_) => appInitFuture),
+
+          // Existing overrides
           selectedDateProvider
-              .overrideWith((ref) => controller.currentSelectedDate!),
+              .overrideWith((ref) => controller.currentSelectedDate),
           flowmodoroControllerProvider.overrideWith((ref) => controller),
         ],
         child: MaterialApp(
@@ -539,8 +567,8 @@ void main() {
       expect(find.textContaining('This is an extremely long subtask title'),
           findsAtLeastNWidgets(1));
 
-      // Assert: Verify scrolling is available for task/subtask lists
-      expect(find.byType(ListView), findsWidgets);
+      // Assert: Verify horizontal scrolling is available for task/subtask cards
+      expect(find.byType(SingleChildScrollView), findsWidgets);
 
       // Verify text widgets handle overflow properly
       final textWidgets = find.byType(Text);
@@ -589,10 +617,10 @@ void main() {
           // Verify basic structure exists
           expect(find.byType(Scaffold), findsOneWidget);
 
-          // Verify scrolling is available
-          final listViews = find.byType(ListView);
-          if (listViews.evaluate().isNotEmpty) {
-            expect(listViews, findsWidgets);
+          // Verify scrolling is available - FlowmodoroPage uses SingleChildScrollView
+          final scrollViews = find.byType(SingleChildScrollView);
+          if (scrollViews.evaluate().isNotEmpty) {
+            expect(scrollViews, findsWidgets);
           }
 
           // Verify no overflow exceptions occurred
@@ -788,8 +816,8 @@ void main() {
         // Assert: Verify tasks and subtasks are displayed
         expect(find.textContaining('Stress Test'), findsWidgets);
 
-        // Verify scrolling handles many items
-        expect(find.byType(ListView), findsWidgets);
+        // Verify horizontal scrolling handles many items - FlowmodoroPage uses SingleChildScrollView
+        expect(find.byType(SingleChildScrollView), findsWidgets);
 
         // Verify no major layout breakage with many items
         final textWidgets = find.byType(Text);

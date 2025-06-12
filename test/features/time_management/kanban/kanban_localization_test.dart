@@ -134,7 +134,6 @@ List<TaskModel> getSampleTasks({required DateTime forDate}) => [
           status: 'todo',
           dueDate: forDate,
           priority: 2,
-          parentTaskId: 't1',
           createdAt: DateTime.now(),
           userId: '',
           updatedAt: DateTime.now()),
@@ -217,10 +216,9 @@ class TestKanbanController extends KanbanController {
   List<TaskModel> _noDateList = [];
 
   TestKanbanController(
-      Ref ref, List<TaskModel> initialTasks, DateTime initialDate)
+      super.ref, List<TaskModel> initialTasks, DateTime initialDate)
       : _allTasksStorage = initialTasks,
-        _currentSelectedDateStorage = initialDate,
-        super(ref) {
+        _currentSelectedDateStorage = initialDate {
     _filterTasksForDate(_currentSelectedDateStorage);
   }
 
@@ -426,10 +424,6 @@ void main() {
           reason: "Medium Priority label should be in English");
       expect(find.text(l10n.lowestPriority, skipOffstage: false), findsWidgets,
           reason: "Lowest Priority label should be in English");
-
-      // Verify subtask indicators are in English
-      expect(find.text(l10n.subtask, skipOffstage: false), findsWidgets,
-          reason: "Subtask label should be in English");
     });
 
     /// Verifies that all major UI elements display correct Spanish text
@@ -488,9 +482,6 @@ void main() {
       expect(find.text(l10n.lowestPriority, skipOffstage: false), findsWidgets,
           reason: "Lowest Priority label should be in Spanish");
 
-      // Verify subtask indicators are in Spanish
-      expect(find.text(l10n.subtask, skipOffstage: false), findsWidgets,
-          reason: "Subtask label should be in Spanish");
     });
 
     /// Verifies that the loading state displays the correct localized text

@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/components/app_header.dart';
-import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/features/settings/settings_controller.dart';
 import 'package:spiceease/components/settings/settings_option_tile.dart';
 import 'package:spiceease/components/settings/settings_section.dart';
@@ -17,7 +16,6 @@ class SettingsPage extends ConsumerWidget {
     final controller = ref.watch(settingsControllerProvider);
     final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final user = ref.watch(authStateProvider).value;
 
     return Scaffold(
       body: SafeArea(
@@ -33,14 +31,13 @@ class SettingsPage extends ConsumerWidget {
                 children: [
                   // Account Section (only show if user is signed in)
                   SettingsSection(
-                    title: localizations.account ?? 'Account',
+                    title: localizations.account,
                     children: [
                       SettingsOptionTile(
                         icon: Icons.account_circle_outlined,
                         title:
-                            localizations.accountSettings ?? 'Account Settings',
-                        subtitle: localizations.manageAccountInfo ??
-                            'Manage your account information',
+                            localizations.accountSettings,
+                        subtitle: localizations.manageAccountInfo,
                         onTap: () =>
                             controller.navigateToAccountSettings(context),
                       ),

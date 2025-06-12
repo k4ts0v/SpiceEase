@@ -3,9 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/app/app_initializer.dart';
 import 'package:spiceease/components/app_header.dart';
 import 'package:spiceease/data/providers/unified_auth_provider.dart';
-import 'package:spiceease/features/reports/metrics_data.dart';
-import 'package:spiceease/features/reports/pie_data.dart';
+import 'package:spiceease/features/reports/data_models/flow_time_data.dart';
+import 'package:spiceease/features/reports/data_models/metrics_data.dart';
+import 'package:spiceease/features/reports/data_models/pie_data.dart';
 import 'package:spiceease/features/reports/reports_controller.dart';
+import 'package:spiceease/features/reports/data_models/time_block_data.dart';
 import 'package:syncfusion_flutter_charts/charts.dart';
 
 import 'package:spiceease/data/providers/selected_date_provider.dart';
@@ -57,7 +59,6 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     );
     _tooltipBehavior = TooltipBehavior(enable: true);
 
-
     final selectedDate = ref.read(selectedDateProvider);
     // Wait for app initialization before fetching data
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -69,7 +70,8 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
         final isAuthenticated = await ref.read(isAuthenticatedProvider);
         if (isAuthenticated && mounted) {
           final controller = ref.read(reportsControllerProvider.notifier);
-          await controller.fetchReportsForTimeRange(_selectedRange, selectedDate);
+          await controller.fetchReportsForTimeRange(
+              _selectedRange, selectedDate);
         }
       } catch (e) {
         print('Error in reports page initialization: $e');
@@ -521,9 +523,9 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                                 overflowMode: LegendItemOverflowMode.wrap,
                               ),
                               series: <CircularSeries>[
-                                DoughnutSeries<_FlowTimeData, String>(
+                                DoughnutSeries<FlowTimeData, String>(
                                   dataSource: [
-                                    _FlowTimeData(
+                                    FlowTimeData(
                                         localizations.breakTime,
                                         ref
                                             .read(reportsControllerProvider
@@ -533,7 +535,7 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                                                 localizations),
                                         reportsState.totalFlowBreakTime
                                             .toDouble()),
-                                    _FlowTimeData(
+                                    FlowTimeData(
                                         localizations.focusTime,
                                         ref
                                             .read(reportsControllerProvider
@@ -622,10 +624,10 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                               tooltipBehavior: TooltipBehavior(enable: true),
                               series: <CartesianSeries>[
                                 // Side-by-side bar for time block counts
-                                ColumnSeries<_TimeBlockData, String>(
+                                ColumnSeries<TimeBlockData, String>(
                                   name: localizations.timeBlocks,
                                   dataSource: [
-                                    _TimeBlockData(localizations.blocks,
+                                    TimeBlockData(localizations.blocks,
                                         reportsState.timeBlocks.toDouble()),
                                   ],
                                   xValueMapper: (data, _) => data.label,
@@ -633,11 +635,11 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
                                   width: 0.4,
                                 ),
                                 // Another bar for hours
-                                ColumnSeries<_TimeBlockData, String>(
+                                ColumnSeries<TimeBlockData, String>(
                                   name:
                                       '${localizations.hours[0].toUpperCase()}${localizations.hours.substring(1)}',
                                   dataSource: [
-                                    _TimeBlockData(localizations.time,
+                                    TimeBlockData(localizations.time,
                                         reportsState.totalTimeSpentInHours),
                                   ],
                                   xValueMapper: (data, _) => data.label,
@@ -698,17 +700,4 @@ class _ReportsPageState extends ConsumerState<ReportsPage> {
     // Default: label and value on separate lines
     return '$label\n$value';
   }
-}
-
-class _FlowTimeData {
-  final String label;
-  final String displayValue;
-  final double numericValue; // Add numeric value for the chart
-  _FlowTimeData(this.label, this.displayValue, this.numericValue);
-}
-
-class _TimeBlockData {
-  final String label;
-  final double value;
-  _TimeBlockData(this.label, this.value);
 }

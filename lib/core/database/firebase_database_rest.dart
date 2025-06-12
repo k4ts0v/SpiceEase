@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:uuid/uuid.dart';
 import 'package:cloud_firestore/cloud_firestore.dart' show Timestamp;
@@ -18,7 +19,6 @@ class FirestoreDatabaseRestService implements DatabaseService {
   final Dio _dio;
   final AuthService _auth;
   final String projectId;
-  final Uuid _uuid;
 
   FirestoreDatabaseRestService({
     required this.projectId,
@@ -26,7 +26,6 @@ class FirestoreDatabaseRestService implements DatabaseService {
     Dio? dio,
     Uuid? uuid,
   })  : _auth = authService,
-        _uuid = uuid ?? const Uuid(),
         _dio = dio ??
             Dio(BaseOptions(
               baseUrl: 'https://firestore.googleapis.com/v1/',
@@ -37,13 +36,13 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
   @override
   Future<void> initialize() async {
-    print('Initializing Firestore REST service for project: $projectId');
+    debugPrint('Initializing Firestore REST service for project: $projectId');
     // Test connection with a simple request
     try {
       await _call('GET', 'projects/$projectId/databases/(default)');
-      print('Firestore REST service initialized successfully');
+      debugPrint('Firestore REST service initialized successfully');
     } catch (e) {
-      print('Firestore REST service initialization failed: $e');
+      debugPrint('Firestore REST service initialization failed: $e');
       // Don't throw - let the app continue and handle errors per operation
     }
   }
@@ -79,8 +78,8 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
       return response.data;
     } on DioException catch (e) {
-      print('Firestore REST API error: ${e.response?.statusCode} ${e.message}');
-      print('Error response: ${e.response?.data}');
+      debugPrint('Firestore REST API error: ${e.response?.statusCode} ${e.message}');
+      debugPrint('Error response: ${e.response?.data}');
 
       // More specific error handling
       switch (e.response?.statusCode) {
@@ -112,7 +111,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
       return _decode(response as Map<String, dynamic>);
     } catch (e) {
-      print('Error getting document $path: $e');
+      debugPrint('Error getting document $path: $e');
       return null;
     }
   }
@@ -146,7 +145,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
       return _decode(response as Map<String, dynamic>);
     } catch (e) {
-      print('Error creating document: $e');
+      debugPrint('Error creating document: $e');
       rethrow;
     }
   }
@@ -188,7 +187,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
       return _decode(response as Map<String, dynamic>);
     } catch (e) {
-      print('Error updating document $path: $e');
+      debugPrint('Error updating document $path: $e');
       rethrow;
     }
   }
@@ -237,10 +236,10 @@ class FirestoreDatabaseRestService implements DatabaseService {
         data: {'writes': writes},
       );
 
-      print(
+      debugPrint(
           'Successfully completed batch update of ${writes.length} documents');
     } catch (e) {
-      print('Error in batch update: $e');
+      debugPrint('Error in batch update: $e');
       rethrow;
     }
   }
@@ -252,9 +251,9 @@ class FirestoreDatabaseRestService implements DatabaseService {
         'DELETE',
         'projects/$projectId/databases/(default)/documents/$path',
       );
-      print('Successfully deleted document: $path');
+      debugPrint('Successfully deleted document: $path');
     } catch (e) {
-      print('Error deleting document $path: $e');
+      debugPrint('Error deleting document $path: $e');
       rethrow;
     }
   }
@@ -308,8 +307,8 @@ class FirestoreDatabaseRestService implements DatabaseService {
         };
       }
 
-      print('Executing query on collection: $collection');
-      print('Query structure: ${structuredQuery.toString()}');
+      debugPrint('Executing query on collection: $collection');
+      debugPrint('Query structure: ${structuredQuery.toString()}');
 
       final response = await _call(
         'POST',
@@ -318,20 +317,20 @@ class FirestoreDatabaseRestService implements DatabaseService {
       );
 
       if (response == null) {
-        print('Query returned null response');
+        debugPrint('Query returned null response');
         return <Map<String, dynamic>>[];
       }
 
       // Handle empty response
       if (response is! List) {
-        print('Query response is not a list: ${response.runtimeType}');
+        debugPrint('Query response is not a list: ${response.runtimeType}');
         return <Map<String, dynamic>>[];
       }
 
-      final responseList = response as List<dynamic>;
+      final responseList = response;
 
       if (responseList.isEmpty) {
-        print('Query returned empty results');
+        debugPrint('Query returned empty results');
         return <Map<String, dynamic>>[];
       }
 
@@ -344,16 +343,16 @@ class FirestoreDatabaseRestService implements DatabaseService {
             final decoded = _decode(item['document'] as Map<String, dynamic>);
             results.add(decoded);
           } catch (e) {
-            print('Error decoding document: $e');
+            debugPrint('Error decoding document: $e');
             // Skip this document but continue with others
           }
         }
       }
 
-      print('Query returned ${results.length} documents');
+      debugPrint('Query returned ${results.length} documents');
       return results;
     } catch (e) {
-      print('Error executing query on collection $collection: $e');
+      debugPrint('Error executing query on collection $collection: $e');
       // Return empty list instead of throwing to prevent app crashes
       return <Map<String, dynamic>>[];
     }
@@ -571,12 +570,12 @@ class FirestoreDatabaseRestService implements DatabaseService {
 
       // Debug logging for completed_dates specifically
       if (result.containsKey('completed_dates')) {
-        print('Document $id completed_dates: ${result['completed_dates']}');
+        debugPrint('Document $id completed_dates: ${result['completed_dates']}');
       }
 
       return result;
     } catch (e) {
-      print('Error decoding document: $e');
+      debugPrint('Error decoding document: $e');
       return {'id': '', 'error': 'Failed to decode document'};
     }
   }
@@ -600,7 +599,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
         final parsedDate = DateTime.parse(rawValue as String);
         final normalized = _normalizeDate(parsedDate);
         // Debug logging
-        print('Decoded timestamp: $rawValue -> $parsedDate -> $normalized');
+        debugPrint('Decoded timestamp: $rawValue -> $parsedDate -> $normalized');
         return normalized;
       case 'nullValue':
         return null;
@@ -610,7 +609,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
             values.map((v) => _decodeValue(v as Map<String, dynamic>)).toList();
         // Debug logging for arrays (like completed_dates)
         if (decodedList.isNotEmpty && decodedList.first is DateTime) {
-          print('Decoded DateTime array: $decodedList');
+          debugPrint('Decoded DateTime array: $decodedList');
         }
         return decodedList;
       case 'mapValue':
@@ -621,7 +620,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
         });
         return result;
       default:
-        print('Unknown Firestore value type: $valueType');
+        debugPrint('Unknown Firestore value type: $valueType');
         return rawValue;
     }
   }
@@ -655,7 +654,7 @@ class FirestoreDatabaseRestService implements DatabaseService {
       // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
       final isoString = normalizedDate.toUtc().toIso8601String();
       // Debug logging
-      print('Encoding DateTime: $value -> $normalizedDate -> $isoString');
+      debugPrint('Encoding DateTime: $value -> $normalizedDate -> $isoString');
       return {'timestampValue': isoString};
     } else if (value is Timestamp) {
       // Normalize date before encoding and ensure proper format for Firestore
@@ -663,13 +662,13 @@ class FirestoreDatabaseRestService implements DatabaseService {
       // Convert to UTC and format as ISO string with Z suffix for Firestore compatibility
       final isoString = normalizedDate.toUtc().toIso8601String();
       // Debug logging
-      print('Encoding Timestamp: $value -> $normalizedDate -> $isoString');
+      debugPrint('Encoding Timestamp: $value -> $normalizedDate -> $isoString');
       return {'timestampValue': isoString};
     } else if (value is List) {
       final encodedList = value.map(_encodeValue).toList();
       // Debug logging for arrays (like completed_dates)
       if (value.isNotEmpty && value.first is DateTime) {
-        print('Encoding DateTime array: $value -> encoded as array');
+        debugPrint('Encoding DateTime array: $value -> encoded as array');
       }
       return {
         'arrayValue': {'values': encodedList}

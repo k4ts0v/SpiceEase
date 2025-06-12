@@ -14,11 +14,11 @@ import 'package:spiceease/main.dart';
 import 'package:spiceease/core/database/database_service.dart';
 import 'package:spiceease/data/models/mood_model.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/list_modal.dart';
-import 'package:spiceease/features/tracker/presentation/modals.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 // import 'package:intl/intl.dart'; // For DateFormat, if not used elsewhere
 
-import 'tracker_mood_test.mocks.dart';
+import '../../tracker_mood_test.mocks.dart';
 
 class FakeAuthService extends Mock implements AuthService {
   @override
@@ -325,42 +325,42 @@ void main() {
     expect(find.textContaining(initialMoodEntry.notes!), findsNothing,
         reason: "Entry for testDate should NOT be visible.");
   });
-testWidgets('ListModal shows SnackBar on deleteDocument failure',
-    (WidgetTester tester) async {
-  await _openMoodListModalViaIconGrid(tester, date: testDate);
+  testWidgets('ListModal shows SnackBar on deleteDocument failure',
+      (WidgetTester tester) async {
+    await _openMoodListModalViaIconGrid(tester, date: testDate);
 
-  when(mockDatabaseService.deleteDocument(
-          '$moodEntriesCollectionName/${initialMoodEntry.id}'))
-      .thenThrow(Exception('Network error'));
+    when(mockDatabaseService.deleteDocument(
+            '$moodEntriesCollectionName/${initialMoodEntry.id}'))
+        .thenThrow(Exception('Network error'));
 
-  final deleteIcon = find
-      .descendant(
-          of: find.byType(ListModal<MoodModel>),
-          matching: find.byIcon(Icons.delete_outline))
-      .first;
-  await tester.tap(deleteIcon);
-  await tester.pumpAndSettle();
+    final deleteIcon = find
+        .descendant(
+            of: find.byType(ListModal<MoodModel>),
+            matching: find.byIcon(Icons.delete_outline))
+        .first;
+    await tester.tap(deleteIcon);
+    await tester.pumpAndSettle();
 
-  final BuildContext confirmDialogContext =
-      tester.element(find.byType(AlertDialog));
-  final AppLocalizations confirmLocalizations =
-      AppLocalizations.of(confirmDialogContext)!;
-  await tester
-      .tap(find.widgetWithText(TextButton, confirmLocalizations.delete));
-  await tester.pump(); // Pump, but don't settle, to allow SnackBar animation
+    final BuildContext confirmDialogContext =
+        tester.element(find.byType(AlertDialog));
+    final AppLocalizations confirmLocalizations =
+        AppLocalizations.of(confirmDialogContext)!;
+    await tester
+        .tap(find.widgetWithText(TextButton, confirmLocalizations.delete));
+    await tester.pump(); // Pump, but don't settle, to allow SnackBar animation
 
-  expect(find.byType(SnackBar), findsOneWidget);
-  final BuildContext listModalContext =
-      tester.element(find.byType(ListModal<MoodModel>));
-  final AppLocalizations listModalLocalizations =
-      AppLocalizations.of(listModalContext)!;
-  expect(
-      find.text(listModalLocalizations
-          .failedToDeleteItem(listModalLocalizations.mood.toLowerCase())),
-      findsOneWidget);
-  expect(find.textContaining(initialMoodEntry.notes!), findsOneWidget,
-      reason: "Item should still be in ListModal on delete failure.");
-});
+    expect(find.byType(SnackBar), findsOneWidget);
+    final BuildContext listModalContext =
+        tester.element(find.byType(ListModal<MoodModel>));
+    final AppLocalizations listModalLocalizations =
+        AppLocalizations.of(listModalContext)!;
+    expect(
+        find.text(listModalLocalizations
+            .failedToDeleteItem(listModalLocalizations.mood.toLowerCase())),
+        findsOneWidget);
+    expect(find.textContaining(initialMoodEntry.notes!), findsOneWidget,
+        reason: "Item should still be in ListModal on delete failure.");
+  });
 
   group('ListModal UI and Actions (for Mood)', () {
     testWidgets('displays existing mood entries and an add button',

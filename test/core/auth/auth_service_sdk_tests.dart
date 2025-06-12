@@ -30,7 +30,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:spiceease/core/auth/firebase_auth_service.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 
-import 'auth_service_tests.mocks.dart'; // Generated mock file
+import 'auth_service_sdk_tests.mocks.dart'; // Generated mock file
 
 @GenerateMocks([
   FirebaseAuth,

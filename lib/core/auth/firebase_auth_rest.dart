@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/user_model.dart';
@@ -52,7 +53,7 @@ class FirebaseAuthRestService implements AuthService {
 
         // Add Bearer token if available
         final token = await _storage.read(key: 'idToken');
-        print('Token from storage: $token');
+        debugPrint('Token from storage: $token');
         if (token != null) {
           options.headers['Authorization'] = 'Bearer $token';
         }
@@ -95,7 +96,7 @@ class FirebaseAuthRestService implements AuthService {
       // For Firestore REST API, we use the ID token directly
       return await getCurrentIdToken();
     } catch (e) {
-      print('Error getting access token: $e');
+      debugPrint('Error getting access token: $e');
       return null;
     }
   }
@@ -111,14 +112,14 @@ class FirebaseAuthRestService implements AuthService {
       try {
         // Check and log token expiration status
         if (_isTokenExpired(token)) {
-          print('Token is expired, signing out for fresh authentication');
+          debugPrint('Token is expired, signing out for fresh authentication');
           await signOut(); // Force fresh login instead of trying refresh
         } else {
-          print('Token is valid, fetching user profile');
+          debugPrint('Token is valid, fetching user profile');
           _authController.add(await _fetchUserProfile(token));
         }
       } catch (e) {
-        print('Error during authentication initialization: $e');
+        debugPrint('Error during authentication initialization: $e');
         await signOut();
       }
     }
@@ -129,7 +130,6 @@ class FirebaseAuthRestService implements AuthService {
   /// [email]: User email address
   /// [password]: User password
   /// Throws AuthException on failure
-  @override
   Future<void> signUp(String email, String password) async {
     try {
       final response = await _dio.post(
@@ -173,16 +173,16 @@ class FirebaseAuthRestService implements AuthService {
   /// Updates storage and auth state
   /// Throws AuthException on failure
   Future<void> refreshToken() async {
-    print('Attempting to refresh token...');
+    debugPrint('Attempting to refresh token...');
     final refreshToken = await _storage.read(key: 'refreshToken');
     if (refreshToken == null) {
-      print('No refresh token found, signing out');
+      debugPrint('No refresh token found, signing out');
       await signOut();
       throw AuthException('No refresh token');
     }
 
     try {
-      print('Making refresh request to Firebase...');
+      debugPrint('Making refresh request to Firebase...');
       final response = await _dio.post(
         'https://securetoken.googleapis.com/v1/token',
         data: {
@@ -192,9 +192,9 @@ class FirebaseAuthRestService implements AuthService {
         queryParameters: {'key': apiKey},
       );
 
-      print('Refresh response received: ${response.statusCode}');
+      debugPrint('Refresh response received: ${response.statusCode}');
       if (response.data == null || !response.data.containsKey('id_token')) {
-        print('Invalid refresh response: ${response.data}');
+        debugPrint('Invalid refresh response: ${response.data}');
         await signOut();
         throw AuthException('Invalid refresh response');
       }
@@ -207,18 +207,18 @@ class FirebaseAuthRestService implements AuthService {
       };
 
       await _storeTokens(data);
-      print('Tokens refreshed and stored successfully');
+      debugPrint('Tokens refreshed and stored successfully');
 
       // Use _fetchUserProfile instead of _getCurrentUser to avoid refresh loops
       final userProfile = await _fetchUserProfile(data['idToken']);
       _authController.add(userProfile);
     } on DioException catch (e) {
-      print(
+      debugPrint(
           'Refresh token request failed: ${e.response?.statusCode} ${e.message}');
       await signOut(); // Always sign out on refresh failure
       throw AuthException(_parseError(e));
     } catch (e) {
-      print('Unexpected error during refresh: $e');
+      debugPrint('Unexpected error during refresh: $e');
       await signOut();
       throw AuthException('Token refresh failed: $e');
     }
@@ -250,14 +250,14 @@ class FirebaseAuthRestService implements AuthService {
   /// - idToken: Short-lived authentication token
   /// - refreshToken: Long-lived refresh token
   Future<void> _storeTokens(Map<String, dynamic> data) async {
-    // Safely print token fragments for debugging
+    // Safely debugPrint token fragments for debugging
     final idTokenSnippet = data['idToken']
             ?.substring(0, min<int>(10, data['idToken']?.length ?? 0)) ??
         'null';
     final refreshTokenSnippet = data['refreshToken']
             ?.substring(0, min<int>(10, data['refreshToken']?.length ?? 0)) ??
         'null';
-    print(
+    debugPrint(
         'Storing tokens: idToken=$idTokenSnippet... refreshToken=$refreshTokenSnippet...');
 
     // Validate required tokens are present
@@ -268,7 +268,7 @@ class FirebaseAuthRestService implements AuthService {
     // Store the tokens securely
     await _storage.write(key: 'idToken', value: data['idToken']);
     await _storage.write(key: 'refreshToken', value: data['refreshToken']);
-    print('Tokens stored successfully');
+    debugPrint('Tokens stored successfully');
   }
 
   /// Clear authentication state
@@ -388,7 +388,7 @@ class FirebaseAuthRestService implements AuthService {
   ///
   /// Extracts error message from DioException
   String _parseError(DioException e) {
-    print('Parsing error: ${e}');
+    debugPrint('Parsing error: $e');
     return e.response?.data?['error']?['message'] ??
         e.message ??
         'Authentication failed';
@@ -438,6 +438,7 @@ class FirebaseAuthRestService implements AuthService {
   }
 
   /// Validate stored tokens and refresh if needed
+  @override
   Future<bool> validateSession() async {
     try {
       final token = await _storage.read(key: 'idToken');
@@ -462,12 +463,12 @@ class FirebaseAuthRestService implements AuthService {
     try {
       final claims = _parseJwt(token);
       if (claims == null) {
-        print('Token has invalid format - cannot parse JWT');
+        debugPrint('Token has invalid format - cannot parse JWT');
         return true;
       }
 
       if (!claims.containsKey('exp')) {
-        print('Token missing expiration claim');
+        debugPrint('Token missing expiration claim');
         return true;
       }
 
@@ -475,13 +476,14 @@ class FirebaseAuthRestService implements AuthService {
       final now = DateTime.now().millisecondsSinceEpoch;
       final isExpired = now > expiry;
 
-      print('Token expires at: ${DateTime.fromMillisecondsSinceEpoch(expiry)}');
-      print('Current time is: ${DateTime.now()}');
-      print('Token ${isExpired ? "IS" : "is NOT"} expired');
+      debugPrint(
+          'Token expires at: ${DateTime.fromMillisecondsSinceEpoch(expiry)}');
+      debugPrint('Current time is: ${DateTime.now()}');
+      debugPrint('Token ${isExpired ? "IS" : "is NOT"} expired');
 
       return isExpired;
     } catch (e) {
-      print('Error checking token expiration: $e');
+      debugPrint('Error checking token expiration: $e');
       return true;
     }
   }
@@ -496,7 +498,7 @@ class FirebaseAuthRestService implements AuthService {
   @override
   Future<void> updateEmail(String newEmail) async {
     try {
-      print('DEBUG: Auth service - updateEmail called with: $newEmail');
+      debugPrint('DEBUG: Auth service - updateEmail called with: $newEmail');
 
       final token = await getCurrentIdToken();
       if (token == null) {
@@ -517,7 +519,8 @@ class FirebaseAuthRestService implements AuthService {
       );
 
       if (response.statusCode == 200) {
-        print('DEBUG: Auth service - Email updated successfully to: $newEmail');
+        debugPrint(
+            'DEBUG: Auth service - Email updated successfully to: $newEmail');
 
         // Store new tokens and update auth state
         await _storeTokens(response.data);
@@ -527,7 +530,7 @@ class FirebaseAuthRestService implements AuthService {
         await sendEmailVerification();
       }
     } on DioException catch (e) {
-      print(
+      debugPrint(
           'DEBUG: Auth service - DioException in updateEmail: ${e.response?.data}');
 
       if (e.response?.statusCode == 400) {
@@ -553,14 +556,15 @@ class FirebaseAuthRestService implements AuthService {
 
       throw AuthException('Failed to update email: ${e.message}');
     } catch (e) {
-      print('DEBUG: Auth service - Exception in updateEmail: $e');
+      debugPrint('DEBUG: Auth service - Exception in updateEmail: $e');
       throw AuthException('Failed to update email: $e');
     }
   }
 
   /// Initiate email change with verification flow
   Future<void> _initiateEmailChangeWithVerification(String newEmail) async {
-    print('DEBUG: Initiating email change with verification for: $newEmail');
+    debugPrint(
+        'DEBUG: Initiating email change with verification for: $newEmail');
 
     try {
       // Store the current user's info and the requested new email
@@ -603,10 +607,10 @@ class FirebaseAuthRestService implements AuthService {
         await _storage.write(key: 'temp_account_token', value: tempToken);
         await _storage.write(key: 'temp_account_password', value: tempPassword);
 
-        print('DEBUG: Verification email sent to new address: $newEmail');
+        debugPrint('DEBUG: Verification email sent to new address: $newEmail');
       }
     } on DioException catch (e) {
-      print(
+      debugPrint(
           'DEBUG: Error in _initiateEmailChangeWithVerification: ${e.response?.data}');
 
       if (e.response?.data?['error']?['message']?.contains('EMAIL_EXISTS') ==
@@ -627,11 +631,11 @@ class FirebaseAuthRestService implements AuthService {
       final tempPassword = await _storage.read(key: 'temp_account_password');
 
       if (pendingEmail == null || tempToken == null || tempPassword == null) {
-        print('DEBUG: No pending email change found');
+        debugPrint('DEBUG: No pending email change found');
         return false;
       }
 
-      print(
+      debugPrint(
           'DEBUG: Checking verification status for pending email: $pendingEmail');
 
       // Check if the temp account's email is verified
@@ -644,7 +648,8 @@ class FirebaseAuthRestService implements AuthService {
 
         final tempUser = lookupResponse.data['users'][0];
         if (tempUser['emailVerified'] == true) {
-          print('DEBUG: New email is verified, completing email change...');
+          debugPrint(
+              'DEBUG: New email is verified, completing email change...');
 
           // Now we can update the original user's email
           final currentToken = await getCurrentIdToken();
@@ -659,9 +664,9 @@ class FirebaseAuthRestService implements AuthService {
               queryParameters: {'key': apiKey},
               data: {'idToken': tempToken},
             );
-            print('DEBUG: Temp account deleted');
+            debugPrint('DEBUG: Temp account deleted');
           } catch (e) {
-            print('DEBUG: Error deleting temp account: $e');
+            debugPrint('DEBUG: Error deleting temp account: $e');
             // Continue anyway
           }
 
@@ -677,7 +682,7 @@ class FirebaseAuthRestService implements AuthService {
           );
 
           if (updateResponse.statusCode == 200) {
-            print(
+            debugPrint(
                 'DEBUG: Email change completed successfully to: $pendingEmail');
 
             // Store new tokens and update auth state
@@ -692,17 +697,17 @@ class FirebaseAuthRestService implements AuthService {
             throw AuthException('Failed to complete email update');
           }
         } else {
-          print('DEBUG: New email not verified yet');
+          debugPrint('DEBUG: New email not verified yet');
           return false;
         }
       } catch (e) {
-        print('DEBUG: Error checking temp account: $e');
+        debugPrint('DEBUG: Error checking temp account: $e');
         // Clean up if temp account is invalid
         await _cleanupEmailChangeData();
         return false;
       }
     } catch (e) {
-      print('DEBUG: Error in checkAndCompleteEmailChange: $e');
+      debugPrint('DEBUG: Error in checkAndCompleteEmailChange: $e');
       await _cleanupEmailChangeData();
       throw AuthException('Failed to complete email change: $e');
     }
@@ -729,90 +734,6 @@ class FirebaseAuthRestService implements AuthService {
         16, (index) => chars[(random * 17 + index * 31) % chars.length]).join();
   }
 
-  // Remove the old completeEmailChange method and helper methods that create confusion
-  // ...existing code...
-
-  /// Attempt to send verification email to new email address
-  /// This is a workaround since Firebase REST API doesn't directly support this
-  Future<void> _sendVerificationToNewEmail(String newEmail) async {
-    print('DEBUG: Attempting to send verification to new email: $newEmail');
-
-    // Workaround: Create a temporary account to send verification
-    try {
-      // Generate a secure temporary password
-      final tempPassword = _generateSecurePassword();
-
-      // Create temporary account with new email
-      final createResponse = await _dio.post(
-        'https://identitytoolkit.googleapis.com/v1/accounts:signUp',
-        queryParameters: {'key': apiKey},
-        data: {
-          'email': newEmail,
-          'password': tempPassword,
-          'returnSecureToken': true,
-        },
-      );
-
-      if (createResponse.statusCode == 200) {
-        final tempToken = createResponse.data['idToken'];
-
-        // Send verification email to the new address
-        await _dio.post(
-          'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
-          queryParameters: {'key': apiKey},
-          data: {
-            'requestType': 'VERIFY_EMAIL',
-            'idToken': tempToken,
-          },
-        );
-
-        // Store the temporary account info for later cleanup
-        await _storage.write(key: 'temp_account_token', value: tempToken);
-        await _storage.write(key: 'pending_email_change', value: newEmail);
-
-        print('DEBUG: Verification email sent to new address: $newEmail');
-
-        // Note: We don't delete the temp account immediately because the user
-        // needs to verify the email first. We'll clean it up after verification.
-      }
-    } on DioException catch (e) {
-      print('DEBUG: Error creating temp account: ${e.response?.data}');
-
-      if (e.response?.data?['error']?['message']?.contains('EMAIL_EXISTS') ==
-          true) {
-        // The email already has an account - that's actually good!
-        // We can try to trigger a verification email to that existing account
-        try {
-          await _triggerVerificationForExistingEmail(newEmail);
-        } catch (existingEmailError) {
-          rethrow; // Re-throw the original error
-        }
-      } else {
-        rethrow;
-      }
-    }
-  }
-
-  /// Trigger verification email for existing email account
-  Future<void> _triggerVerificationForExistingEmail(String email) async {
-    try {
-      // Send password reset email as a workaround to verify email ownership
-      await _dio.post(
-        'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode',
-        queryParameters: {'key': apiKey},
-        data: {
-          'requestType': 'PASSWORD_RESET',
-          'email': email,
-        },
-      );
-
-      print('DEBUG: Password reset email sent to existing account: $email');
-      throw AuthException('EXISTING_ACCOUNT_VERIFICATION:$email');
-    } catch (e) {
-      print('DEBUG: Error sending password reset to existing account: $e');
-      rethrow;
-    }
-  }
 
   /// Updates the user's password
   ///
@@ -841,7 +762,7 @@ class FirebaseAuthRestService implements AuthService {
             'returnSecureToken': false,
           },
         );
-      } on DioException catch (e) {
+      } on DioException {
         // If verification fails, it's likely an incorrect password
         throw AuthException('invalid_current_password');
       }

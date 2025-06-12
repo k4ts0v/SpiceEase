@@ -107,7 +107,6 @@ class TestTaskData {
           dueDate: forDate,
           priority: 3,
           description: 'This is a subtask',
-          parentTaskId: 'todo-2',
           estimatedTime: '60 minutes',
           createdAt: DateTime.now(),
           userId: 'test-user',
@@ -164,7 +163,7 @@ class TestTaskData {
 class MockKanbanController extends KanbanController {
   final List<TaskModel> _allTasks;
   DateTime _currentDate;
-  bool _isLoading;
+  final bool _isLoading;
 
   // Categorized task lists
   List<TaskModel> _todoTasks = [];
@@ -212,15 +211,18 @@ class MockKanbanController extends KanbanController {
     _todoTasks = dateSpecificTasks.where((t) => t.status == 'todo').toList();
     _inProgressTasks =
         dateSpecificTasks.where((t) => t.status == 'in_progress').toList();
+
+    // Done tasks: show if completed on this date OR due on this date but only if completed
     _doneTasks = dateSpecificTasks.where((t) {
-      // Show completed tasks if they are completed on this date OR due on this date
       if (t.status == 'done') {
-        if (t.completedAt != null && _isSameDay(t.completedAt!, date)) {
-          return true;
+        // Task is marked as done
+        if (t.completedAt != null) {
+          // Show on completion date and future dates until a new day comes
+          return _isSameDay(t.completedAt!, date) ||
+              t.completedAt!.isBefore(date);
         }
-        if (t.dueDate != null && _isSameDay(t.dueDate!, date)) {
-          return true;
-        }
+        // If no completion date but marked as done, show it
+        return true;
       }
       return false;
     }).toList();
@@ -258,11 +260,46 @@ class MockKanbanController extends KanbanController {
 
     final taskIndex = _allTasks.indexWhere((t) => t.id == task.id);
     if (taskIndex != -1) {
-      final updatedTask = _allTasks[taskIndex].copyWith(
-        status: newStatus,
-        completedAt: newStatus == 'done' ? _currentDate : null,
-        updatedAt: DateTime.now(),
-      );
+      // Create updated task with proper completion date handling
+      TaskModel updatedTask;
+      if (newStatus == 'done') {
+        // When moving to done, set completion date
+        updatedTask = TaskModel(
+          id: task.id,
+          title: task.title,
+          status: newStatus,
+          dueDate: task.dueDate,
+          priority: task.priority,
+          description: task.description,
+          estimatedTime: task.estimatedTime,
+          completedAt: _currentDate, // Set completion date
+          createdAt: task.createdAt,
+          userId: task.userId,
+          updatedAt: DateTime.now(),
+          hasSubtasks: task.hasSubtasks,
+          startTime: task.startTime,
+          endTime: task.endTime,
+        );
+      } else {
+        // When moving away from done, clear completion date
+        updatedTask = TaskModel(
+          id: task.id,
+          title: task.title,
+          status: newStatus,
+          dueDate: task.dueDate,
+          priority: task.priority,
+          description: task.description,
+          estimatedTime: task.estimatedTime,
+          completedAt: null, // Clear completion date
+          createdAt: task.createdAt,
+          userId: task.userId,
+          updatedAt: DateTime.now(),
+          hasSubtasks: task.hasSubtasks,
+          startTime: task.startTime,
+          endTime: task.endTime,
+        );
+      }
+
       _allTasks[taskIndex] = updatedTask;
       _categorizeTasksForDate(_currentDate);
       notifyListeners();

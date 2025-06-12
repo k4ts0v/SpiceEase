@@ -107,7 +107,7 @@ class LanguageSwitcher extends ConsumerWidget {
               ))
           .toList(),
       onChanged: (locale) => locale != null
-          ? ref.read(localeProvider.notifier).state = locale
+          ? ref.read(localeProvider.notifier).setLocale(locale)
           : null,
     );
   }
@@ -139,7 +139,7 @@ class _AuthLogo extends StatelessWidget {
         Text(
           "Track your health journey",
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
         ),
       ],
@@ -404,7 +404,7 @@ class _AuthFormState extends State<_AuthForm> {
             controller: emailController,
             decoration: InputDecoration(
               labelText: widget.loc.email,
-              hintText: widget.loc.emailHint ?? 'Enter your email address',
+              hintText: widget.loc.emailHint,
               border: const OutlineInputBorder(),
             ),
             keyboardType: TextInputType.emailAddress,
@@ -433,7 +433,7 @@ class _AuthFormState extends State<_AuthForm> {
                 if (context.mounted) Navigator.pop(context);
               }
             },
-            child: Text(widget.loc.resetEmail ?? 'Send Reset Email'),
+            child: Text(widget.loc.resetEmail),
           ),
         ],
       ),

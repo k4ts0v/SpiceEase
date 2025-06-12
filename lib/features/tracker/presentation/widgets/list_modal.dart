@@ -10,13 +10,13 @@ class ListModal<T> extends ConsumerWidget {
   final Widget Function(BuildContext, T) itemBuilder;
 
   const ListModal({
-    Key? key,
+    super.key,
     required this.title,
     required this.additionalText,
     required this.items,
     required this.onAdd,
     required this.itemBuilder,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

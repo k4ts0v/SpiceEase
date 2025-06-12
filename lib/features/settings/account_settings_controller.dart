@@ -21,7 +21,7 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
   }
 
   Future<AccountSettingsResult> updateEmail(String newEmail) async {
-    print('DEBUG: Controller - updateEmail called with: $newEmail');
+    debugPrint('DEBUG: Controller - updateEmail called with: $newEmail');
 
     if (newEmail.isEmpty) {
       return AccountSettingsResult.failure("Email cannot be empty");
@@ -30,14 +30,14 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
     setEmailUpdating(true);
 
     try {
-      print('DEBUG: Controller - calling authService.updateEmail...');
+      debugPrint('DEBUG: Controller - calling authService.updateEmail...');
       await _authService.updateEmail(newEmail);
-      print('DEBUG: Controller - updateEmail completed successfully');
+      debugPrint('DEBUG: Controller - updateEmail completed successfully');
       setEmailUpdating(false);
       return AccountSettingsResult.success(
-          "Email change verification sent to $newEmail. Please check your inbox and click the verification link to complete the change.");
+          "Verification email sent to $newEmail. Please check your inbox and click the verification link. You'll need to re-login once verified.");
     } on AuthException catch (e) {
-      print('DEBUG: Controller - AuthException in updateEmail: ${e.message}');
+      debugPrint('DEBUG: Controller - AuthException in updateEmail: ${e.message}');
       setEmailUpdating(false);
 
       if (e.message.contains('email_already_in_use')) {
@@ -54,22 +54,23 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
         return AccountSettingsResult.failure(e.message);
       }
     } catch (e, stackTrace) {
-      print('DEBUG: Controller - Exception in updateEmail: $e');
-      print('DEBUG: Stack trace: $stackTrace');
+      debugPrint('DEBUG: Controller - Exception in updateEmail: $e');
+      debugPrint('DEBUG: Stack trace: $stackTrace');
       setEmailUpdating(false);
       return AccountSettingsResult.failure(
           "Failed to update email: ${e.toString()}");
     }
   }
+
   Future<AccountSettingsResult> updatePassword(
     String currentPassword,
     String newPassword,
     String confirmPassword,
   ) async {
-    print('DEBUG: Controller - updatePassword called');
-    print('DEBUG: Current password length: ${currentPassword.length}');
-    print('DEBUG: New password length: ${newPassword.length}');
-    print('DEBUG: Confirm password length: ${confirmPassword.length}');
+    debugPrint('DEBUG: Controller - updatePassword called');
+    debugPrint('DEBUG: Current password length: ${currentPassword.length}');
+    debugPrint('DEBUG: New password length: ${newPassword.length}');
+    debugPrint('DEBUG: Confirm password length: ${confirmPassword.length}');
 
     // Validation
     if (currentPassword.isEmpty ||
@@ -95,22 +96,23 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
     setPasswordUpdating(true);
 
     try {
-      print('DEBUG: Controller - calling authService.updatePassword...');
-      
+      debugPrint('DEBUG: Controller - calling authService.updatePassword...');
+
       // Increased timeout to 2 minutes for very slow connections
-      await _authService.updatePassword(currentPassword, newPassword)
-          .timeout(
-            const Duration(seconds: 120), // Increased from 45 to 120 seconds
-            onTimeout: () {
-              throw Exception('Password update timed out after 2 minutes. Please check your internet connection and try again later.');
-            },
-          );
-      
-      print('DEBUG: Controller - updatePassword completed successfully');
+      await _authService.updatePassword(currentPassword, newPassword).timeout(
+        const Duration(seconds: 120), // Increased from 45 to 120 seconds
+        onTimeout: () {
+          throw Exception(
+              'Password update timed out after 2 minutes. Please check your internet connection and try again later.');
+        },
+      );
+
+      debugPrint('DEBUG: Controller - updatePassword completed successfully');
       setPasswordUpdating(false);
       return AccountSettingsResult.success("Password updated successfully");
     } on AuthException catch (e) {
-      print('DEBUG: Controller - AuthException in updatePassword: ${e.message}');
+      debugPrint(
+          'DEBUG: Controller - AuthException in updatePassword: ${e.message}');
       setPasswordUpdating(false);
 
       if (e.message == 'requires_recent_login') {
@@ -118,9 +120,9 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
           return await updatePassword(
               currentPassword, newPassword, confirmPassword);
         });
-      } else if (e.message.contains('wrong_password') || 
-                 e.message.contains('invalid_credential') ||
-                 e.message.contains('invalid_login_credentials')) {
+      } else if (e.message.contains('wrong_password') ||
+          e.message.contains('invalid_credential') ||
+          e.message.contains('invalid_login_credentials')) {
         return AccountSettingsResult.failure("Current password is incorrect");
       } else if (e.message.contains('weak_password')) {
         return AccountSettingsResult.failure(
@@ -132,20 +134,20 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
         return AccountSettingsResult.failure(_parsePasswordError(e.message));
       }
     } catch (e, stackTrace) {
-      print('DEBUG: Controller - Exception in updatePassword: $e');
-      print('DEBUG: Stack trace: $stackTrace');
+      debugPrint('DEBUG: Controller - Exception in updatePassword: $e');
+      debugPrint('DEBUG: Stack trace: $stackTrace');
       setPasswordUpdating(false);
-      
-      if (e.toString().contains('timed out') || e.toString().contains('TimeoutException')) {
+
+      if (e.toString().contains('timed out') ||
+          e.toString().contains('TimeoutException')) {
         return AccountSettingsResult.failure(
             "Password update timed out. This may be due to slow network conditions. Please try again later when you have a better connection.");
       }
-      
+
       return AccountSettingsResult.failure(
           "Failed to update password: ${e.toString()}");
     }
   }
-
 
   String _parsePasswordError(String error) {
     switch (error.toLowerCase()) {
@@ -170,38 +172,41 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
 
   Future<AccountSettingsResult> reauthenticate(
       String email, String password) async {
-    print('DEBUG: Controller - reauthenticate called for email: $email');
-    
+    debugPrint('DEBUG: Controller - reauthenticate called for email: $email');
+
     try {
-      await _authService.reauthenticate(email, password)
-          .timeout(
-            const Duration(seconds: 30),
-            onTimeout: () {
-              throw Exception('Authentication timed out');
-            },
-          );
-      
-      print('DEBUG: Controller - reauthenticate successful');
+      await _authService.reauthenticate(email, password).timeout(
+        const Duration(seconds: 30),
+        onTimeout: () {
+          throw Exception('Authentication timed out');
+        },
+      );
+
+      debugPrint('DEBUG: Controller - reauthenticate successful');
       return AccountSettingsResult.success("Reauthentication successful");
     } on AuthException catch (e) {
-      print('DEBUG: Controller - AuthException in reauthenticate: ${e.message}');
-      
-      if (e.message.contains('wrong_password') || 
+      debugPrint(
+          'DEBUG: Controller - AuthException in reauthenticate: ${e.message}');
+
+      if (e.message.contains('wrong_password') ||
           e.message.contains('invalid_credential') ||
           e.message.contains('invalid_login_credentials')) {
         return AccountSettingsResult.failure("Password is incorrect");
       } else if (e.message == 'operation_timeout') {
-        return AccountSettingsResult.failure("Authentication timed out. Please try again");
+        return AccountSettingsResult.failure(
+            "Authentication timed out. Please try again");
       } else {
         return AccountSettingsResult.failure(_parsePasswordError(e.message));
       }
     } catch (e) {
-      print('DEBUG: Controller - Exception in reauthenticate: $e');
-      
-      if (e.toString().contains('timed out') || e.toString().contains('TimeoutException')) {
-        return AccountSettingsResult.failure("Authentication timed out. Please try again");
+      debugPrint('DEBUG: Controller - Exception in reauthenticate: $e');
+
+      if (e.toString().contains('timed out') ||
+          e.toString().contains('TimeoutException')) {
+        return AccountSettingsResult.failure(
+            "Authentication timed out. Please try again");
       }
-      
+
       return AccountSettingsResult.failure(
           'Authentication failed: ${e.toString()}');
     }
@@ -231,14 +236,14 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
       return authState.when(
         data: (user) {
           final isVerified = user?.isEmailVerified ?? false;
-          print('DEBUG: User verification status from provider: $isVerified');
+          debugPrint('DEBUG: User verification status from provider: $isVerified');
           return isVerified;
         },
         loading: () => false,
         error: (_, __) => false,
       );
     } catch (e) {
-      print('DEBUG: Error checking email verification in controller: $e');
+      debugPrint('DEBUG: Error checking email verification in controller: $e');
       return false;
     }
   }
@@ -249,14 +254,14 @@ class AccountSettingsController extends StateNotifier<AccountSettingsState> {
       return authState.when(
         data: (user) {
           final email = user?.email;
-          print('DEBUG: User email from provider: $email');
+          debugPrint('DEBUG: User email from provider: $email');
           return email;
         },
         loading: () => null,
         error: (_, __) => null,
       );
     } catch (e) {
-      print('DEBUG: Error getting user email in controller: $e');
+      debugPrint('DEBUG: Error getting user email in controller: $e');
       return null;
     }
   }

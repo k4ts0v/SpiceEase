@@ -19,7 +19,7 @@ class IconListLauncher<T> extends StatelessWidget {
   final bool isMoodLauncher; // Flag to identify if this is the mood launcher
 
   const IconListLauncher({
-    Key? key,
+    super.key,
     required this.title,
     required this.icon,
     required this.items,
@@ -32,11 +32,10 @@ class IconListLauncher<T> extends StatelessWidget {
     required this.onEdit,
     required this.statsLabelBuilder,
     this.isMoodLauncher = false, // Default to false
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Container(
@@ -46,7 +45,7 @@ class IconListLauncher<T> extends StatelessWidget {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: theme.colorScheme.outline.withOpacity(0.2),
+          color: theme.colorScheme.outline.withValues(alpha: 0.2),
           width: 1,
         ),
       ),
@@ -55,7 +54,7 @@ class IconListLauncher<T> extends StatelessWidget {
         children: [
           Container(
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: IconButton(
@@ -135,7 +134,7 @@ class IconListLauncher<T> extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -175,7 +174,6 @@ class IconListLauncher<T> extends StatelessWidget {
   Widget _buildListItem(BuildContext listModalItemContext, T item) {
     // 'listModalItemContext' is the BuildContext from within the ListModal, for this specific item.
     // It can be used to pop the ListModal.
-    final localizations = AppLocalizations.of(listModalItemContext)!;
     final theme = Theme.of(listModalItemContext);
 
     return Card(
@@ -273,7 +271,7 @@ class IconListLauncher<T> extends StatelessWidget {
                             .toLowerCase()))), // Assuming title is like "Mood"
                   );
                 }
-                print("Delete failed: $e");
+                debugPrint("Delete failed: $e");
               }
             },
           ),

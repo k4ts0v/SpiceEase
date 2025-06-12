@@ -121,7 +121,7 @@ class TimeBlockController extends StateNotifier<TimeBlockState> {
       final Map<String, int> subtaskPriorities = {}; // Build priority map
 
       for (final task in tasks) {
-        if (task.hasSubtasks ?? false) {
+        if (task.hasSubtasks) {
           final subtasksForThisTask = await ref
               .read(subtaskServiceProvider)
               .getSubtasksForTask(task.id);
@@ -140,7 +140,7 @@ class TimeBlockController extends StateNotifier<TimeBlockState> {
         // Filter out done tasks
         if (task.status == 'Done') return false;
         // Filter out parent tasks that have subtasks
-        if (task.hasSubtasks ?? false) return false;
+        if (task.hasSubtasks) return false;
         return true;
       }).toList();
 

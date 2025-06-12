@@ -1,23 +1,21 @@
 import 'dart:async';
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
-import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_controller.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
 class FlowmodoroPage extends ConsumerStatefulWidget {
-  const FlowmodoroPage({Key? key}) : super(key: key);
+  const FlowmodoroPage({super.key});
 
   @override
-  _FlowmodoroPageState createState() => _FlowmodoroPageState();
+  FlowmodoroPageState createState() => FlowmodoroPageState();
 }
 
-class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
+class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
   TaskModel? _selectedTask;
   bool _selectedIsSubtask = false; // Added to track if we selected a subtask
   int _focusMinutes = 25;
@@ -229,11 +227,11 @@ class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                 Navigator.of(context).pop();
                 _completeTaskOnly(); // Only complete the task, don't save flowmodoro again
               },
-              child: Text(localizations.markAsDone),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
               ),
+              child: Text(localizations.markAsDone),
             ),
           ],
         );
@@ -289,48 +287,6 @@ class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     }
   }
 
-  /// If it's a subtask, mark subtask as complete. Otherwise, mark task.
-  /// This method now only saves flowmodoro and completes task together (for backward compatibility)
-  void _completeTask() async {
-    if (_selectedTask == null) return;
-
-    final localizations = AppLocalizations.of(context)!;
-    final controller = ref.read(flowmodoroControllerProvider.notifier);
-
-    // Save the completed flowmodoro data
-    await controller.saveCompletedFlowmodoro(
-      taskId: _selectedTask!.id,
-      focusMinutes: _focusMinutes,
-      breakMinutes: _breakMinutes,
-      cycles: _currentCycle,
-    );
-
-    final success = _selectedIsSubtask
-        ? await controller.completeSubtask(_selectedTask!.id)
-        : await controller.completeTask(_selectedTask!.id);
-
-    if (success) {
-      setState(() {
-        _selectedIsSubtask = false;
-        _selectedTask = null;
-        _resetFlowmodoro();
-      });
-
-      await controller.loadTasks(context);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(localizations.taskMarkedAsCompleted)),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            localizations.errorMarkingTaskComplete(_selectedTask!.title),
-          ),
-        ),
-      );
-    }
-  }
 
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;
@@ -353,7 +309,6 @@ class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
       });
     }
 
-    final availableTasks = controller.availableTasks;
 
     return Scaffold(
       appBar: AppBar(
@@ -961,7 +916,7 @@ class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
         ),
         const SizedBox(height: 8),
         Text(
-          '${_currentCycle} / ${_cycleCount} ${localizations.cycles}',
+          '$_currentCycle / $_cycleCount ${localizations.cycles}',
           style: TextStyle(
             fontSize: 16,
             color: theme.colorScheme.onSurface.withAlpha(153),
@@ -1148,17 +1103,17 @@ class _FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     if (brightness == Brightness.dark) {
       switch (priority) {
         case 1:
-          return const Color(0xFF0D47A1).withOpacity(0.3); // Dark blue pastel
+          return const Color(0xFF0D47A1).withValues(alpha: 0.3); // Dark blue pastel
         case 2:
-          return const Color(0xFF1B5E20).withOpacity(0.3); // Dark green pastel
+          return const Color(0xFF1B5E20).withValues(alpha: 0.3); // Dark green pastel
         case 3:
-          return const Color(0xFFF57F17).withOpacity(0.3); // Dark yellow pastel
+          return const Color(0xFFF57F17).withValues(alpha: 0.3); // Dark yellow pastel
         case 4:
-          return const Color(0xFFE65100).withOpacity(0.3); // Dark orange pastel
+          return const Color(0xFFE65100).withValues(alpha: 0.3); // Dark orange pastel
         case 5:
-          return const Color(0xFFB71C1C).withOpacity(0.3); // Dark red pastel
+          return const Color(0xFFB71C1C).withValues(alpha: 0.3); // Dark red pastel
         default:
-          return const Color(0xFF424242).withOpacity(0.3); // Dark grey pastel
+          return const Color(0xFF424242).withValues(alpha: 0.3); // Dark grey pastel
       }
     }
 

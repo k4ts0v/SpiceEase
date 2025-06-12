@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/services/subtask_service.dart';
 import 'package:spiceease/data/repositories/subtask_repository.dart';

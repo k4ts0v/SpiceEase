@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/features/tracker/presentation/calendar_widget.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/calendar_widget.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:table_calendar/table_calendar.dart';

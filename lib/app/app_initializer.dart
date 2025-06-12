@@ -8,14 +8,14 @@ final appInitializerProvider = FutureProvider<void>((ref) async {
     final authService = ref.read(authServiceProvider);
     await authService.initialize();
     return;
-  } catch (e, stack) {
-    throw e;
+  } catch (e) {
+    rethrow;
   }
 });
 
 final databaseInitializerProvider = FutureProvider<void>((ref) async {
   final isAuthenticated = ref.watch(isAuthenticatedProvider);
-  
+
   if (isAuthenticated) {
     final databaseService = ref.read(databaseServiceProvider);
     await databaseService.initialize();

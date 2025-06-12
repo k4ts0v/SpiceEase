@@ -30,6 +30,9 @@
   "username_required": "Es necesario introducir un nombre de usuario.",
   "symptom": "Síntoma",
   "symptoms": "Síntomas",
+  "symptomNotesHint":"Describe otras sensaciones, ubicación, severidad, etc.",
+  "energyNotesHint":"Describe qué afectó tu energía, actividades, calidad del sueño, etc.",
+  "moodNotesHint":"Describe qué influyó en tu estado de ánimo, eventos, desencadenantes, estrategias de afrontamiento, etc.",
   "task": "Tarea",
   "tasks": "Tareas",
   "habit": "Hábito",
@@ -780,5 +783,112 @@
   "failedToSendVerification": "Falló el envío del email de verificación",
   "sendVerification": "Enviar verificación",
   "emailVerificationRequired": "Se requiere verificación de correo electrónico antes de cambiar la dirección de correo electrónico",
-  "operationNotAllowed": "Esta operación no está permitida"
+  "operationNotAllowed": "Esta operación no está permitida",
+  "faqEmailChangeProcess": "¿Cómo cambio mi dirección de correo electrónico?",
+  "faqEmailChangeProcessAnswer": "Para cambiar tu dirección de correo electrónico: 1) Ve a Configuración > Cuenta > Cambiar Correo Electrónico, 2) Ingresa tu nueva dirección de correo electrónico, 3) Revisa tu bandeja de entrada del nuevo correo para encontrar un enlace de verificación, 4) Haz clic en el enlace de verificación para confirmar tu nuevo correo, 5) Una vez verificado, necesitarás cerrar sesión y volver a iniciar sesión con tu nueva dirección de correo electrónico. Tu correo electrónico mostrado permanecerá sin cambios hasta que completes la verificación y vuelvas a iniciar sesión.",
+  "faqEmailNotUpdating": "Mi dirección de correo electrónico no se actualiza después de cambiarla",
+  "faqEmailNotUpdatingAnswer": "Este es un comportamiento normal por razones de seguridad. Después de cambiar tu dirección de correo electrónico, debes: 1) Revisar tu bandeja de entrada del nuevo correo para encontrar un correo de verificación, 2) Hacer clic en el enlace de verificación en ese correo, 3) Cerrar sesión de la aplicación completamente, 4) Volver a iniciar sesión usando tu nueva dirección de correo electrónico. Tu correo electrónico mostrado solo se actualizará después de que completes la verificación y vuelvas a iniciar sesión con las nuevas credenciales.",
+  "sendVerificationEmail": "Enviar Correo de Verificación",
+  "verifyYourEmailAddress": "Verifica tu dirección de correo electrónico",
+  "updateYourAccountPassword": "Actualiza la contraseña de tu cuenta",
+  "signOutOfYourAccount": "Cerrar sesión de tu cuenta",
+  "emailVerified": "Correo Electrónico Verificado",
+  "yourAccountIsFullyVerifiedAndSecure": "Tu cuenta está completamente verificada y segura",
+  "emailNotVerified": "Correo Electrónico No Verificado",
+  "verifyYourEmailToSecureYourAccount": "Verifica tu correo electrónico para asegurar tu cuenta",
+  "verify": "Verificar",
+  "currentEmailColon": "Correo electrónico actual: {email}",
+  "@currentEmailColon": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "newEmailAddress": "Nueva Dirección de Correo Electrónico",
+  "updateEmail": "Actualizar Correo Electrónico",
+  "emailChangeInitiated": "Cambio de Correo Electrónico Iniciado",
+  "aVerificationEmailHasBeenSentTo": "Se ha enviado un correo de verificación a:",
+  "importantSteps": "Pasos Importantes:",
+  "emailChangeSteps": "1. Revisa tu bandeja de entrada del nuevo correo para encontrar el enlace de verificación\n2. Haz clic en el enlace de verificación para confirmar tu nuevo correo\n3. Una vez verificado, necesitarás cerrar sesión y volver a iniciar sesión con tu nueva dirección de correo electrónico",
+  "yourDisplayedEmailWillRemainUnchanged": "Tu correo electrónico mostrado permanecerá sin cambios hasta que completes la verificación y vuelvas a iniciar sesión.",
+  "resendEmail": "Reenviar Correo",
+  "verificationEmailResentTo": "Correo de verificación reenviado a {email}",
+  "@verificationEmailResentTo": {
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "failedToResendEmail": "Falló al reenviar el correo: {error}",
+  "@failedToResendEmail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "updatingPasswordPleaseWait": "Actualizando contraseña, por favor espera...",
+  "thisMayTakeUpTo2Minutes": "Esto puede tomar hasta 2 minutos debido a verificaciones de seguridad...",
+  "verifyingCurrentPassword": "Verificando contraseña actual...",
+  "authenticatingWithFirebase": "Autenticando con Firebase...",
+  "processingSecurityChecks": "Procesando verificaciones de seguridad...",
+  "finalizingChanges": "Finalizando cambios...",
+  "pleaseWaitTakingLonger": "Por favor espera, esto está tomando más tiempo de lo usual...",
+  "updatePassword": "Actualizar Contraseña",
+  "areYouSureYouWantToSignOut": "¿Estás seguro de que quieres cerrar sesión?",
+  "pleaseEnterADifferentEmailAddress": "Por favor ingresa una dirección de correo electrónico diferente",
+  "pleaseEnterAValidEmailAddress": "Por favor ingresa una dirección de correo electrónico válida",
+  "emailUpdateFailed": "Falló la actualización del correo electrónico: {error}",
+  "@emailUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "verificationEmailSent": "¡Correo de verificación enviado! Por favor revisa tu bandeja de entrada.",
+  "failedToSendVerificationEmail": "Falló el envío del correo de verificación: {error}",
+  "@failedToSendVerificationEmail": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "verifyYourAccount": "Verifica Tu Cuenta",
+  "pleaseVerifyYourEmailAddress": "Por favor verifica tu dirección de correo electrónico para asegurar tu cuenta y acceder a todas las funciones.",
+  "later": "Más Tarde",
+  "securityVerification": "Verificación de Seguridad",
+  "pleaseEnterYourCurrentPasswordToContinue": "Por favor ingresa tu contraseña actual para continuar.",
+  "authenticationFailed": "Falló la autenticación: {error}",
+  "@authenticationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "passwordUpdateFailed": "Falló la actualización de la contraseña: {error}",
+  "@passwordUpdateFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+
+  "faqPasswordChangeProcess": "¿Cómo cambio mi contraseña?",
+  "faqPasswordChangeProcessAnswer": "Para cambiar tu contraseña: 1) Ve a Configuración > Cuenta > Cambiar Contraseña, 2) Ingresa tu contraseña actual para verificación, 3) Ingresa tu nueva contraseña (debe tener al menos 6 caracteres), 4) Confirma tu nueva contraseña escribiéndola de nuevo, 5) Toca 'Actualizar Contraseña' y espera a que el proceso se complete. La actualización puede tomar hasta 2 minutos debido a verificaciones de seguridad. Tu contraseña se cambiará inmediatamente después de completarse exitosamente.",
+  "faqPasswordNotWorking": "Mi nueva contraseña no funciona después de cambiarla",
+  "faqPasswordNotWorkingAnswer": "Si tu nueva contraseña no funciona: 1) Asegúrate de estar usando la contraseña exacta que estableciste (las contraseñas distinguen entre mayúsculas y minúsculas), 2) Espera unos minutos e intenta de nuevo, ya que los cambios pueden tomar tiempo en propagarse, 3) Verifica si recibiste algún mensaje de error durante el proceso de cambio de contraseña, 4) Si el problema persiste, intenta cambiar tu contraseña de nuevo o usa la opción '¿Olvidaste tu contraseña?' para restablecerla completamente.",
+  "failedToUpdate": "Error al actualizar: {error}",
+  "@failedToUpdate": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  }
 }

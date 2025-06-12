@@ -11,30 +11,28 @@ import 'package:spiceease/data/models/medication_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
-import 'package:spiceease/data/services/estimator_service.dart';
 import 'package:spiceease/data/services/magic_todo_service.dart';
 import 'package:spiceease/features/time_management/time_blocks/time_block_controller.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/estimator_widget.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
-import 'tracker_controller.dart';
+import '../tracker_controller.dart';
 
 // —— Base Editor Modal —— //
 
 abstract class TrackingEditorModal<T> extends StatefulWidget {
-  const TrackingEditorModal({Key? key, required this.ref, this.existing})
-      : super(key: key);
+  const TrackingEditorModal({super.key, required this.ref, this.existing});
   final WidgetRef ref;
   final T? existing;
   @override
   TrackingEditorModalState createState();
 }
 
+// Update the base TrackingEditorModal build method
 abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     extends State<T> {
   Widget buildForm();
   void onSave();
-  // onDelete is now responsible for its own error handling and popping
-  void
-      onDelete(); // Remove default empty implementation if all children implement it
+  void onDelete();
 
   // Base editor modal build method
   @override
@@ -48,27 +46,39 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
+        width: double.maxFinite, // Ensure dialog uses available width
+        constraints: BoxConstraints(
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+          maxHeight: MediaQuery.of(context).size.height * 0.8,
+        ),
         padding: const EdgeInsets.all(24),
         child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
-                getTitle(), // Use the overridden title
-                style: theme.textTheme.headlineSmall,
-                textAlign: TextAlign.center,
+              // Fix title text overflow
+              Flexible(
+                child: Text(
+                  getTitle(),
+                  style: theme.textTheme.headlineSmall,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2,
+                ),
               ),
               const SizedBox(height: 20),
               buildForm(),
               const SizedBox(height: 24),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+              // Fix button row overflow
+              Wrap(
+                alignment: WrapAlignment.end,
+                spacing: 8,
+                runSpacing: 8,
                 children: [
                   if (widget.existing != null)
                     TextButton(
                       onPressed: () {
-                        // Show confirmation dialog before calling onDelete
                         showDialog(
                           context: context,
                           builder: (alertDialogContext) => AlertDialog(
@@ -88,9 +98,8 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                                       TextStyle(color: theme.colorScheme.error),
                                 ),
                                 onPressed: () {
-                                  Navigator.of(alertDialogContext)
-                                      .pop(); // Pop alert
-                                  onDelete(); // Call the modal's specific onDelete
+                                  Navigator.of(alertDialogContext).pop();
+                                  onDelete();
                                 },
                               ),
                             ],
@@ -102,12 +111,10 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                         style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ),
-                  const Spacer(),
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(localizations.cancel),
                   ),
-                  const SizedBox(width: 8),
                   ElevatedButton(
                     onPressed: onSave,
                     child: Text(localizations.save),
@@ -130,26 +137,28 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
 class SymptomEditorModal extends TrackingEditorModal {
   final SymptomModel? existing;
   const SymptomEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
-  }) : super(key: key, ref: ref);
+  });
   @override
-  _SymptomEditorModalState createState() => _SymptomEditorModalState();
+  SymptomEditorModalState createState() => SymptomEditorModalState();
 }
 
-class _SymptomEditorModalState
+class SymptomEditorModalState
     extends TrackingEditorModalState<SymptomEditorModal> {
   late TextEditingController _nameC;
   final _customCatC = TextEditingController();
   String _category = 'Physical';
   bool _isCustomCategory = false;
-  int _severity = 1;
+  int _severity = 0;
+  late TextEditingController _notesC;
 
   @override
   void initState() {
     super.initState();
     _nameC = TextEditingController(text: widget.existing?.name ?? '');
+    _notesC = TextEditingController(text: widget.existing?.notes ?? '');
 
     // Handle category initialization
     if (widget.existing != null) {
@@ -161,7 +170,7 @@ class _SymptomEditorModalState
         _customCatC.text = widget.existing!.category;
         _category = 'Custom';
       }
-      _severity = widget.existing?.severity ?? 1;
+      _severity = widget.existing?.severity ?? 0;
     }
   }
 
@@ -193,57 +202,82 @@ class _SymptomEditorModalState
           decoration: InputDecoration(labelText: localizations.name),
         ),
         const SizedBox(height: 12),
-        Row(
+        // Fix: Replace overflowing Row with responsive Column layout
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${localizations.category}:'),
-            const SizedBox(width: 16),
+            const SizedBox(height: 8),
             if (_isCustomCategory)
-              Expanded(
-                child: TextFormField(
-                  controller: _customCatC,
-                  decoration:
-                      InputDecoration(labelText: localizations.customCategory),
-                  onChanged: (value) => setState(() => _category = value),
-                ),
+              TextFormField(
+                controller: _customCatC,
+                decoration:
+                    InputDecoration(labelText: localizations.customCategory),
+                onChanged: (value) => setState(() => _category = value),
               )
             else
-              DropdownButton<String>(
-                value: localizedCategory,
-                items: predefinedCategories
-                    .map((e) => DropdownMenuItem(value: e, child: Text(e)))
-                    .toList(),
-                onChanged: (v) => setState(() {
-                  if (v == localizations.custom) {
-                    _isCustomCategory = true;
-                    _customCatC.text = _category == 'Custom' ? '' : _category;
-                    _category = 'Custom';
-                  } else if (v == localizations.physical) {
-                    _isCustomCategory = false;
-                    _category = 'Physical';
-                  } else if (v == localizations.psychological) {
-                    _isCustomCategory = false;
-                    _category = 'Psychological';
-                  }
-                }),
+              SizedBox(
+                width: double.infinity,
+                child: DropdownButtonFormField<String>(
+                  value: localizedCategory,
+                  decoration:
+                      InputDecoration(labelText: localizations.category),
+                  items: predefinedCategories
+                      .map((e) => DropdownMenuItem(value: e, child: Text(e)))
+                      .toList(),
+                  onChanged: (v) => setState(() {
+                    if (v == localizations.custom) {
+                      _isCustomCategory = true;
+                      _customCatC.text = _category == 'Custom' ? '' : _category;
+                      _category = 'Custom';
+                    } else if (v == localizations.physical) {
+                      _isCustomCategory = false;
+                      _category = 'Physical';
+                    } else if (v == localizations.psychological) {
+                      _isCustomCategory = false;
+                      _category = 'Psychological';
+                    }
+                  }),
+                ),
               ),
           ],
         ),
         const SizedBox(height: 12),
-        Row(
+        // Fix: Make severity row responsive
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${localizations.severity}:'),
-            Expanded(
-              child: Slider(
-                min: 1,
-                max: 10,
-                divisions: 9,
-                value: _severity.toDouble(),
-                label: '$_severity',
-                onChanged: (v) => setState(() => _severity = v.round()),
-              ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: Slider(
+                    min: 0,
+                    max: 10,
+                    divisions: 10,
+                    value: _severity.toDouble(),
+                    label: '$_severity',
+                    onChanged: (v) => setState(() => _severity = v.round()),
+                  ),
+                ),
+                Container(
+                  width: 40,
+                  alignment: Alignment.center,
+                  child: Text('$_severity'),
+                ),
+              ],
             ),
-            Text('$_severity'),
           ],
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          controller: _notesC,
+          decoration: InputDecoration(
+            labelText: localizations.notes,
+            hintText: localizations.symptomNotesHint,
+          ),
+          maxLines: null,
         ),
       ],
     );
@@ -268,6 +302,7 @@ class _SymptomEditorModalState
         _nameC.text.trim(),
         categoryToSave,
         _severity,
+        _notesC.text.trim(),
       );
     } else {
       await ctrl.updateSymptom(
@@ -275,6 +310,7 @@ class _SymptomEditorModalState
         _nameC.text.trim(),
         categoryToSave,
         _severity,
+        _notesC.text.trim(),
       );
     }
   }
@@ -291,17 +327,16 @@ class _SymptomEditorModalState
 class HabitEditorModal extends TrackingEditorModal {
   final HabitModel? existing;
   const HabitEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
-  }) : super(key: key, ref: ref);
+  });
 
   @override
-  _HabitEditorModalState createState() => _HabitEditorModalState();
+  HabitEditorModalState createState() => HabitEditorModalState();
 }
 
-class _HabitEditorModalState
-    extends TrackingEditorModalState<HabitEditorModal> {
+class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
   late TextEditingController _titleC, _descC;
   late String _freqLabel;
   List<int> _selectedDays = [];
@@ -332,11 +367,6 @@ class _HabitEditorModalState
         : 'Daily';
     _selectedDays = widget.existing?.customDays ?? [];
 
-    // // Initialize reminder fields
-    // _hasReminder = widget.existing?.hasReminder ?? false;
-    // _reminderTime = widget.existing?.reminderTime;
-    // _reminderDaysOfWeek = widget.existing?.reminderDaysOfWeek ?? [];
-
     if (widget.existing?.lastCompleted != null) {
       final today = DateTime.now();
       _markAsCompleted = widget.existing!.lastCompleted!.year == today.year &&
@@ -360,7 +390,6 @@ class _HabitEditorModalState
     if (label == 'Monthly' || label == _freqMapToInternal['Monthly']) return -1;
     return 1; // Default to Daily
   }
-
 
   // Fix 1: Missing closing bracket in buildForm method around line 410
   @override
@@ -511,7 +540,7 @@ class _HabitEditorModalState
                   value ?? false,
                 );
               } catch (e) {
-                print('Error updating habit completion: $e');
+                debugPrint('Error updating habit completion: $e');
                 // Revert the UI state if the operation failed
                 if (mounted) {
                   setState(() => _markAsCompleted = !_markAsCompleted);
@@ -590,19 +619,19 @@ class TaskEditorModal extends TrackingEditorModal {
   final String? initialStatus;
   final String? initialValue;
   const TaskEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
     this.initialStatus,
     this.initialValue,
     DateTime? selectedDate,
-  }) : super(key: key, ref: ref);
+  });
 
   @override
-  _TaskEditorModalState createState() => _TaskEditorModalState();
+  TaskEditorModalState createState() => TaskEditorModalState();
 }
 
-class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
+class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   late TextEditingController _titleC, _descC;
   String _status = 'Pending';
   DateTime? _dueDate;
@@ -678,8 +707,6 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
-  // ...existing code...
-
   Future<void> _pickTime(BuildContext context, bool isStartTime) async {
     final now = TimeOfDay.now();
     final initialTime = isStartTime
@@ -708,7 +735,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
 
   Future<void> _generateSubtasks() async {
     final localizations = AppLocalizations.of(context)!;
-    print('Generating subtasks...');
+    debugPrint('Generating subtasks...');
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.titleRequiredForSubtasks)),
@@ -755,6 +782,20 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         );
       }
 
+      // Get existing subtasks to determine the next order number
+      final subtaskService = widget.ref.read(subtaskServiceProvider);
+      final existingSubtasks = await subtaskService.getSubtasksForTask(taskId);
+      int nextOrder = 0;
+
+      if (existingSubtasks.isNotEmpty) {
+        // Find the highest order number and add 1
+        final maxOrder = existingSubtasks
+            .map((subtask) => subtask.order)
+            .where((order) => order != null)
+            .fold<int>(0, (max, order) => order! > max ? order : max);
+        nextOrder = maxOrder + 1;
+      }
+
       // Now generate and add subtasks
       final magicTodo = widget.ref.read(magicTodoServiceProvider);
       final subtaskSuggestions = await magicTodo.divideTask(
@@ -776,12 +817,13 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         for (int i = 0; i < subtaskSuggestions.length; i++) {
           final suggestion = subtaskSuggestions[i];
 
-          // Create the subtask using the new service
-          await ctrl.createSubtask(
-            taskId,
-            suggestion.title,
-            rawTimeValue: suggestion.rawTimeValue,
-          );
+          // Create the subtask with proper order numbering
+        await ctrl.createSubtask(
+          taskId,
+          suggestion.title,
+          suggestion.rawTimeValue,
+          nextOrder + i, // Start from nextOrder and increment
+        );
 
           // Calculate time estimate if available
           if (suggestion.rawTimeValue != null &&
@@ -831,7 +873,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         return;
       }
     } catch (e) {
-      print('Error generating subtasks: $e');
+      debugPrint('Error generating subtasks: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
             content:
@@ -920,7 +962,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                 ),
               ],
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             // Replace the existing completion status Row with this Column
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1050,7 +1092,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: Text(
-                    '${localizations.estimatedTimeLabel}: ${_estimatedTime}'),
+                    '${localizations.estimatedTimeLabel}: $_estimatedTime!.'),
               ),
             const SizedBox(height: 16),
 
@@ -1067,7 +1109,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                         onPressed: _isLoadingSubtasks
                             ? null
                             : () {
-                                print("Generating subtasks");
+                                debugPrint("Generating subtasks");
                                 _generateSubtasks();
                               },
                         child: _isLoadingSubtasks
@@ -1156,7 +1198,7 @@ class _TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         }
       }
     } catch (e) {
-      print('Error saving task: $e');
+      debugPrint('Error saving task: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save task: $e')),
@@ -1210,20 +1252,17 @@ class SubtaskEditorModal extends TrackingEditorModal<SubtaskModel> {
   final SubtaskModel subtask; // This is the 'existing' item
 
   const SubtaskEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     required this.parentTask,
     required this.subtask,
-  }) : super(
-            key: key,
-            ref: ref,
-            existing: subtask); // Pass the subtask to 'existing'
+  }) : super(existing: subtask); // Pass the subtask to 'existing'
 
   @override
-  _SubtaskEditorModalState createState() => _SubtaskEditorModalState();
+  SubtaskEditorModalState createState() => SubtaskEditorModalState();
 }
 
-class _SubtaskEditorModalState
+class SubtaskEditorModalState
     extends TrackingEditorModalState<SubtaskEditorModal> {
   late TextEditingController _titleC;
   late TextEditingController _descC;
@@ -1494,7 +1533,7 @@ class _SubtaskEditorModalState
         }
       }
     } catch (e) {
-      print('Error saving subtask: $e');
+      debugPrint('Error saving subtask: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save subtask: $e')),
@@ -1549,15 +1588,15 @@ class _SubtaskEditorModalState
 class MoodLevelEditorModal extends TrackingEditorModal {
   final MoodModel? existing;
   const MoodLevelEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
-  }) : super(key: key, ref: ref);
+  });
   @override
-  _MoodLevelEditorModalState createState() => _MoodLevelEditorModalState();
+  MoodLevelEditorModalState createState() => MoodLevelEditorModalState();
 }
 
-class _MoodLevelEditorModalState
+class MoodLevelEditorModalState
     extends TrackingEditorModalState<MoodLevelEditorModal> {
   int? _value;
   late TextEditingController _notesC;
@@ -1618,6 +1657,7 @@ class _MoodLevelEditorModalState
         maxLines: 3,
         decoration: InputDecoration(
           labelText: localizations.notes,
+          hintText: localizations.moodNotesHint,
           border: const OutlineInputBorder(),
         ),
       ),
@@ -1723,15 +1763,15 @@ class _MoodLevelEditorModalState
 class EnergyLevelEditorModal extends TrackingEditorModal {
   final EnergyModel? existing;
   const EnergyLevelEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
-  }) : super(key: key, ref: ref);
+  });
   @override
-  _EnergyLevelEditorModalState createState() => _EnergyLevelEditorModalState();
+  EnergyLevelEditorModalState createState() => EnergyLevelEditorModalState();
 }
 
-class _EnergyLevelEditorModalState
+class EnergyLevelEditorModalState
     extends TrackingEditorModalState<EnergyLevelEditorModal> {
   int? _value;
   late TextEditingController _notesC;
@@ -1790,6 +1830,7 @@ class _EnergyLevelEditorModalState
         maxLines: 3,
         decoration: InputDecoration(
           labelText: localizations.notes,
+          hintText: localizations.energyNotesHint,
           border: const OutlineInputBorder(),
         ),
       ),
@@ -1852,16 +1893,16 @@ class _EnergyLevelEditorModalState
 class MedicationEditorModal extends TrackingEditorModal {
   final MedicationModel? existing;
   const MedicationEditorModal({
-    Key? key,
-    required WidgetRef ref,
+    super.key,
+    required super.ref,
     this.existing,
-  }) : super(key: key, ref: ref);
+  });
 
   @override
-  _MedicationEditorModalState createState() => _MedicationEditorModalState();
+  MedicationEditorModalState createState() => MedicationEditorModalState();
 }
 
-class _MedicationEditorModalState
+class MedicationEditorModalState
     extends TrackingEditorModalState<MedicationEditorModal> {
   final _nameC = TextEditingController();
   final _doseC = TextEditingController();
@@ -1880,13 +1921,11 @@ class _MedicationEditorModalState
   @override
   void initState() {
     super.initState();
-    final selectedDate = widget.ref.read(selectedDateProvider);
     if (widget.existing != null) {
       _nameC.text = widget.existing!.name;
       _doseC.text = widget.existing!.dose.toString();
       // Update taken status initialization
-      final selectedDate =
-          widget.ref.read(selectedDateProvider) ?? DateTime.now();
+      final selectedDate = widget.ref.read(selectedDateProvider);
       _takenTimes = widget.existing!.getTakenCountForDate(selectedDate);
       _markAsTaken = _takenTimes > 0;
 
@@ -1956,7 +1995,7 @@ class _MedicationEditorModalState
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
     final predefinedUnits = ['ml', 'mg', 'g', 'tablets', 'custom'];
-    String _getLocalizedUnit(String unit, AppLocalizations loc) {
+    String getLocalizedUnit(String unit, AppLocalizations loc) {
       switch (unit) {
         case 'ml':
           return 'ml';
@@ -1986,55 +2025,113 @@ class _MedicationEditorModalState
     return Column(mainAxisSize: MainAxisSize.min, children: [
       TextFormField(
         controller: _nameC,
-        decoration: InputDecoration(labelText: localizations.name),
+        decoration: InputDecoration(
+            labelText: localizations.name), // Fix: Use expected test label
       ),
       const SizedBox(height: 16),
-      Row(
-        children: [
-          Expanded(
-            child: TextFormField(
-              controller: _doseC,
-              decoration: InputDecoration(labelText: localizations.dose),
-              keyboardType: TextInputType.number,
-            ),
-          ),
-          const SizedBox(width: 16),
-          if (_isCustomUnit)
-            Expanded(
-              child: TextFormField(
-                controller: _customUnitC,
-                decoration:
-                    InputDecoration(labelText: localizations.customUnit),
-                onChanged: (value) => setState(() {
-                  _unit = value;
-                }),
-              ),
-            )
-          else
-            DropdownButton<String>(
-              value: _unit,
-              items: predefinedUnits
-                  .map((e) => DropdownMenuItem(
-                        value: e,
-                        child: Text(_getLocalizedUnit(e, localizations)),
-                      ))
-                  .toList(),
-              onChanged: (v) => setState(() {
-                if (v == 'custom') {
-                  _isCustomUnit = true;
-                  _customUnitC.text = _unit == 'custom' ? '' : _unit;
-                } else {
-                  _isCustomUnit = false;
-                  _unit = v!;
-                }
-              }),
-            ),
-        ],
+
+      // Fix: Replace the overflowing Row with responsive layout
+      LayoutBuilder(
+        builder: (context, constraints) {
+          // Use Column layout for very narrow screens to prevent overflow
+          if (constraints.maxWidth < 300) {
+            return Column(
+              children: [
+                TextFormField(
+                  controller: _doseC,
+                  decoration: InputDecoration(labelText: localizations.dose),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                if (_isCustomUnit)
+                  TextFormField(
+                    controller: _customUnitC,
+                    decoration:
+                        InputDecoration(labelText: localizations.customUnit),
+                    onChanged: (value) => setState(() {
+                      _unit = value;
+                    }),
+                  )
+                else
+                  DropdownButtonFormField<String>(
+                    value: _unit,
+                    decoration: InputDecoration(labelText: localizations.unit),
+                    items: predefinedUnits
+                        .map((e) => DropdownMenuItem(
+                              value: e,
+                              child: Text(getLocalizedUnit(e, localizations)),
+                            ))
+                        .toList(),
+                    onChanged: (v) => setState(() {
+                      if (v == 'custom') {
+                        _isCustomUnit = true;
+                        _customUnitC.text = _unit == 'custom' ? '' : _unit;
+                      } else {
+                        _isCustomUnit = false;
+                        _unit = v!;
+                      }
+                    }),
+                  ),
+              ],
+            );
+          } else {
+            // Use Row layout for wider screens but with Expanded widgets
+            return Row(
+              children: [
+                Expanded(
+                  flex: 2,
+                  child: TextFormField(
+                    controller: _doseC,
+                    decoration: InputDecoration(labelText: localizations.dose),
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 2,
+                  child: _isCustomUnit
+                      ? TextFormField(
+                          controller: _customUnitC,
+                          decoration: InputDecoration(
+                              labelText: localizations.customUnit),
+                          onChanged: (value) => setState(() {
+                            _unit = value;
+                          }),
+                        )
+                      : DropdownButtonFormField<String>(
+                          value: _unit,
+                          decoration:
+                              InputDecoration(labelText: localizations.unit),
+                          items: predefinedUnits
+                              .map((e) => DropdownMenuItem(
+                                    value: e,
+                                    child: Text(
+                                        getLocalizedUnit(e, localizations)),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            if (v == 'custom') {
+                              _isCustomUnit = true;
+                              _customUnitC.text =
+                                  _unit == 'custom' ? '' : _unit;
+                            } else {
+                              _isCustomUnit = false;
+                              _unit = v!;
+                            }
+                          }),
+                        ),
+                ),
+              ],
+            );
+          }
+        },
       ),
       const SizedBox(height: 16),
-      // Fix: Use the proper value and update internal representation correctly
-      DropdownButton<String>(
+
+      // Fix: Use proper dropdown form field for frequency
+      DropdownButtonFormField<String>(
         value: localizedFreq,
+        decoration: InputDecoration(labelText: localizations.frequency),
         items: freqOptions
             .map((e) => DropdownMenuItem(value: e, child: Text(e)))
             .toList(),
@@ -2050,6 +2147,7 @@ class _MedicationEditorModalState
           _selectedDays.clear();
         }),
       ),
+
       if (_freqLabel == 'Weekly') ...[
         const SizedBox(height: 16),
         Wrap(
@@ -2110,51 +2208,109 @@ class _MedicationEditorModalState
               .toList(),
         ),
       ],
+
       const SizedBox(height: 16),
-      Row(
-        children: [
-          Text(localizations.timesPerDay),
-          const SizedBox(width: 16),
-          if (_isCustomTimes)
-            Expanded(
-              child: TextFormField(
-                controller: _customTimesC,
-                decoration:
-                    InputDecoration(labelText: localizations.customValue),
-                keyboardType: TextInputType.number,
-                onChanged: (value) {
-                  final times = int.tryParse(value);
-                  if (times != null && times > 0) {
-                    setState(() => _timesPerDay = times);
-                  }
-                },
-              ),
-            )
-          else
-            DropdownButton<dynamic>(
-              value: _timesPerDay > 5 ? localizations.custom : _timesPerDay,
-              items: [
-                ...List.generate(
-                  5,
-                  (i) =>
-                      DropdownMenuItem(value: i + 1, child: Text('${i + 1}')),
-                ),
-                DropdownMenuItem(
-                    value: localizations.custom,
-                    child: Text(localizations.custom)),
+
+      // Fix: Make times per day section responsive
+      LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth < 300) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(localizations.timesPerDay),
+                const SizedBox(height: 8),
+                if (_isCustomTimes)
+                  TextFormField(
+                    controller: _customTimesC,
+                    decoration:
+                        InputDecoration(labelText: localizations.customValue),
+                    keyboardType: TextInputType.number,
+                    onChanged: (value) {
+                      final times = int.tryParse(value);
+                      if (times != null && times > 0) {
+                        setState(() => _timesPerDay = times);
+                      }
+                    },
+                  )
+                else
+                  DropdownButtonFormField<dynamic>(
+                    value:
+                        _timesPerDay > 5 ? localizations.custom : _timesPerDay,
+                    decoration:
+                        InputDecoration(labelText: localizations.timesPerDay),
+                    items: [
+                      ...List.generate(
+                        5,
+                        (i) => DropdownMenuItem(
+                            value: i + 1, child: Text('${i + 1}')),
+                      ),
+                      DropdownMenuItem(
+                          value: localizations.custom,
+                          child: Text(localizations.custom)),
+                    ],
+                    onChanged: (v) => setState(() {
+                      if (v == localizations.custom) {
+                        _isCustomTimes = true;
+                        _customTimesC.text = _timesPerDay.toString();
+                      } else {
+                        _isCustomTimes = false;
+                        _timesPerDay = v as int;
+                      }
+                    }),
+                  ),
               ],
-              onChanged: (v) => setState(() {
-                if (v == localizations.custom) {
-                  _isCustomTimes = true;
-                  _customTimesC.text = _timesPerDay.toString();
-                } else {
-                  _isCustomTimes = false;
-                  _timesPerDay = v as int;
-                }
-              }),
-            ),
-        ],
+            );
+          } else {
+            return Row(
+              children: [
+                Text(localizations.timesPerDay),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: _isCustomTimes
+                      ? TextFormField(
+                          controller: _customTimesC,
+                          decoration: InputDecoration(
+                              labelText: localizations.customValue),
+                          keyboardType: TextInputType.number,
+                          onChanged: (value) {
+                            final times = int.tryParse(value);
+                            if (times != null && times > 0) {
+                              setState(() => _timesPerDay = times);
+                            }
+                          },
+                        )
+                      : DropdownButtonFormField<dynamic>(
+                          value: _timesPerDay > 5
+                              ? localizations.custom
+                              : _timesPerDay,
+                          items: [
+                            ...List.generate(
+                              5,
+                              (i) => DropdownMenuItem(
+                                  value: i + 1, child: Text('${i + 1}')),
+                            ),
+                            DropdownMenuItem(
+                                value: localizations.custom,
+                                child: Text(localizations.custom)),
+                          ],
+                          onChanged: (v) => setState(() {
+                            if (v == localizations.custom) {
+                              _isCustomTimes = true;
+                              _customTimesC.text = _timesPerDay.toString();
+                            } else {
+                              _isCustomTimes = false;
+                              _timesPerDay = v as int;
+                            }
+                          }),
+                        ),
+                ),
+              ],
+            );
+          }
+        },
       ),
+
       if (widget.existing != null) ...[
         const SizedBox(height: 16),
         if (_timesPerDay <= 1)
@@ -2168,8 +2324,8 @@ class _MedicationEditorModalState
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(localizations.unitsTaken,
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
+              Text(localizations.unitsTaken),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -2197,6 +2353,7 @@ class _MedicationEditorModalState
                   ),
                 ],
               ),
+              const SizedBox(height: 8),
               // Progress indicator
               LinearProgressIndicator(
                 value: _timesPerDay > 0 ? _takenTimes / _timesPerDay : 0,
@@ -2278,348 +2435,5 @@ class _MedicationEditorModalState
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteMedication(widget.existing!.id);
-  }
-}
-
-class EstimatorWidget extends ConsumerStatefulWidget {
-  final String title;
-  final String description;
-  final Function(String, String) onEstimateUpdated;
-  final String? initialValue;
-
-  const EstimatorWidget({
-    Key? key,
-    required this.title,
-    required this.description,
-    required this.onEstimateUpdated,
-    this.initialValue,
-  }) : super(key: key);
-
-  @override
-  _EstimatorWidgetState createState() => _EstimatorWidgetState();
-}
-
-class _EstimatorWidgetState extends ConsumerState<EstimatorWidget> {
-  String _rawEstimate = '';
-  String _estimatedTime = '';
-  String _estimatedUnit = '';
-  bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Set initial value if provided
-    if (widget.initialValue != null && widget.initialValue!.isNotEmpty) {
-      _rawEstimate = widget.initialValue!;
-
-      // Only notify parent if we have a valid initial value
-      if (_rawEstimate.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          widget.onEstimateUpdated(_rawEstimate, '');
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final localizations = AppLocalizations.of(context)!;
-
-    // Display the parsed values if available, otherwise show the label
-    final String displayText = (_estimatedTime.isNotEmpty)
-        ? "$_estimatedTime $_estimatedUnit"
-        : (_rawEstimate.isNotEmpty)
-            ? _rawEstimate
-            : localizations.estimatedTimeLabel;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                enabled: false,
-                decoration: InputDecoration(
-                  labelText: localizations.estimatedTimeLabel,
-                  border: const OutlineInputBorder(),
-                ),
-                controller: TextEditingController(text: displayText),
-              ),
-            ),
-            const SizedBox(width: 6),
-            ElevatedButton(
-              onPressed: _isLoading
-                  ? null
-                  : () async {
-                      setState(() => _isLoading = true);
-                      try {
-                        final estimatorService =
-                            ref.read(estimatorServiceProvider);
-                        print("Estimating task with title: ${widget.title}");
-
-                        // First get the raw API response
-                        final result = await estimatorService.estimateTask(
-                          widget.title,
-                          widget.description,
-                          localizations.estimateInstructions,
-                        );
-
-                        print("API estimation result: $result");
-
-                        if (result is String && result.isNotEmpty) {
-                          // Then parse the response to extract time and unit
-                          final parsed = await estimatorService
-                              .parseResponseWithLocale(result, context);
-                          print("Parsed estimation: $parsed");
-
-                          if (parsed != null) {
-                            setState(() {
-                              _rawEstimate =
-                                  parsed['estimate'] + ' ' + parsed['unit'];
-                            });
-                          }
-
-                          // Pass the raw estimate to parent
-                          widget.onEstimateUpdated(_rawEstimate, '');
-                          print(_rawEstimate);
-                        }
-                      } catch (e) {
-                        print("Error estimating task: $e");
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("Error: $e")),
-                        );
-                      } finally {
-                        setState(() => _isLoading = false);
-                      }
-                    },
-              child: _isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Text(localizations.estimate),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-}
-
-// ...existing code...
-
-class SubtaskList extends ConsumerWidget {
-  final String parentTaskId;
-  final TaskModel parentTask;
-  final WidgetRef ref;
-
-  const SubtaskList({
-    Key? key,
-    required this.parentTaskId,
-    required this.parentTask,
-    required this.ref,
-  }) : super(key: key);
-
-  // Helper method to get localized version of the status
-  String _getLocalizedStatus(String? status, AppLocalizations localizations) {
-    if (status == null) return localizations.todo;
-
-    switch (status.toLowerCase()) {
-      case 'done':
-        return localizations.done;
-      case 'in_progress':
-        return localizations.inProgress;
-      case 'todo':
-      default:
-        return localizations.todo;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final localizations = AppLocalizations.of(context)!;
-
-    final subtasksAsync = ref.watch(subtaskStateNotifierProvider(parentTaskId));
-
-    return subtasksAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) =>
-          Text('${localizations.errorLoadingSubtasks}: $error'),
-      data: (subtasks) {
-        print(
-            'SubtaskList: Found ${subtasks.length} subtasks for task $parentTaskId');
-
-        final sortedSubtasks = List<SubtaskModel>.from(subtasks)
-          ..sort((a, b) => a.order.compareTo(b.order));
-
-        List<Widget> subtaskWidgets = sortedSubtasks.map<Widget>((subtask) {
-          print(
-              'Rendering subtask: ${subtask.id}, order: ${subtask.order}, title: ${subtask.title}, rawTimeValue: ${subtask.rawTimeValue}');
-
-          return Container(
-            margin: const EdgeInsets.only(left: 15.0),
-            child: ListTile(
-              contentPadding: const EdgeInsets.only(
-                  left: 0, right: 0), // Adjusted for new trailing
-              leading: const Padding(
-                padding: EdgeInsets.only(left: 8.0),
-                child: Icon(Icons.task_alt, size: 20),
-              ),
-              title: Text(
-                subtask.title,
-                style: TextStyle(
-                  decoration:
-                      subtask.completed ? TextDecoration.lineThrough : null,
-                  color: subtask.completed
-                      ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                      : Theme.of(context).colorScheme.onSurface,
-                  fontSize: 14.0,
-                ),
-              ),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Status indicator
-                  Text(
-                    '${localizations.status}: ${_getLocalizedStatus(subtask.status, localizations)}',
-                    style: TextStyle(
-                      fontSize: 12.0,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  // Time estimate
-                  Text(
-                    subtask.rawTimeValue != null &&
-                            subtask.rawTimeValue!.isNotEmpty
-                        ? '${localizations.estimatedTimeLabel}: ${subtask.rawTimeValue}'
-                        : '${localizations.estimatedTimeLabel}: ${localizations.noTimeEstimate}',
-                    style: TextStyle(
-                      fontSize: 12.0,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => SubtaskEditorModal(
-                    ref: ref,
-                    parentTask: parentTask,
-                    subtask: subtask,
-                  ),
-                );
-              },
-              // In the SubtaskList widget's checkbox onChanged method
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    child: Checkbox(
-                      value: subtask.completed,
-                      onChanged: (_) async {
-                        // Capture controller reference before async operation
-                        final ctrl = ref.read(trackerControllerProvider);
-
-                        try {
-                          // Calculate the new status based on completion
-                          final newCompleted = !subtask.completed;
-                          final newStatus = newCompleted ? 'done' : 'todo';
-
-                          await ctrl.updateSubtask(
-                            parentTaskId,
-                            subtask,
-                            subtask.title,
-                            newCompleted,
-                            newStatus,
-                            subtask.rawTimeValue ?? '',
-                            subtask.startTime,
-                            subtask.endTime,
-                          );
-                        } catch (e) {
-                          print('Error updating subtask completion: $e');
-                          if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                  content:
-                                      Text('Failed to update subtask: $e')),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }).toList();
-
-        if (subtasks.isEmpty) {
-          subtaskWidgets.add(Padding(
-            padding: const EdgeInsets.only(left: 15.0, top: 8.0, bottom: 8.0),
-            child: Text(localizations.noSubtasks),
-          ));
-        }
-
-        subtaskWidgets.add(
-          Padding(
-            padding: const EdgeInsets.only(left: 24.0, top: 8.0, bottom: 8.0),
-            child: TextButton.icon(
-              icon: const Icon(Icons.add, size: 14),
-              label: Text(localizations.addNew),
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (BuildContext dialogContext) {
-                    final titleController = TextEditingController();
-                    return AlertDialog(
-                      backgroundColor: Colors.white,
-                      title: Text(
-                        localizations.addNewSubtask,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      content: TextField(
-                        controller: titleController,
-                        decoration: InputDecoration(
-                          labelText: localizations.title,
-                        ),
-                        autofocus: true,
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(dialogContext).pop(),
-                          child: Text(localizations.cancel),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            if (titleController.text.trim().isNotEmpty) {
-                              Navigator.of(dialogContext).pop();
-                              final ctrl = ref.read(trackerControllerProvider);
-                              await ctrl.createSubtask(
-                                parentTaskId,
-                                titleController.text.trim(),
-                              );
-                            }
-                          },
-                          child: Text(localizations.addNewSubtask),
-                        ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        );
-
-        return Column(children: subtaskWidgets);
-      },
-    );
   }
 }

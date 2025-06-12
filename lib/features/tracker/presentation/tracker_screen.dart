@@ -9,7 +9,7 @@ import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/icon_grid.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/entity_sections.dart';
-import 'package:spiceease/features/tracker/presentation/calendar_widget.dart';
+import 'package:spiceease/features/tracker/presentation/widgets/calendar_widget.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
