@@ -1,5 +1,5 @@
 // Import application domain model
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 
 /// Abstract authentication service contract defining core auth operations
 ///

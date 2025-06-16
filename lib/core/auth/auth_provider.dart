@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/auth/firebase_auth_rest.dart';
 import 'package:spiceease/core/auth/firebase_auth_service.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;

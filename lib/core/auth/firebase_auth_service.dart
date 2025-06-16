@@ -2,7 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 
 /// A service class to handle user authentication using Firebase.
 ///

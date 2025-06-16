@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'auth_service.dart';
 
 /// Firebase Authentication REST API implementation

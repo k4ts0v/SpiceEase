@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 
 /// Single source of truth for authentication state
 final unifiedAuthProvider = StreamProvider<AppUser?>((ref) {
