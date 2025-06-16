@@ -5,7 +5,7 @@ import 'package:mockito/annotations.dart';
 import 'package:mockito/mockito.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/core/database/database_provider.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/core/database/database_service.dart'

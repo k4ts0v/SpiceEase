@@ -32,7 +32,7 @@ import 'package:dio/dio.dart';
 import 'package:mockito/mockito.dart';
 import 'package:mockito/annotations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/data/providers/unified_auth_provider.dart';
 import 'package:spiceease/data/services/magic_todo_service.dart';
 import 'package:spiceease/data/models/subtask_model.dart';

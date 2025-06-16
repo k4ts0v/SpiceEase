@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/features/navigation_bar.dart';
 import 'package:spiceease/features/auth/presentation/auth_controller.dart';
 import 'package:spiceease/data/providers/unified_auth_provider.dart';

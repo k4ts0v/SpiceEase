@@ -14,6 +14,7 @@ class HelpScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final helpState = ref.watch(helpControllerProvider);
     final controller = ref.read(helpControllerProvider.notifier);
+    print('Test Provider Hash: ${helpControllerProvider.hashCode}');
 
     // Set context in controller for navigation
     WidgetsBinding.instance.addPostFrameCallback((_) {

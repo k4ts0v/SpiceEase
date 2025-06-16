@@ -15,7 +15,7 @@ import 'package:spiceease/data/providers/energy_provider.dart';
 import 'package:spiceease/data/providers/symptom_provider.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:mockito/mockito.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/core/database/database_service.dart';
 
 import '../ui/tracker_screen_ui_test.mocks.dart';

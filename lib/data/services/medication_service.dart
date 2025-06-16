@@ -36,7 +36,7 @@ class MedicationService {
   /// Deletes a medication by delegating to the repository.
   Future<void> deleteMedication(String id) => _repository.deleteMedication(id);
 
-  /// Provides medication entries for DIAGRAMAthe authenticated user in a specified date.
+  /// Provides medication entries for the authenticated user in a specified date.
   /// Since FireStore has technical limitations regarding queries,
   /// this was done client-side.
   Future<List<MedicationModel>> getMedicationsForDate(DateTime date) async {

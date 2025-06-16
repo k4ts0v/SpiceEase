@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/core/auth/auth_exception.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/data/models/user_model.dart';
 import 'package:spiceease/data/providers/user_provider.dart';
 import 'package:spiceease/data/services/user_service.dart';

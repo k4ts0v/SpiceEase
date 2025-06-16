@@ -156,10 +156,12 @@ class AboutScreen extends ConsumerWidget {
     String issueType,
   ) async {
     final localizations = AppLocalizations.of(context)!;
-    final launched = await controller.launchGitHubIssue(issueType, localizations);
+    final launched =
+        await controller.launchGitHubIssue(issueType, localizations);
 
     if (!launched && context.mounted) {
-      final issueUrl = controller.createGitHubIssueUrl(issueType, localizations);
+      final issueUrl =
+          controller.createGitHubIssueUrl(issueType, localizations);
       _showGitHubIssueDialog(context, controller, issueType, issueUrl);
     }
   }

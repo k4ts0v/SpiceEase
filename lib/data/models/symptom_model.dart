@@ -141,6 +141,11 @@ class SymptomModel {
     };
   }
 
+  /// Creates a copy of the SymptomModel with optional overrides for fields.
+  ///
+  /// Returns a new instance with the specified fields overridden.
+  /// [id], [userId], [name], [category], [severity], [notes], [createdAt], and [updatedAt]
+  /// are optional parameters that can be used to override the existing values.
   SymptomModel copyWith({
     String? id,
     String? userId,

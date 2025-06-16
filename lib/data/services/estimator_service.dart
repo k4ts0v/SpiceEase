@@ -51,8 +51,8 @@ class EstimatorService {
     final energyService = ref.read(energyServiceProvider);
     final lastEntry = await energyService.getLastEnergyEntry();
     final int spiciness = _spicinessFromEnergy(lastEntry?.energyLevel ?? 0);
-    final String gt = "goblin" + "." + "tools" + "/";
-    final String ep = "api/estimator";
+    const String gt = "goblin" "." "tools" "/";
+    const String ep = "api/estimator";
 
     // API endpoint and request body
     final body = {
@@ -68,8 +68,6 @@ class EstimatorService {
       options: Options(headers: {"Content-Type": "application/json"}),
     );
 
-    print(body); // Debug: Print the request body
-    print(response.data); // Debug: Print the response data
     return response.data;
   }
 

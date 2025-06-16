@@ -14,7 +14,7 @@ import 'package:dio/src/response.dart' as _i6;
 import 'package:dio/src/transformer.dart' as _i4;
 import 'package:mockito/mockito.dart' as _i1;
 import 'package:spiceease/core/auth/auth_service.dart' as _i10;
-import 'package:spiceease/core/auth/user_model.dart' as _i11;
+import 'package:spiceease/core/auth/auth_user_model.dart' as _i11;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values

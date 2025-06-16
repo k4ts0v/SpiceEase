@@ -75,14 +75,20 @@ class FlowmodoroRepository {
         '${DatabaseService.flowmodoros}/$id'); // Deleting the document by ID.
   }
 
+  /// Retrieves all flowmodoro documents for a specific user on a given date.
+  ///
+  /// This method fetches flowmodoro documents created by the user on the specified date.
+  /// It filters the documents based on the user's ID and the creation date,
+  /// and returns a list of [FlowmodoroModel] instances.
+  /// It has the parameter [date] which is the date for which flowmodoros are fetched.
   Future<List<FlowmodoroModel>> getFlowmodorosForDate(DateTime date) async {
-    final user = await _ref.read(unifiedAuthProvider).value;
+    final user = _ref.read(unifiedAuthProvider).value;
     if (user == null) return [];
 
     final start = FirestoreDateAdapter.toTimestamp(
         DateTime(date.year, date.month, date.day));
     final end = FirestoreDateAdapter.toTimestamp(
-        DateTime(date.year, date.month, date.day).add(Duration(days: 1)));
+        DateTime(date.year, date.month, date.day).add(const Duration(days: 1)));
 
     final raw = await _db.query(
       collection: DatabaseService.flowmodoros,
@@ -92,7 +98,7 @@ class FlowmodoroRepository {
             'created_at', QueryOperator.greaterThanOrEqual, start),
         QueryFilter.basic('created_at', QueryOperator.lessThan, end),
       ],
-      orderBy: [QueryOrder('created_at')],
+      orderBy: [const QueryOrder('created_at')],
     );
 
     return raw.map((e) => FlowmodoroModel.fromMap(e)).toList();

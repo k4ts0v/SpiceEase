@@ -73,7 +73,9 @@ class TutorialsScreen extends ConsumerWidget {
                                     ],
                                   ),
                                   const SizedBox(height: 8),
-                                  Row(
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
                                     children: [
                                       Chip(
                                         label: Text(controller.getDuration(

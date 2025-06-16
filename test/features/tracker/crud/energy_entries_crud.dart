@@ -31,7 +31,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
-import 'package:spiceease/core/auth/user_model.dart';
+import 'package:spiceease/core/auth/auth_user_model.dart';
 import 'package:spiceease/core/database/database_provider.dart';
 import 'package:spiceease/core/auth/auth_provider.dart';
 import 'package:spiceease/main.dart'; // Assuming MyApp is your root widget

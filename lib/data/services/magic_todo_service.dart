@@ -52,6 +52,8 @@ class MagicTodoService {
         (await energyService.getLastEnergyEntry())?.energyLevel;
 
     final int spiciness = _spicinessFromEnergy(lastEnergy ?? 0);
+    const String gt = "goblin" "." "tools" "/";
+    const String ep = "api/todo";
 
     // Prepare the request body for the API.
     final body = {
@@ -63,7 +65,7 @@ class MagicTodoService {
     try {
       // Make the POST request to the goblin.tools API.
       final response = await _dio.post(
-        "https://goblin.tools/api/todo",
+        "https://$gt$ep",
         data: body,
         options: Options(
           headers: {"Content-Type": "application/json"},
