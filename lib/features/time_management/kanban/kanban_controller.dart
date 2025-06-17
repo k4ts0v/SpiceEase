@@ -100,40 +100,40 @@ class KanbanController extends ChangeNotifier {
         }
       }
 
-      // Step 3: Filter out parent tasks that have subtasks and filter out done tasks
+      // Step 3: Filter tasks - keep parent tasks with subtasks but filter based on completion
       final List<TaskModel> filteredTasks = tasks.where((task) {
-        // Filter out done tasks
-        if (task.status == 'Done') return false;
-        // Filter out parent tasks that have subtasks
+        // Filter out parent tasks that have subtasks (they won't be shown directly)
         if (task.hasSubtasks) return false;
         return true;
       }).toList();
 
-      // Step 4: Filter out completed subtasks
-      final List<SubtaskModel> filteredSubtasks =
-          allSubtasksForDay.where((subtask) {
-        return !subtask.completed;
-      }).toList();
+      // Step 4: Filter subtasks - don't filter out completed ones here, do it in categorization
+      final List<SubtaskModel> filteredSubtasks = allSubtasksForDay;
 
       // Step 5: Categorize regular tasks by status
       final todoTaskList = <TaskModel>[];
       final inProgTaskList = <TaskModel>[];
       final doneTaskList = <TaskModel>[];
 
+      final selectedDay = DateUtils.dateOnly(selectedDate);
+
       for (final task in filteredTasks) {
         debugPrint('Categorizing task ${task.id} with status ${task.status}');
 
-        // Special handling for completed tasks: only show on completion date
-        if (task.completedAt != null) {
-          final completedDay = DateUtils.dateOnly(task.completedAt!);
-          final selectedDay = DateUtils.dateOnly(selectedDate);
-          if (completedDay.isAtSameMomentAs(selectedDay)) {
-            doneTaskList.add(task);
+        // Check if task is completed and handle done tasks
+        if (task.status.toLowerCase() == 'done' || task.completedAt != null) {
+          // Only show done tasks if they were completed on the selected date
+          if (task.completedAt != null) {
+            final completedDay = DateUtils.dateOnly(task.completedAt!);
+            if (completedDay.isAtSameMomentAs(selectedDay)) {
+              doneTaskList.add(task);
+            }
+          } else {
+            // Task marked as done but no completion date - don't show it
+            // This ensures we only show tasks actually completed on this date
           }
-        } else if (task.status.toLowerCase() == 'done') {
-          // Task marked as done but no completion date
-          doneTaskList.add(task);
-        } else if (task.status.toLowerCase() == 'in progress') {
+        } else if (task.status.toLowerCase() == 'in progress' ||
+            task.status.toLowerCase() == 'in_progress') {
           // Task currently being worked on
           inProgTaskList.add(task);
         } else {
@@ -149,24 +149,34 @@ class KanbanController extends ChangeNotifier {
 
       for (final subtask in filteredSubtasks) {
         debugPrint(
-            'Categorizing subtask ${subtask.id} with status ${subtask.status}');
+            'Categorizing subtask ${subtask.id} with status ${subtask.status}, completed: ${subtask.completed}');
 
-        // Special handling for completed subtasks: only show on completion date
-        if (subtask.completed && subtask.updatedAt != null) {
-          final completedDay = DateUtils.dateOnly(subtask.updatedAt!);
-          final selectedDay = DateUtils.dateOnly(selectedDate);
-          if (completedDay.isAtSameMomentAs(selectedDay)) {
-            doneSubtaskList.add(subtask);
+        // Check if subtask is completed
+        if (subtask.completed && subtask.status.toLowerCase() == 'done') {
+          // For completed subtasks, check if completion date matches selected date
+          // Use completedAt if available, otherwise fall back to updatedAt
+          DateTime? completionDate = subtask.completedAt ?? subtask.updatedAt;
+
+          if (completionDate != null) {
+            final completedDay = DateUtils.dateOnly(completionDate);
+            if (completedDay.isAtSameMomentAs(selectedDay)) {
+              doneSubtaskList.add(subtask);
+              debugPrint(
+                  'Added subtask ${subtask.id} to done list - completed on $completedDay');
+            } else {
+              debugPrint(
+                  'Subtask ${subtask.id} completed on $completedDay, not showing (selected: $selectedDay)');
+            }
+          } else {
+            // Subtask marked as done but no completion date - don't show it
+            debugPrint(
+                'Subtask ${subtask.id} marked as done but no completion date');
           }
-        } else if (subtask.status?.toLowerCase() == 'done' ||
-            subtask.completed) {
-          // Subtask marked as done
-          doneSubtaskList.add(subtask);
-        } else if (subtask.status?.toLowerCase() == 'in_progress') {
+        } else if (subtask.status.toLowerCase() == 'in_progress') {
           // Subtask currently being worked on
           inProgSubtaskList.add(subtask);
         } else {
-          // Default to todo status
+          // Default to todo status (not completed)
           todoSubtaskList.add(subtask);
         }
       }
@@ -181,14 +191,88 @@ class KanbanController extends ChangeNotifier {
       doneSubtasks = doneSubtaskList;
 
       // Step 8: Identify tasks with no due date for separate display
-      noDueDateTasks = filteredTasks
-          .where((task) => task.dueDate == null && task.completedAt == null)
-          .toList();
+      // Only include non-completed tasks or tasks completed on the selected date
+      noDueDateTasks = filteredTasks.where((task) {
+        if (task.dueDate != null) return false;
+
+        // If task is completed, only show if completed today
+        if (task.completedAt != null) {
+          final completedDay = DateUtils.dateOnly(task.completedAt!);
+          return completedDay.isAtSameMomentAs(selectedDay);
+        }
+
+        // Show non-completed tasks without due dates
+        return task.status.toLowerCase() != 'done';
+      }).toList();
+
+      debugPrint(
+          'Categorized tasks: ${todoTasks.length} todo, ${inProgressTasks.length} in progress, ${doneTasks.length} done');
+      debugPrint(
+          'Categorized subtasks: ${todoSubtasks.length} todo, ${inProgressSubtasks.length} in progress, ${doneSubtasks.length} done');
     } catch (e) {
       debugPrint('Error loading tasks: $e');
     } finally {
       isLoading = false;
       notifyListeners();
+    }
+  }
+
+    /// Updates the status of a subtask and persists the change to the database.
+  Future<void> updateSubtaskStatus(
+      SubtaskModel subtask, String newStatus, BuildContext context) async {
+    final selectedDate = _ref.read(selectedDateProvider);
+
+    try {
+      // Map display status to database status
+      String dbStatus;
+      bool isCompleted = newStatus == 'done';
+      DateTime? completedAt;
+
+      switch (newStatus.toLowerCase()) {
+        case 'in_progress':
+          dbStatus = 'in_progress';
+          isCompleted = false;
+          completedAt = null;
+          break;
+        case 'done':
+          dbStatus = 'done';
+          isCompleted = true;
+          // Set completion date to the SELECTED DATE (not current time)
+          completedAt = DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+          break;
+        default:
+          dbStatus = 'todo';
+          isCompleted = false;
+          completedAt = null;
+      }
+
+      // Create updated subtask with new status, completion state, and completion date
+      final updatedSubtask = subtask.copyWith(
+        status: dbStatus,
+        completed: isCompleted,
+        completedAt: completedAt, // Track when subtask was actually completed
+        updatedAt: DateTime.now(), // Always update the modification timestamp
+      );
+
+      // Persist the change to the database
+      await _ref
+          .read(subtaskServiceProvider)
+          .updateSubtask(subtask.id, updatedSubtask);
+
+      // Refresh the subtask provider for the parent task
+      if (subtask.taskId.isNotEmpty) {
+        _ref.refresh(subtaskStateNotifierProvider(subtask.taskId));
+      }
+
+      debugPrint(
+          'Subtask ${subtask.id} updated in DB with status $dbStatus, completed: $isCompleted, completedAt: $completedAt');
+
+      // Reload all tasks to refresh the kanban board
+      await loadTasks(context);
+    } catch (e) {
+      debugPrint('Error updating subtask: $e');
+      // Still reload tasks to ensure UI consistency
+      await loadTasks(context);
     }
   }
 
@@ -214,7 +298,10 @@ class KanbanController extends ChangeNotifier {
       // Create updated task with new status and completion date if applicable
       final updated = task.copyWith(
         status: dbStatus,
-        completedAt: newStatus == 'done' ? selectedDate : null,
+        // Set completion date to the SELECTED DATE (not current time)
+        completedAt: newStatus == 'done'
+            ? DateTime(selectedDate.year, selectedDate.month, selectedDate.day)
+            : null,
         clearCompletedAt: newStatus != 'done',
         updatedAt: DateTime.now(),
       );
@@ -228,54 +315,6 @@ class KanbanController extends ChangeNotifier {
       await loadTasks(context);
     } catch (e) {
       debugPrint('Error updating task: $e');
-      // Still reload tasks to ensure UI consistency
-      await loadTasks(context);
-    }
-  }
-
-  /// Updates the status of a subtask and persists the change to the database.
-  Future<void> updateSubtaskStatus(
-      SubtaskModel subtask, String newStatus, BuildContext context) async {
-    final selectedDate = _ref.read(selectedDateProvider);
-
-    try {
-      // Map display status to database status
-      String dbStatus;
-      switch (newStatus.toLowerCase()) {
-        case 'in_progress':
-          dbStatus = 'in_progress';
-          break;
-        case 'done':
-          dbStatus = 'done';
-          break;
-        default:
-          dbStatus = 'todo';
-      }
-
-      // Create updated subtask with new status and completion state
-      final updatedSubtask = subtask.copyWith(
-        status: dbStatus, // Set the new status code
-        completed: newStatus == 'done', // Mark as completed if done
-        updatedAt: selectedDate, // Update the timestamp
-      );
-
-      // Persist the change to the database
-      await _ref
-          .read(subtaskServiceProvider)
-          .updateSubtask(subtask.id, updatedSubtask);
-
-      // Refresh the subtask provider for the parent task
-      if (subtask.taskId.isNotEmpty) {
-        _ref.refresh(subtaskStateNotifierProvider(subtask.taskId));
-      }
-
-      debugPrint(
-          'Subtask ${subtask.id} updated in DB with status $dbStatus, reloading tasks');
-
-      // Reload all tasks to refresh the kanban board
-      await loadTasks(context);
-    } catch (e) {
-      debugPrint('Error updating subtask: $e');
       // Still reload tasks to ensure UI consistency
       await loadTasks(context);
     }

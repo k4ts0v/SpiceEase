@@ -7,6 +7,7 @@ import 'package:spiceease/components/calendar_week_selector.dart';
 import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/providers/selected_date_provider.dart';
+import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/features/time_management/kanban/kanban_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/modals.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
@@ -617,9 +618,7 @@ class KanbanPage extends ConsumerWidget {
 
     return GestureDetector(
       onTap: () {
-        if (parentTask != null) {
-          _showTaskModal(context, ref, parentTask);
-        }
+        _showSubtaskModal(context, ref, subtask);
       },
       child: Container(
         width: 180,
@@ -743,6 +742,51 @@ class KanbanPage extends ConsumerWidget {
       // Refresh tasks after modal is closed to reflect any changes
       ref.read(kanbanControllerProvider).loadTasks(context);
     });
+  }
+
+  /// Shows a modal dialog for editing an existing subtask.
+  ///
+  /// The [context] parameter provides the widget context for showing the modal.
+  /// The [ref] parameter is used to access providers and refresh data.
+  /// The [subtask] parameter is the existing subtask to edit.
+  Future<void> _showSubtaskModal(
+    BuildContext context,
+    WidgetRef ref,
+    SubtaskModel subtask,
+  ) async {
+    // Fetch the parent task for this subtask
+    final parentTask =
+        await ref.read(taskServiceProvider).getTaskById(subtask.taskId);
+
+    if (parentTask == null) {
+      // Handle error: parent task not found
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Parent task not found')),
+        );
+      }
+      return;
+    }
+
+    // Build the SubtaskEditorModal with the parent task and existing subtask
+    final modalContent = SubtaskEditorModal(
+      ref: ref,
+      parentTask: parentTask,
+      subtask: subtask, // Pass the existing subtask for editing
+    );
+
+    // Show the modal bottom sheet
+    final result = await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => modalContent,
+    );
+
+    // Refresh tasks after modal is closed to reflect any changes
+    if (result == true && context.mounted) {
+      ref.read(kanbanControllerProvider).loadTasks(context);
+    }
   }
 
   /// Builds a single column of the Kanban board with drag-and-drop functionality.
@@ -984,7 +1028,8 @@ class KanbanPage extends ConsumerWidget {
       // Minimal empty state for very constrained spaces
       return Center(
         child: Icon(Icons.inbox_outlined,
-            size: 16, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+            size: 16,
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
       );
     }
 
@@ -996,7 +1041,8 @@ class KanbanPage extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.inbox_outlined,
-                size: 20, color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
+                size: 20,
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.3)),
             const SizedBox(height: 4),
             Flexible(
               child: Text(
@@ -1124,7 +1170,8 @@ class KanbanPage extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         height: 1.0,
                       ),
                     ),
@@ -1192,10 +1239,9 @@ class KanbanPage extends ConsumerWidget {
     // Build the main card content
     Widget cardContent = InkWell(
       onTap: () {
-        // Show subtask edit modal if needed
-        // For now, just show parent task modal
+        // Show subtask modal
         if (parentTask != null) {
-          _showTaskModal(context, ref, parentTask);
+          _showSubtaskModal(context, ref, subtask);
         }
       },
       borderRadius: BorderRadius.circular(10),
@@ -1247,7 +1293,8 @@ class KanbanPage extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 10,
-                        color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.6),
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -1622,17 +1669,23 @@ class KanbanPage extends ConsumerWidget {
     if (brightness == Brightness.dark) {
       switch (priority) {
         case 1:
-          return const Color(0xFF0D47A1).withValues(alpha: 0.3); // Dark blue pastel
+          return const Color(0xFF0D47A1)
+              .withValues(alpha: 0.3); // Dark blue pastel
         case 2:
-          return const Color(0xFF1B5E20).withValues(alpha: 0.3); // Dark green pastel
+          return const Color(0xFF1B5E20)
+              .withValues(alpha: 0.3); // Dark green pastel
         case 3:
-          return const Color(0xFFF57F17).withValues(alpha: 0.3); // Dark yellow pastel
+          return const Color(0xFFF57F17)
+              .withValues(alpha: 0.3); // Dark yellow pastel
         case 4:
-          return const Color(0xFFE65100).withValues(alpha: 0.3); // Dark orange pastel
+          return const Color(0xFFE65100)
+              .withValues(alpha: 0.3); // Dark orange pastel
         case 5:
-          return const Color(0xFFB71C1C).withValues(alpha: 0.3); // Dark red pastel
+          return const Color(0xFFB71C1C)
+              .withValues(alpha: 0.3); // Dark red pastel
         default:
-          return const Color(0xFF424242).withValues(alpha: 0.3); // Dark grey pastel
+          return const Color(0xFF424242)
+              .withValues(alpha: 0.3); // Dark grey pastel
       }
     }
 
