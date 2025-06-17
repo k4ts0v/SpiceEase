@@ -26,24 +26,47 @@ class TrackerController {
 
   TrackerController(this.ref);
 
-  // Helper method to refresh all providers for a given date
-  void _refreshAllProviders(DateTime date) {
+  void _refreshTasksOnly(DateTime date) {
     ref.invalidate(taskStateNotifierProvider(date));
-    ref.invalidate(habitStateNotifierProvider(date));
-    ref.invalidate(symptomStateNotifierProvider(date));
-    ref.invalidate(medicationStateNotifierProvider(date));
-    ref.invalidate(moodStateNotifierProvider(date));
-    ref.invalidate(energyStateNotifierProvider(date));
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(taskStateNotifierProvider(date).notifier).init();
+    });
+  }
+
+  void _refreshHabitsOnly(DateTime date) {
+    ref.invalidate(habitStateNotifierProvider(date));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(habitStateNotifierProvider(date).notifier).fetchHabits();
-      ref.read(symptomStateNotifierProvider(date).notifier).fetchSymptoms();
+    });
+  }
+
+  void _refreshMedicationsOnly(DateTime date) {
+    ref.invalidate(medicationStateNotifierProvider(date));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(medicationStateNotifierProvider(date).notifier)
           .fetchMedications();
-      ref.read(moodStateNotifierProvider(date).notifier).fetchMoods();
+    });
+  }
+
+  void _refreshSymptomsOnly(DateTime date) {
+    ref.invalidate(symptomStateNotifierProvider(date));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(symptomStateNotifierProvider(date).notifier).fetchSymptoms();
+    });
+  }
+
+  void _refreshEnergiesOnly(DateTime date) {
+    ref.invalidate(energyStateNotifierProvider(date));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(energyStateNotifierProvider(date).notifier).fetchEnergies();
+    });
+  }
+
+  void _refreshMoodOnly(DateTime date) {
+    ref.invalidate(moodStateNotifierProvider(date));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(moodStateNotifierProvider(date).notifier).fetchMoods();
     });
   }
 
@@ -54,6 +77,7 @@ class TrackerController {
       ref.read(taskStateNotifierProvider(date).notifier).init();
       if (taskId != null) {
         ref.invalidate(subtaskStateNotifierProvider(taskId));
+        ref.read(subtaskStateNotifierProvider(taskId).notifier).refresh();
       }
     });
   }
@@ -85,7 +109,7 @@ class TrackerController {
       notes: notes,
       createdAt: combinedDate,
     ));
-    _refreshAllProviders(selectedDate);
+    _refreshEnergiesOnly(selectedDate);
   }
 
   Future<void> updateEnergy(String id, int energyLevel, String? notes) async {
@@ -111,13 +135,13 @@ class TrackerController {
         createdAt: combinedDate,
       ),
     );
-    _refreshAllProviders(selectedDate);
+    _refreshEnergiesOnly(selectedDate);
   }
 
   Future<void> deleteEnergy(String id, WidgetRef ref) async {
     final service = ref.read(energyServiceProvider);
     await service.deleteEnergy(id);
-    _refreshAllProviders(selectedDate);
+    _refreshEnergiesOnly(selectedDate);
   }
 
   // Mood methods - updated with unified refresh
@@ -142,7 +166,7 @@ class TrackerController {
       createdAt: combinedDate,
       updatedAt: DateTime.now(),
     ));
-    _refreshAllProviders(selectedDate);
+    _refreshMoodOnly(selectedDate);
   }
 
   Future<void> updateMood(String id, int moodLevel, String? notes) async {
@@ -169,13 +193,13 @@ class TrackerController {
         updatedAt: DateTime.now(),
       ),
     );
-    _refreshAllProviders(selectedDate);
+    _refreshMoodOnly(selectedDate);
   }
 
   Future<void> deleteMood(String id, WidgetRef ref) async {
     final service = ref.read(moodServiceProvider);
     await service.deleteMood(id);
-    _refreshAllProviders(selectedDate);
+    _refreshMoodOnly(selectedDate);
   }
 
   // Symptoms - updated with unified refresh
@@ -205,11 +229,11 @@ class TrackerController {
       createdAt: dateWithCurrentTime,
       updatedAt: dateWithCurrentTime,
     ));
-    _refreshAllProviders(selectedDate);
+    _refreshSymptomsOnly(selectedDate);
   }
 
-  Future<void> updateSymptom(
-      String id, String name, String category, int severity, String? notes) async {
+  Future<void> updateSymptom(String id, String name, String category,
+      int severity, String? notes) async {
     final service = ref.read(symptomServiceProvider);
     final now = DateTime.now();
 
@@ -227,16 +251,16 @@ class TrackerController {
     );
 
     await service.updateSymptom(id, updatedSymptom);
-    _refreshAllProviders(selectedDate);
+    _refreshSymptomsOnly(selectedDate);
   }
 
   Future<void> deleteSymptom(String id, WidgetRef ref) async {
     final service = ref.read(symptomServiceProvider);
     await service.deleteSymptom(id);
-    _refreshAllProviders(selectedDate);
+    _refreshSymptomsOnly(selectedDate);
   }
 
-  // Medication methods - updated with unified refresh
+  // Medication methods - updated to NOT refresh when using optimistic updates
   Future<void> addMedication({
     required String name,
     required double dose,
@@ -269,29 +293,46 @@ class TrackerController {
     medication = medication.copyWith(nextDueDate: initialNextDueDate);
 
     await service.createMedication(medication);
-    _refreshAllProviders(selectedDate);
+    _refreshMedicationsOnly(selectedDate);
   }
 
+  // ...existing code...
+  // Updated to NOT refresh when using optimistic updates
   Future<void> updateMedication({
     required String id,
-    required int newCount,
+    required bool isCompleted, // Changed from newCount to a boolean flag
     required DateTime forDate,
+    bool skipRefresh = false,
   }) async {
     final service = ref.read(medicationServiceProvider);
     final existingMed = await service.getMedicationById(id);
 
     if (existingMed == null) throw Exception('Medication not found');
 
+    // Use a date with no time component for consistent day-based checks
+    final dateOnly = DateTime(forDate.year, forDate.month, forDate.day);
+
     final updatedCompletedDates =
         List<DateTime>.from(existingMed.completedDates);
 
-    updatedCompletedDates.removeWhere((d) =>
-        d.year == forDate.year &&
-        d.month == forDate.month &&
-        d.day == forDate.day);
+    // Check if the date is already in the list
+    final isAlreadyCompleted = updatedCompletedDates.any((d) =>
+        d.year == dateOnly.year &&
+        d.month == dateOnly.month &&
+        d.day == dateOnly.day);
 
-    for (int i = 0; i < newCount; i++) {
-      updatedCompletedDates.add(forDate);
+    if (isCompleted && !isAlreadyCompleted) {
+      // If we need to mark it as complete and it's not already, add the date.
+      updatedCompletedDates.add(dateOnly);
+    } else if (!isCompleted && isAlreadyCompleted) {
+      // If we need to mark it as not complete and it is, remove all instances of the date.
+      updatedCompletedDates.removeWhere((d) =>
+          d.year == dateOnly.year &&
+          d.month == dateOnly.month &&
+          d.day == dateOnly.day);
+    } else {
+      // No change needed, state is already correct.
+      return;
     }
 
     final tempMed = existingMed.copyWith(completedDates: updatedCompletedDates);
@@ -301,16 +342,47 @@ class TrackerController {
     );
 
     await service.updateMedication(id, updatedMed);
-    _refreshAllProviders(selectedDate);
+
+    // Only refresh if not using optimistic updates
+    if (!skipRefresh) {
+      _refreshMedicationsOnly(selectedDate);
+    }
+  }
+
+  Future<void> updateMedicationDetails({
+    required String id,
+    required String name,
+    required double dose,
+    required String unit,
+    required String frequency,
+    List<int>? customDays,
+    required int timesPerDay,
+  }) async {
+    final service = ref.read(medicationServiceProvider);
+    final existingMed = await service.getMedicationById(id);
+    if (existingMed == null) throw Exception('Medication not found');
+
+    final updatedMed = existingMed.copyWith(
+      name: name,
+      dose: dose,
+      unit: unit,
+      frequency: frequency,
+      customDays: customDays,
+      timesPerDay: timesPerDay,
+      updatedAt: DateTime.now(),
+    );
+
+    await service.updateMedication(id, updatedMed);
+    _refreshMedicationsOnly(selectedDate);
   }
 
   Future<void> deleteMedication(String id) async {
     final service = ref.read(medicationServiceProvider);
     await service.deleteMedication(id);
-    _refreshAllProviders(selectedDate);
+    _refreshMedicationsOnly(selectedDate);
   }
 
-  // Tasks - updated with unified refresh
+  // Tasks - updated to NOT refresh when using optimistic updates
   Future<void> addTask(
       {required String title,
       required String description,
@@ -341,6 +413,7 @@ class TrackerController {
     _refreshTaskProviders(selectedDate);
   }
 
+  // Updated to NOT refresh when using optimistic updates
   Future<void> updateTask(
     String id,
     String title,
@@ -352,8 +425,9 @@ class TrackerController {
     int priority,
     List<SubtaskModel>? subtasks,
     DateTime? startTime,
-    DateTime? endTime,
-  ) async {
+    DateTime? endTime, {
+    bool skipRefresh = false, // Add flag to skip refresh for optimistic updates
+  }) async {
     final service = ref.read(taskServiceProvider);
     final existingTask = await service.getTaskById(id);
 
@@ -364,16 +438,12 @@ class TrackerController {
     String finalStatus = status;
     DateTime? finalCompletedAt = completedAt;
 
-    // Handle completion logic more explicitly
     if (status == 'Done') {
-      // Task is being marked as complete
       finalCompletedAt = completedAt ?? DateTime.now();
       finalStatus = 'Done';
     } else {
-      // Task is being marked as incomplete
       finalCompletedAt = null;
-      finalStatus =
-          status; // Use the provided status ('In Progress', 'todo', etc.)
+      finalStatus = status;
     }
 
     final updatedTask = existingTask.copyWith(
@@ -387,12 +457,15 @@ class TrackerController {
       updatedAt: DateTime.now(),
       startTime: startTime,
       endTime: endTime,
-      // Add these flags to explicitly clear completedAt when needed
       clearCompletedAt: finalCompletedAt == null,
     );
 
     await service.updateTask(id, updatedTask);
-    _refreshTaskProviders(selectedDate, taskId: id);
+
+    // Only refresh if not using optimistic updates
+    if (!skipRefresh) {
+      _refreshTaskProviders(selectedDate, taskId: id);
+    }
   }
 
   Future<void> deleteTask(String id) async {
@@ -401,7 +474,8 @@ class TrackerController {
     _refreshTaskProviders(selectedDate);
   }
 
-  // Subtask methods - updated with unified refresh
+  // Update the updateSubtask method around line 450
+
   Future<void> updateSubtask(
       String taskId,
       SubtaskModel subtask,
@@ -410,10 +484,30 @@ class TrackerController {
       String status,
       String rawTimeValue,
       DateTime? startTime,
-      DateTime? endtime) async {
+      DateTime? endtime,
+      {bool skipRefresh = false}) async {
+    // Add skipRefresh parameter
     final taskService = ref.read(taskServiceProvider);
     final subtaskService = ref.read(subtaskServiceProvider);
     final userId = await taskService.getCurrentUserId();
+    final selectedDate = ref.read(selectedDateProvider);
+
+    String finalStatus = status;
+    DateTime? completedAt;
+
+    if (completed && status.toLowerCase() != 'done') {
+      finalStatus = 'done';
+      completedAt =
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    } else if (!completed && status.toLowerCase() == 'done') {
+      finalStatus = 'in_progress';
+      completedAt = null;
+    } else if (completed && status.toLowerCase() == 'done') {
+      completedAt = subtask.completedAt ??
+          DateTime(selectedDate.year, selectedDate.month, selectedDate.day);
+    } else {
+      completedAt = null;
+    }
 
     final updatedSubtask = subtask.copyWith(
       title: title,
@@ -421,17 +515,22 @@ class TrackerController {
       rawTimeValue: rawTimeValue,
       startTime: startTime,
       endTime: endtime,
-      status: status,
+      status: finalStatus,
       userId: userId,
+      completedAt: completedAt,
       updatedAt: DateTime.now(),
     );
 
     await subtaskService.updateSubtask(subtask.id, updatedSubtask);
-    _refreshTaskProviders(selectedDate, taskId: taskId);
+
+    // Only refresh if not using optimistic updates
+    if (!skipRefresh) {
+      _refreshTaskProviders(selectedDate, taskId: taskId);
+    }
   }
 
-  Future<void> createSubtask(String taskId, String title,
-      String? rawTimeValue, int? order) async {
+  Future<void> createSubtask(
+      String taskId, String title, String? rawTimeValue, int? order) async {
     final taskService = ref.read(taskServiceProvider);
     final subtaskService = ref.read(subtaskServiceProvider);
     final userId = await taskService.getCurrentUserId();
@@ -446,12 +545,13 @@ class TrackerController {
       title: title,
       order: newOrder,
       completed: false,
+      status: 'todo',
       rawTimeValue: rawTimeValue,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
 
-    await subtaskService.createSubtask(subtask);
+    await subtaskService.createSubtaskAndUpdateParent(subtask);
     _refreshTaskProviders(selectedDate, taskId: taskId);
   }
 
@@ -461,7 +561,7 @@ class TrackerController {
     _refreshTaskProviders(selectedDate, taskId: parentTaskId);
   }
 
-  // Habits - updated with unified refresh
+  // Habits - updated to NOT refresh when using optimistic updates
   Future<void> addHabit({
     required String title,
     required String description,
@@ -486,17 +586,19 @@ class TrackerController {
       updatedAt: today,
     ));
 
-    _refreshAllProviders(selectedDate);
+    _refreshHabitsOnly(selectedDate);
   }
 
+  // Updated to NOT refresh when using optimistic updates
   Future<void> updateHabit(
     String id,
     String title,
     String description,
     int frequency,
     List<int>? customDays,
-    bool markAsCompleted,
-  ) async {
+    bool markAsCompleted, {
+    bool skipRefresh = false, // Add flag to skip refresh for optimistic updates
+  }) async {
     final service = ref.read(habitServiceProvider);
     final existingHabit = await service.getHabitById(id);
 
@@ -519,7 +621,11 @@ class TrackerController {
     );
 
     await service.updateHabit(id, updatedHabit);
-    _refreshAllProviders(selectedDate);
+
+    // Only refresh if not using optimistic updates
+    if (!skipRefresh) {
+      _refreshHabitsOnly(selectedDate);
+    }
   }
 
   Future<void> deleteHabit(String id) async {
@@ -527,7 +633,7 @@ class TrackerController {
 
     try {
       await service.deleteHabit(id);
-      _refreshAllProviders(selectedDate);
+      _refreshHabitsOnly(selectedDate);
       debugPrint('Habit $id deleted successfully');
     } catch (e) {
       debugPrint('Error deleting habit: $e');
@@ -535,7 +641,8 @@ class TrackerController {
     }
   }
 
-  // Helper methods
+  // ... rest of the existing methods remain the same ...
+
   String generateId() {
     final service = ref.read(taskServiceProvider);
     return service.generateId();
@@ -582,7 +689,7 @@ class TrackerController {
     return null;
   }
 
-  // Additional helper methods for medication frequency
+  // Additional helper methods remain the same...
   bool isMedicationDue(MedicationModel med) {
     if (med.completedDates.isEmpty) return true;
 
@@ -635,7 +742,7 @@ class TrackerController {
     );
 
     await service.updateMedication(medication.id, updatedMed);
-    _refreshAllProviders(selectedDate);
+    _refreshMedicationsOnly(selectedDate);
   }
 
   Future<void> updateTaskStatus(
@@ -654,11 +761,21 @@ class TrackerController {
 
   Future<List<TaskModel>> getAllTasks() async {
     final service = ref.read(taskServiceProvider);
-    return await service.getAllTasks();
+    return await service.getAllTasksFiltered(selectedDate);
   }
 
   Future<List<TaskModel>> getTasksByStatus(String status) async {
     final service = ref.read(taskServiceProvider);
-    return await service.getTasksByStatus(status);
+    return await service.getTasksByStatus(status, filterDate: selectedDate);
+  }
+
+  Future<List<TaskModel>> getTasksForSelectedDate() async {
+    final service = ref.read(taskServiceProvider);
+    return await service.getTasksForDate(selectedDate);
+  }
+
+  Future<List<SubtaskModel>> getSubtasksForTask(String taskId) async {
+    final service = ref.read(subtaskServiceProvider);
+    return await service.getSubtasksForTaskFiltered(taskId, selectedDate);
   }
 }

@@ -16,7 +16,7 @@ import 'package:spiceease/features/tracker/presentation/widgets/entity_section.d
 import 'package:spiceease/features/tracker/presentation/widgets/subtask_list.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
-class EntitySections extends ConsumerWidget {
+class EntitySections extends ConsumerStatefulWidget {
   final Function(BuildContext, Widget) showModal;
   final DateTime selectedDate;
 
@@ -27,12 +27,57 @@ class EntitySections extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final symptoms = ref.watch(symptomStateNotifierProvider(selectedDate));
+  ConsumerState<EntitySections> createState() => _EntitySectionsState();
+}
+
+class _EntitySectionsState extends ConsumerState<EntitySections> {
+  // Local state for optimistic updates
+  final Map<String, int> _localMedicationCounts = {};
+  final Map<String, bool> _localTaskCompletion = {};
+  final Map<String, bool> _localHabitCompletion = {};
+
+  @override
+  void didUpdateWidget(EntitySections oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Clear local state when date changes
+    if (widget.selectedDate != oldWidget.selectedDate) {
+      _localMedicationCounts.clear();
+      _localTaskCompletion.clear();
+      _localHabitCompletion.clear();
+    }
+  }
+
+  // Helper methods for local state
+  int _getEffectiveMedicationCount(MedicationModel medication) {
+    return _localMedicationCounts[medication.id] ??
+        medication.getTakenCountForDate(widget.selectedDate);
+  }
+
+  bool _getEffectiveTaskCompletion(TaskModel task) {
+    return _localTaskCompletion[task.id] ??
+        (task.status == 'Done' || task.completedAt != null);
+  }
+
+  bool _getEffectiveHabitCompletion(HabitModel habit) {
+    if (_localHabitCompletion.containsKey(habit.id)) {
+      return _localHabitCompletion[habit.id]!;
+    }
+
+    final displayDate = widget.selectedDate;
+    return habit.completedDates.any((d) =>
+        d.year == displayDate.year &&
+        d.month == displayDate.month &&
+        d.day == displayDate.day);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final symptoms =
+        ref.watch(symptomStateNotifierProvider(widget.selectedDate));
     final medications =
-        ref.watch(medicationStateNotifierProvider(selectedDate));
-    final tasks = ref.watch(taskStateNotifierProvider(selectedDate));
-    final habits = ref.watch(habitStateNotifierProvider(selectedDate));
+        ref.watch(medicationStateNotifierProvider(widget.selectedDate));
+    final tasks = ref.watch(taskStateNotifierProvider(widget.selectedDate));
+    final habits = ref.watch(habitStateNotifierProvider(widget.selectedDate));
     final theme = Theme.of(context);
 
     // Extract data, loading status, and errors manually
@@ -61,11 +106,11 @@ class EntitySections extends ConsumerWidget {
           items: symptomsList,
           isLoading: symptomsLoading,
           error: symptomsError,
-          onTap: (symptom) => showModal(
+          onTap: (symptom) => widget.showModal(
             context,
             SymptomEditorModal(ref: ref, existing: symptom),
           ),
-          onAdd: () => showModal(context, SymptomEditorModal(ref: ref)),
+          onAdd: () => widget.showModal(context, SymptomEditorModal(ref: ref)),
           itemBuilder: (symptom) => ListTile(
             title: Text(symptom.name),
             subtitle: Text(
@@ -82,49 +127,62 @@ class EntitySections extends ConsumerWidget {
           items: medicationsList,
           isLoading: medicationsLoading,
           error: medicationsError,
-          onTap: (medication) => showModal(
+          onTap: (medication) => widget.showModal(
             context,
             MedicationEditorModal(ref: ref, existing: medication),
           ),
-          onAdd: () => showModal(context, MedicationEditorModal(ref: ref)),
+          onAdd: () =>
+              widget.showModal(context, MedicationEditorModal(ref: ref)),
           itemBuilder: (medication) {
-            final selectedDate = ref.watch(selectedDateProvider);
-            final takenCount = medication.getTakenCountForDate(selectedDate);
+            final takenCount = _getEffectiveMedicationCount(medication);
             final timesPerDay = medication.timesPerDay;
+            final isCompleted = takenCount >= timesPerDay;
 
             return ListTile(
-              title: Text(medication.name),
+              title: Text(
+                medication.name,
+                style: TextStyle(
+                  decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  color: isCompleted
+                      ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                      : null,
+                ),
+              ),
               subtitle: Text(
                   '${localizations.dose}: ${medication.dose} ${medication.unit}'),
               trailing: timesPerDay <= 1
-                  ? StatefulBuilder(
-                      builder: (context, setState) {
-                        return Checkbox(
-                          value: takenCount >= 1,
-                          onChanged: (bool? value) async {
-                            setState(() {});
-                            try {
-                              final newCount = (value == true) ? 1 : 0;
-                              final controller =
-                                  ref.read(trackerControllerProvider);
-                              await controller.updateMedication(
-                                id: medication.id,
-                                newCount: newCount,
-                                forDate: selectedDate,
-                              );
-                            } catch (e) {
-                              setState(() {});
+                  ? Checkbox(
+                      value: takenCount >= 1,
+                      onChanged: (bool? value) async {
+                        final newIsCompleted = value == true;
+
+                        // Optimistic UI update
+                        setState(() {
+                          _localMedicationCounts[medication.id] =
+                              newIsCompleted ? 1 : 0;
+                        });
+
+                        try {
+                          final controller =
+                              ref.read(trackerControllerProvider);
+                          await controller.updateMedication(
+                              id: medication.id,
+                              isCompleted: newIsCompleted,
+                              forDate: widget.selectedDate,
+                              skipRefresh: true);
+                        } catch (e) {
+                          // Revert optimistic update on error
+                          if (mounted) {
+                            setState(() {
+                              _localMedicationCounts.remove(medication.id);
+                            });
+                            ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                   content: Text(
-                                      '${localizations.failedToUpdate}: $e'));
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${localizations.failedToUpdate}: $e')),
-                              );
-                            }
-                          },
-                        );
+                                      '${localizations.failedToUpdate}: $e')),
+                            );
+                          }
+                        }
                       },
                     )
                   : Row(
@@ -141,41 +199,88 @@ class EntitySections extends ConsumerWidget {
                           onPressed: takenCount > 0
                               ? () async {
                                   final newCount = takenCount - 1;
-                                  final controller =
-                                      ref.read(trackerControllerProvider);
-                                  await controller.updateMedication(
-                                    id: medication.id,
-                                    newCount: newCount,
-                                    forDate: selectedDate,
-                                  );
+                                  final wasCompleted = isCompleted;
+                                  final willBeCompleted =
+                                      newCount >= timesPerDay;
+
+                                  // Optimistic UI update
+                                  setState(() {
+                                    _localMedicationCounts[medication.id] =
+                                        newCount;
+                                  });
+
+                                  // Only update backend if completion status changes
+                                  if (wasCompleted && !willBeCompleted) {
+                                    try {
+                                      final controller =
+                                          ref.read(trackerControllerProvider);
+                                      await controller.updateMedication(
+                                          id: medication.id,
+                                          isCompleted: false,
+                                          forDate: widget.selectedDate,
+                                          skipRefresh: true);
+                                    } catch (e) {
+                                      // Revert on error
+                                      if (mounted) {
+                                        setState(() {
+                                          _localMedicationCounts[
+                                              medication.id] = takenCount;
+                                        });
+                                      }
+                                    }
+                                  }
                                 }
                               : null,
                         ),
                         Text(
                           '$takenCount/$timesPerDay',
                           style: TextStyle(
-                            color: theme.colorScheme.onSurface,
+                            color: isCompleted
+                                ? Colors.green
+                                : theme.colorScheme.onSurface,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                         IconButton(
                           icon: Icon(
                             Icons.add_circle_outline,
-                            color: takenCount < timesPerDay
+                            color: !isCompleted
                                 ? theme.colorScheme.primary
                                 : theme.colorScheme.onSurface
                                     .withValues(alpha: 0.3),
                           ),
-                          onPressed: takenCount < timesPerDay
+                          onPressed: !isCompleted
                               ? () async {
                                   final newCount = takenCount + 1;
-                                  final controller =
-                                      ref.read(trackerControllerProvider);
-                                  await controller.updateMedication(
-                                    id: medication.id,
-                                    newCount: newCount,
-                                    forDate: selectedDate,
-                                  );
+                                  final willBeCompleted =
+                                      newCount >= timesPerDay;
+
+                                  // Optimistic UI update
+                                  setState(() {
+                                    _localMedicationCounts[medication.id] =
+                                        newCount;
+                                  });
+
+                                  // Update backend if now completed
+                                  if (willBeCompleted) {
+                                    try {
+                                      final controller =
+                                          ref.read(trackerControllerProvider);
+                                      await controller.updateMedication(
+                                          id: medication.id,
+                                          isCompleted: true,
+                                          forDate: widget.selectedDate,
+                                          skipRefresh: true);
+                                    } catch (e) {
+                                      // Revert on error
+                                      if (mounted) {
+                                        setState(() {
+                                          _localMedicationCounts[
+                                              medication.id] = takenCount;
+                                        });
+                                      }
+                                    }
+                                  }
                                 }
                               : null,
                         ),
@@ -186,155 +291,139 @@ class EntitySections extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
         EntitySection<TaskModel>(
-            title: localizations.tasks,
-            items: tasksList,
-            isLoading: tasksLoading,
-            error: tasksError,
-            onTap: (task) =>
-                showModal(context, TaskEditorModal(ref: ref, existing: task)),
-            onAdd: () => showModal(context, TaskEditorModal(ref: ref)),
-            itemBuilder: (task) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  StatefulBuilder(
-                    builder: (context, setState) {
-                      // Move the completion calculation inside StatefulBuilder
-                      bool localIsCompleted =
-                          task.status == 'Done' || task.completedAt != null;
+          title: localizations.tasks,
+          items: tasksList,
+          isLoading: tasksLoading,
+          error: tasksError,
+          onTap: (task) => widget.showModal(
+              context, TaskEditorModal(ref: ref, existing: task)),
+          onAdd: () => widget.showModal(context, TaskEditorModal(ref: ref)),
+          itemBuilder: (task) {
+            // Use local state for completion status
+            final localIsCompleted = _getEffectiveTaskCompletion(task);
 
-                      // Also calculate visual completion state for styling
-                      final isCompleted = localIsCompleted;
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                ListTile(
+                  leading: Icon(
+                    Icons.task_alt,
+                    color: localIsCompleted
+                        ? theme.colorScheme.primary.withValues(alpha: 0.7)
+                        : theme.colorScheme.primary,
+                  ),
+                  title: Text(
+                    task.title,
+                    style: TextStyle(
+                      decoration:
+                          localIsCompleted ? TextDecoration.lineThrough : null,
+                      color: localIsCompleted
+                          ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  subtitle: Text(
+                    '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${_getLocalizedStatus(task.status, localizations)}',
+                    style: TextStyle(
+                      color: localIsCompleted
+                          ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
+                          : theme.colorScheme.onSurface,
+                    ),
+                  ),
+                  trailing: Checkbox(
+                    value: localIsCompleted,
+                    onChanged: (value) async {
+                      final newIsCompleted = value ?? false;
 
-                      return ListTile(
-                        leading: Icon(
-                          Icons.task_alt,
-                          color: isCompleted
-                              ? theme.colorScheme.primary.withValues(alpha: 0.7)
-                              : theme.colorScheme.primary,
-                        ),
-                        title: Text(
-                          task.title,
-                          style: TextStyle(
-                            decoration:
-                                isCompleted ? TextDecoration.lineThrough : null,
-                            color: isCompleted
-                                ? theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.6)
-                                : theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        subtitle: Text(
-                          '${task.dueDate != null ? "${localizations.due}: ${DateFormat('EEE, d MMMM').format(task.dueDate!.toLocal())}" : localizations.noDueDate} | ${localizations.status}: ${_getLocalizedStatus(task.status, localizations)}',
-                          style: TextStyle(
-                            color: isCompleted
-                                ? theme.colorScheme.onSurface
-                                    .withValues(alpha: 0.6)
-                                : theme.colorScheme.onSurface,
-                          ),
-                        ),
-                        trailing: Checkbox(
-                          value: localIsCompleted,
-                          onChanged: (value) async {
-                            // Store previous state for potential revert
-                            final previousState = localIsCompleted;
+                      // Update local state immediately
+                      setState(() {
+                        _localTaskCompletion[task.id] = newIsCompleted;
+                      });
 
-                            // Optimistic UI update - update immediately
+                      // Delay the backend update to prevent immediate refreshes
+                      Future.delayed(const Duration(milliseconds: 100),
+                          () async {
+                        try {
+                          final controller =
+                              ref.read(trackerControllerProvider);
+                          await controller.updateTask(
+                            task.id,
+                            task.title,
+                            task.description,
+                            newIsCompleted ? 'Done' : 'In Progress',
+                            task.dueDate,
+                            newIsCompleted ? widget.selectedDate : null,
+                            task.estimatedTime,
+                            task.priority,
+                            null,
+                            task.startTime,
+                            task.endTime,
+                            skipRefresh: true,
+                          );
+                        } catch (e) {
+                          // Revert local state on error
+                          if (mounted) {
                             setState(() {
-                              localIsCompleted = value ?? false;
+                              _localTaskCompletion.remove(task.id);
                             });
-
-                            try {
-                              final controller =
-                                  ref.read(trackerControllerProvider);
-
-                              // Use the controller's updateTask method with proper status and completedAt handling
-                              await controller.updateTask(
-                                task.id,
-                                task.title,
-                                task.description,
-                                (value ?? false)
-                                    ? 'Done'
-                                    : 'In Progress', // Match the model's logic
-                                task.dueDate,
-                                (value ?? false)
-                                    ? selectedDate
-                                    : null, // completedAt
-                                task.estimatedTime,
-                                task.priority,
-                                null,
-                                task.startTime,
-                                task.endTime,
-                              );
-                            } catch (e) {
-                              // Revert to previous state on error
-                              setState(() {
-                                localIsCompleted = previousState;
-                              });
-
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                    content: Text(
-                                        '${localizations.failedToUpdate}: $e')),
-                              );
-                            }
-                          },
-                        ),
-                      );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content:
+                                    Text('${localizations.failedToUpdate}: $e'),
+                              ),
+                            );
+                          }
+                        }
+                      });
                     },
                   ),
+                ),
 
-                  // Display subtasks if parent has them flagged
-                  if (task.hasSubtasks)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 0.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16.0, vertical: 8.0),
-                            child: Text(
-                              localizations.subtasks,
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: theme.colorScheme.onSurface,
-                              ),
+                // Display subtasks if parent has them flagged
+                if (task.hasSubtasks)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 0.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
+                          child: Text(
+                            localizations.subtasks,
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
-                          SubtaskList(
-                            parentTaskId: task.id,
-                            parentTask: task,
-                            ref: ref,
-                          ),
-                        ],
-                      ),
-                    )
-                ],
-              );
-            }),
+                        ),
+                        SubtaskList(
+                          parentTaskId: task.id,
+                          parentTask: task,
+                        ),
+                      ],
+                    ),
+                  )
+              ],
+            );
+          },
+        ),
         const SizedBox(height: 20),
         EntitySection<HabitModel>(
           title: localizations.habits,
           items: habitsList,
           isLoading: habitsLoading,
           error: habitsError,
-          onTap: (habit) => showModal(
+          onTap: (habit) => widget.showModal(
             context,
             HabitEditorModal(ref: ref, existing: habit),
           ),
-          onAdd: () => showModal(context, HabitEditorModal(ref: ref)),
+          onAdd: () => widget.showModal(context, HabitEditorModal(ref: ref)),
           itemBuilder: (habit) {
-            final selectedDate = ref.watch(selectedDateProvider);
-            final displayDate = selectedDate;
-
-            // Check if habit is completed for the display date
-            final isCompleted = habit.completedDates.any((d) =>
-                d.year == displayDate.year &&
-                d.month == displayDate.month &&
-                d.day == displayDate.day);
+            // Use local state for completion status
+            final localIsCompleted = _getEffectiveHabitCompletion(habit);
 
             // Frequency text function
             String getFrequencyText() {
@@ -354,15 +443,16 @@ class EntitySections extends ConsumerWidget {
             return ListTile(
               leading: Icon(
                 Icons.sync_rounded,
-                color: isCompleted
+                color: localIsCompleted
                     ? theme.colorScheme.primary.withValues(alpha: 0.7)
                     : theme.colorScheme.primary,
               ),
               title: Text(
                 habit.title,
                 style: TextStyle(
-                  decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  color: isCompleted
+                  decoration:
+                      localIsCompleted ? TextDecoration.lineThrough : null,
+                  color: localIsCompleted
                       ? theme.colorScheme.onSurface.withValues(alpha: 0.6)
                       : theme.colorScheme.onSurface,
                 ),
@@ -370,35 +460,44 @@ class EntitySections extends ConsumerWidget {
               subtitle: Text(
                 '${habit.description.isNotEmpty ? habit.description : localizations.noDescription} | ${localizations.frequency}: ${getFrequencyText()}',
               ),
-              trailing: StatefulBuilder(
-                builder: (context, setState) {
-                  return Checkbox(
-                    value: isCompleted,
-                    onChanged: (value) async {
-                      // Optimistic UI update
-                      setState(() {});
+              trailing: Checkbox(
+                value: localIsCompleted,
+                onChanged: (value) async {
+                  final newIsCompleted = value ?? false;
 
+                  // Update local state immediately
+                  setState(() {
+                    _localHabitCompletion[habit.id] = newIsCompleted;
+                  });
+
+                  // Delay the backend update
+                  Future.delayed(const Duration(milliseconds: 100), () async {
+                    try {
                       final controller = ref.read(trackerControllerProvider);
-                      try {
-                        await controller.updateHabit(
-                          habit.id,
-                          habit.title,
-                          habit.description,
-                          habit.frequency,
-                          habit.customDays,
-                          value ?? false,
-                        );
-                      } catch (e) {
-                        // Revert on error
-                        setState(() {});
+                      await controller.updateHabit(
+                        habit.id,
+                        habit.title,
+                        habit.description,
+                        habit.frequency,
+                        habit.customDays,
+                        newIsCompleted,
+                        skipRefresh: true,
+                      );
+                    } catch (e) {
+                      // Revert local state on error
+                      if (mounted) {
+                        setState(() {
+                          _localHabitCompletion.remove(habit.id);
+                        });
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                              content:
-                                  Text('${localizations.failedToUpdate}: $e')),
+                            content:
+                                Text('${localizations.failedToUpdate}: $e'),
+                          ),
                         );
                       }
-                    },
-                  );
+                    }
+                  });
                 },
               ),
             );

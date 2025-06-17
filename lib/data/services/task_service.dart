@@ -1,5 +1,4 @@
-// lib/data/services/task_service.dart
-
+import 'package:flutter/material.dart';
 import 'package:spiceease/core/auth/auth_service.dart';
 import 'package:spiceease/core/database/database_service.dart';
 import 'package:spiceease/core/database/firestore_date_adapter.dart';
@@ -27,6 +26,29 @@ class TaskService {
       _repository.updateTask(id, task);
 
   Future<void> deleteTask(String id) => _repository.deleteTask(id);
+
+  /// Filters tasks to show completed tasks until their completion date (not after)
+  List<TaskModel> _filterTasksForSelectedDate(
+      List<TaskModel> tasks, DateTime selectedDate) {
+    final selectedDay = DateUtils.dateOnly(selectedDate);
+
+    return tasks.where((task) {
+      // If task is completed, only show if selected date is on or before completion date
+      if (task.status.toLowerCase() == 'done' || task.completedAt != null) {
+        if (task.completedAt != null) {
+          final completedDay = DateUtils.dateOnly(task.completedAt!);
+          // Show if selected date is on or before the completion date
+          return selectedDay.isBefore(completedDay) ||
+              selectedDay.isAtSameMomentAs(completedDay);
+        }
+        // Task marked as done but no completion date - don't show it
+        return false;
+      }
+
+      // Show non-completed tasks
+      return true;
+    }).toList();
+  }
 
   Future<List<TaskModel>> getTasksForDate(DateTime date) async {
     final user = await _authService.getCurrentUser();
@@ -58,20 +80,22 @@ class TaskService {
     );
 
     final allTasks = [...tasksWithDueDate, ...tasksWithoutDueDate];
-    return allTasks.map((e) => TaskModel.fromMap(e)).toList();
+    final taskModels = allTasks.map((e) => TaskModel.fromMap(e)).toList();
+
+    // Apply filtering to show completed tasks from completion date onwards
+    return _filterTasksForSelectedDate(taskModels, date);
   }
 
-  String generateId() => _db.generateId();
-
-  Future<String> getCurrentUserId() async {
-    final user = await _authService.getCurrentUser();
-    if (user == null) throw Exception('User not authenticated');
-    return user.uid;
+  /// Gets filtered tasks for all dates (used by tracker)
+  Future<List<TaskModel>> getAllTasksFiltered(DateTime selectedDate) async {
+    final allTasks = await getAllTasks();
+    return _filterTasksForSelectedDate(allTasks, selectedDate);
   }
 
   Future<List<TaskModel>> getTasksByStatus(
     String status, {
     bool sortByPriority = false,
+    DateTime? filterDate,
   }) async {
     final userId = await getCurrentUserId();
 
@@ -91,11 +115,26 @@ class TaskService {
       orderBy: orderFields,
     );
 
-    return tasks.map(TaskModel.fromMap).toList();
+    final taskModels = tasks.map(TaskModel.fromMap).toList();
+
+    // Apply filtering if date is provided
+    if (filterDate != null) {
+      return _filterTasksForSelectedDate(taskModels, filterDate);
+    }
+
+    return taskModels;
   }
 
-  /// You may add a signal method to inform UI when toggling is complete
-  Future<void> toggleTaskCompletion(String taskId, DateTime selectedDate) async {
+  String generateId() => _db.generateId();
+
+  Future<String> getCurrentUserId() async {
+    final user = await _authService.getCurrentUser();
+    if (user == null) throw Exception('User not authenticated');
+    return user.uid;
+  }
+
+  Future<void> toggleTaskCompletion(
+      String taskId, DateTime selectedDate) async {
     final task = await getTaskById(taskId);
     if (task == null) throw Exception("Task not found");
 

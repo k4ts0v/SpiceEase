@@ -818,12 +818,12 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           final suggestion = subtaskSuggestions[i];
 
           // Create the subtask with proper order numbering
-        await ctrl.createSubtask(
-          taskId,
-          suggestion.title,
-          suggestion.rawTimeValue,
-          nextOrder + i, // Start from nextOrder and increment
-        );
+          await ctrl.createSubtask(
+            taskId,
+            suggestion.title,
+            suggestion.rawTimeValue,
+            nextOrder + i, // Start from nextOrder and increment
+          );
 
           // Calculate time estimate if available
           if (suggestion.rawTimeValue != null &&
@@ -2386,8 +2386,7 @@ class MedicationEditorModalState
       return;
     }
 
-    if ((_freqLabel == localizations.weekly ||
-            _freqLabel == localizations.monthly) &&
+    if ((_freqLabel == 'Weekly' || _freqLabel == 'Monthly') &&
         _selectedDays.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.selectAtLeastOneDay)),
@@ -2395,17 +2394,19 @@ class MedicationEditorModalState
       return;
     }
 
+    // Guard against async gaps
+    if (!mounted) return;
     Navigator.of(context).pop();
-    final ctrl = widget.ref.read(trackerControllerProvider);
 
+    final ctrl = widget.ref.read(trackerControllerProvider);
     final frequency = _mapLabelToFrequency(_freqLabel);
     final customDays = (frequency == 'weekly' || frequency == 'monthly')
         ? _selectedDays.toList()
         : null;
-
     final unitToSave = _isCustomUnit ? _customUnitC.text : _unit;
 
     if (widget.existing == null) {
+      // Creating new medication
       await ctrl.addMedication(
         name: _nameC.text.trim(),
         dose: double.parse(_doseC.text),
@@ -2415,11 +2416,46 @@ class MedicationEditorModalState
         timesPerDay: _timesPerDay,
       );
     } else {
-      await ctrl.updateMedication(
+      // Updating existing medication details
+      // First update the medication details
+      await ctrl.updateMedicationDetails(
         id: widget.existing!.id,
-        newCount: _timesPerDay > 1 ? _takenTimes : (_markAsTaken ? 1 : 0),
-        forDate: widget.ref.read(selectedDateProvider) ?? DateTime.now(),
+        name: _nameC.text.trim(),
+        dose: double.parse(_doseC.text),
+        unit: unitToSave,
+        frequency: frequency,
+        customDays: customDays,
+        timesPerDay: _timesPerDay,
       );
+
+      // Then update the taken status for today if changed
+      final selectedDate = widget.ref.read(selectedDateProvider);
+      final currentTakenCount =
+          widget.existing!.getTakenCountForDate(selectedDate);
+
+      if (_timesPerDay <= 1) {
+        // Simple checkbox case
+        final shouldBeTaken = _markAsTaken;
+        final isTaken = currentTakenCount > 0;
+
+        if (shouldBeTaken != isTaken) {
+          await ctrl.updateMedication(
+            id: widget.existing!.id,
+            isCompleted: shouldBeTaken,
+            forDate: selectedDate,
+          );
+        }
+      } else {
+        // Multiple times per day case
+        if (_takenTimes != currentTakenCount) {
+          final isCompleted = _takenTimes >= _timesPerDay;
+          await ctrl.updateMedication(
+            id: widget.existing!.id,
+            isCompleted: isCompleted,
+            forDate: selectedDate,
+          );
+        }
+      }
     }
   }
 

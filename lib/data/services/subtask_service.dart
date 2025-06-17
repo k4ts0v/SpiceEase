@@ -1,53 +1,75 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
 import 'package:spiceease/data/repositories/subtask_repository.dart';
 
-/// A service layer that coordinates subtask-related business logic.
-///
-/// This class depends on the [SubtaskRepository] and provides higher-level
-/// operations for managing subtasks. It's responsible for transforming data
-/// or adding additional logic before calling the repository.
 class SubtaskService {
-  final SubtaskRepository
-      _repository; // Dependency for accessing the repository.
+  final SubtaskRepository _repository;
   final Ref _ref;
 
   const SubtaskService(this._repository, this._ref);
 
-  /// Retrieves all subtasks by delegating to the repository.
+  /// Filters subtasks to show completed subtasks until their completion date (not after)
+  List<SubtaskModel> _filterSubtasksForSelectedDate(
+      List<SubtaskModel> subtasks, DateTime selectedDate) {
+    final selectedDay = DateUtils.dateOnly(selectedDate);
+
+    return subtasks.where((subtask) {
+      // If subtask is completed, only show if selected date is on or before completion date
+      if (subtask.completed && subtask.status.toLowerCase() == 'done') {
+        DateTime? completionDate = subtask.completedAt ?? subtask.updatedAt;
+
+        if (completionDate != null) {
+          final completedDay = DateUtils.dateOnly(completionDate);
+          // Show if selected date is on or before the completion date
+          return selectedDay.isBefore(completedDay) ||
+                 selectedDay.isAtSameMomentAs(completedDay);
+        }
+        // Subtask marked as done but no completion date - don't show it
+        return false;
+      }
+
+      // Show non-completed subtasks
+      return true;
+    }).toList();
+  }
+
   Future<List<SubtaskModel>> getAllSubtasks() => _repository.getAllSubtasks();
 
-  /// Retrieves a specific subtask by ID through the repository.
   Future<SubtaskModel?> getSubtaskById(String id) =>
       _repository.getSubtaskById(id);
 
-  /// Creates a new subtask by delegating to the repository.
   Future<SubtaskModel> createSubtask(SubtaskModel subtask) =>
       _repository.createSubtask(subtask);
 
-  /// Updates an existing subtask by delegating to the repository.
-  Future<SubtaskModel> updateSubtask(String id, SubtaskModel subtask) =>
-      _repository.updateSubtask(id, subtask);
+  Future<SubtaskModel> updateSubtask(String id, SubtaskModel subtask) async {
+    final updatedSubtask = await _repository.updateSubtask(id, subtask);
+    await _updateParentTaskStatus(subtask.taskId);
+    return updatedSubtask;
+  }
 
-  /// Deletes a subtask by delegating to the repository.
   Future<void> deleteSubtask(String id) => _repository.deleteSubtask(id);
 
-  // Task-specific operations
+  // Regular method without filtering (for Kanban)
   Future<List<SubtaskModel>> getSubtasksForTask(String taskId) =>
       _repository.getSubtasksForTask(taskId);
 
-  // Task-coordination methods - service layer is the right place for these
+  // Filtered method for tracker
+  Future<List<SubtaskModel>> getSubtasksForTaskFiltered(
+      String taskId, DateTime selectedDate) async {
+    final subtasks = await _repository.getSubtasksForTask(taskId);
+    return _filterSubtasksForSelectedDate(subtasks, selectedDate);
+  }
+
   Future<SubtaskModel> createSubtaskAndUpdateParent(
       SubtaskModel subtask) async {
-    // First create the subtask using the repository
     final createdSubtask = await _repository.createSubtask(subtask);
-    final _taskService = _ref.read(taskServiceProvider);
+    final taskService = _ref.read(taskServiceProvider);
 
-    // Then update the parent task to mark hasSubtasks=true
-    final parentTask = await _taskService.getTaskById(subtask.taskId);
+    final parentTask = await taskService.getTaskById(subtask.taskId);
     if (parentTask != null && !parentTask.hasSubtasks) {
-      await _taskService.updateTask(
+      await taskService.updateTask(
           parentTask.id, parentTask.copyWith(hasSubtasks: true));
     }
 
@@ -59,20 +81,81 @@ class SubtaskService {
     if (subtask == null) return;
 
     final taskId = subtask.taskId;
-
-    // Delete the subtask
     await _repository.deleteSubtask(id);
 
-    final _taskService = _ref.read(taskServiceProvider);
-    // Check if parent task has any remaining subtasks
+    final taskService = _ref.read(taskServiceProvider);
     final remainingSubtasks = await _repository.getSubtasksForTask(taskId);
     if (remainingSubtasks.isEmpty) {
-      final parentTask = await _taskService.getTaskById(taskId);
+      final parentTask = await taskService.getTaskById(taskId);
       if (parentTask != null && parentTask.hasSubtasks) {
-        // Update parent to reflect it no longer has subtasks
-        await _taskService.updateTask(
+        await taskService.updateTask(
             taskId, parentTask.copyWith(hasSubtasks: false));
       }
+    } else {
+      await _updateParentTaskStatus(taskId);
+    }
+  }
+
+  Future<void> _updateParentTaskStatus(String taskId) async {
+    final taskService = _ref.read(taskServiceProvider);
+    final parentTask = await taskService.getTaskById(taskId);
+
+    if (parentTask == null) return;
+
+    // Use unfiltered subtasks for parent status calculation
+    final subtasks = await _repository.getSubtasksForTask(taskId);
+
+    if (subtasks.isEmpty) return;
+
+    final completedSubtasks = subtasks
+        .where((s) => s.completed || s.status.toLowerCase() == 'done')
+        .length;
+    final inProgressSubtasks = subtasks
+        .where((s) =>
+            !s.completed &&
+            (s.status.toLowerCase() == 'in progress' ||
+                s.status.toLowerCase() == 'in_progress'))
+        .length;
+
+    String newParentStatus = parentTask.status ?? 'todo';
+    DateTime? newCompletedAt = parentTask.completedAt;
+
+    if (completedSubtasks == subtasks.length) {
+      newParentStatus = 'done';
+
+      DateTime? latestCompletionDate;
+      for (final subtask in subtasks) {
+        if (subtask.completed && subtask.completedAt != null) {
+          if (latestCompletionDate == null ||
+              subtask.completedAt!.isAfter(latestCompletionDate)) {
+            latestCompletionDate = subtask.completedAt;
+          }
+        }
+      }
+
+      newCompletedAt = latestCompletionDate ?? DateTime.now();
+    } else if (completedSubtasks > 0 || inProgressSubtasks > 0) {
+      newParentStatus = 'in_progress';
+      newCompletedAt = null;
+    } else {
+      final currentParentStatus = parentTask.status?.toLowerCase() ?? '';
+      if (currentParentStatus == 'done' ||
+          currentParentStatus == 'in_progress') {
+        newParentStatus = 'todo';
+        newCompletedAt = null;
+      }
+    }
+
+    if (newParentStatus != parentTask.status ||
+        newCompletedAt != parentTask.completedAt) {
+      final updatedParentTask = parentTask.copyWith(
+        status: newParentStatus,
+        completedAt: newCompletedAt,
+        updatedAt: DateTime.now(),
+        clearCompletedAt: newCompletedAt == null,
+      );
+
+      await taskService.updateTask(parentTask.id, updatedParentTask);
     }
   }
 }

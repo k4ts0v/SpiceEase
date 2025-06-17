@@ -10,11 +10,9 @@ class TaskStateNotifier extends StateNotifier<List<TaskModel>> {
   String? _error;
 
   TaskStateNotifier(this._taskService, this._date) : super([]) {
-    // Automatically initialize when the notifier is created
     _initialize();
   }
 
-  // Private initialization method
   void _initialize() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -37,14 +35,14 @@ class TaskStateNotifier extends StateNotifier<List<TaskModel>> {
 
     try {
       print("TaskStateNotifier - Fetching tasks for date: $_date");
+      // Use the service's filtered method - this now includes the completion date filtering
       final tasks = await _taskService.getTasksForDate(_date);
-      print("TaskStateNotifier - Fetched ${tasks.length} tasks for $_date");
+      print("TaskStateNotifier - Fetched ${tasks.length} filtered tasks for $_date");
 
-      // Log each task for debugging
       for (int i = 0; i < tasks.length; i++) {
         final task = tasks[i];
         print(
-            "TaskStateNotifier - Task $i: ${task.title} (Created: ${task.createdAt}, Due: ${task.dueDate})");
+            "TaskStateNotifier - Task $i: ${task.title} (Status: ${task.status}, Completed: ${task.completedAt})");
       }
 
       if (!mounted) return;
@@ -62,7 +60,6 @@ class TaskStateNotifier extends StateNotifier<List<TaskModel>> {
   void _setLoading(bool loading) => _isLoading = loading;
   void _setError(String? error) => _error = error;
 
-  // Add method to refresh tasks
   Future<void> refresh() async {
     await fetchTasks();
   }

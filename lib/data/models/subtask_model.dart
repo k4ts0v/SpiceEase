@@ -1,9 +1,8 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:spiceease/core/database/firestore_date_adapter.dart';
 
 class SubtaskModel {
-  // Add fields required for flat DB structure
   final String _id;
-  final String _userId; // Add owner user ID
+  final String _userId;
   final String _taskId;
   String _title;
   int _order;
@@ -12,10 +11,10 @@ class SubtaskModel {
   String? _rawTimeValue;
   final DateTime? _startTime;
   final DateTime? _endTime;
-  final DateTime _createdAt; // Add creation timestamp
-  final DateTime _updatedAt; // Add update timestamp
+  final DateTime? _completedAt;
+  final DateTime _createdAt;
+  final DateTime _updatedAt;
 
-  // Update constructor
   SubtaskModel({
     required String id,
     required String taskId,
@@ -27,8 +26,9 @@ class SubtaskModel {
     String? rawTimeValue,
     DateTime? startTime,
     DateTime? endTime,
+    DateTime? completedAt,
     DateTime? createdAt,
-    DateTime? updatedAt
+    DateTime? updatedAt,
   })  : _id = id,
         _taskId = taskId,
         _userId = userId,
@@ -39,69 +39,24 @@ class SubtaskModel {
         _rawTimeValue = rawTimeValue,
         _startTime = startTime,
         _endTime = endTime,
+        _completedAt = completedAt,
         _createdAt = createdAt ?? DateTime.now(),
         _updatedAt = updatedAt ?? DateTime.now();
 
-  // Add getters for new fields
   String get id => _id;
   String get userId => _userId;
   String get taskId => _taskId;
   String get title => _title;
   int get order => _order;
   bool get completed => _completed;
-  String? get status => _status;
+  String get status => _status;
   String? get rawTimeValue => _rawTimeValue;
   DateTime? get startTime => _startTime;
   DateTime? get endTime => _endTime;
+  DateTime? get completedAt => _completedAt;
   DateTime get createdAt => _createdAt;
   DateTime get updatedAt => _updatedAt;
-  // Update toMap method
-  Map<String, dynamic> toMap() {
-    return {
-      'id': _id,
-      'task_id': _taskId,
-      'user_id': _userId,
-      'title': _title,
-      'order': _order,
-      'completed': _completed,
-      'status': _status,
-      'raw_time_value': _rawTimeValue,
-      'start_time': _startTime,
-      'end_time': _endTime,
-      'created_at': _createdAt,
-      'updated_at': _updatedAt,
-    };
-  }
 
-  // Update fromMap factory
-  factory SubtaskModel.fromMap(Map<String, dynamic> map) {
-    DateTime? _parseDynamicDate(dynamic v) {
-      if (v == null) return null;
-      if (v is DateTime) return v;
-      if (v is Timestamp) return v.toDate();
-      if (v is String) {
-        return DateTime.tryParse(v);
-      }
-      return null;
-    }
-
-    return SubtaskModel(
-      id: map['id'] ?? '',
-      taskId: map['task_id'] ?? '',
-      userId: map['user_id'] ?? '',
-      title: map['title'] ?? '',
-      order: map['order'] ?? 0,
-      completed: map['completed'] ?? false,
-      status: map['status'] ?? 'todo',
-      rawTimeValue: map['raw_time_value'],
-      startTime: _parseDynamicDate(map['start_time']),
-      endTime: _parseDynamicDate(map['end_time']),
-      createdAt: _parseDynamicDate(map['created_at']),
-      updatedAt: _parseDynamicDate(map['updated_at']),
-    );
-  }
-
-  // Add copyWith method
   SubtaskModel copyWith({
     String? id,
     String? taskId,
@@ -113,6 +68,7 @@ class SubtaskModel {
     String? rawTimeValue,
     DateTime? startTime,
     DateTime? endTime,
+    DateTime? completedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -123,13 +79,51 @@ class SubtaskModel {
       title: title ?? this.title,
       order: order ?? this.order,
       completed: completed ?? this.completed,
-      status: status ?? 'todo',
+      status: status ?? this.status,
       rawTimeValue: rawTimeValue ?? this.rawTimeValue,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: startTime ?? this.startTime,
+      endTime: endTime ?? this.endTime,
+      completedAt: completedAt ?? this.completedAt,
       createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': _id,
+      'task_id': _taskId,
+      'user_id': _userId,
+      'title': _title,
+      'order': _order,
+      'completed': _completed,
+      'status': _status,
+      'raw_time_value': _rawTimeValue,
+      'start_time': _startTime != null ? FirestoreDateAdapter.toTimestamp(_startTime) : null,
+      'end_time': _endTime != null ? FirestoreDateAdapter.toTimestamp(_endTime) : null,
+      'completed_at': _completedAt != null ? FirestoreDateAdapter.toTimestamp(_completedAt) : null,
+      'created_at': FirestoreDateAdapter.toTimestamp(_createdAt),
+      'updated_at': FirestoreDateAdapter.toTimestamp(_updatedAt),
+    };
+  }
+
+  factory SubtaskModel.fromMap(Map<String, dynamic> map) {
+    return SubtaskModel(
+      id: map['id'] ?? '',
+      taskId: map['task_id'] ?? '',
+      userId: map['user_id'] ?? '',
+      title: map['title'] ?? '',
+      order: map['order'] ?? 0,
+      completed: map['completed'] ?? false,
+      status: map['status'] ?? 'todo',
+      rawTimeValue: map['raw_time_value'],
+      startTime: FirestoreDateAdapter.fromFirestore(map['start_time']),
+      endTime: FirestoreDateAdapter.fromFirestore(map['end_time']),
+      completedAt: FirestoreDateAdapter.fromFirestore(map['completed_at']),
+      createdAt:
+          FirestoreDateAdapter.fromFirestore(map['created_at']) ?? DateTime.now(),
       updatedAt:
-          updatedAt ?? DateTime.now(), // Always update the updatedAt timestamp
+          FirestoreDateAdapter.fromFirestore(map['updated_at']) ?? DateTime.now(),
     );
   }
 }
