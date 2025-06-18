@@ -1,6 +1,11 @@
+// Standard Flutter imports for UI components and state management
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+// Date/time formatting utilities
 import 'package:intl/intl.dart';
+
+// Data models that define the structure of different tracking entities
 import 'package:spiceease/data/models/habit_model.dart';
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/models/symptom_model.dart';
@@ -8,33 +13,63 @@ import 'package:spiceease/data/models/task_model.dart';
 import 'package:spiceease/data/models/mood_model.dart';
 import 'package:spiceease/data/models/energy_model.dart';
 import 'package:spiceease/data/models/medication_model.dart';
+
+// Providers that manage state for different tracking entities
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/data/providers/subtask_provider.dart';
 import 'package:spiceease/data/providers/task_provider.dart';
+
+// External services for AI-powered features
 import 'package:spiceease/data/services/magic_todo_service.dart';
+
+// Time management features
 import 'package:spiceease/features/time_management/time_blocks/time_block_controller.dart';
+
+// Custom widgets for AI task estimation
 import 'package:spiceease/features/tracker/presentation/widgets/estimator_widget.dart';
+
+// Internationalization for multi-language support
 import 'package:spiceease/l10n/app_localizations.dart';
-import '../tracker_controller.dart';
 
-// —— Base Editor Modal —— //
+// Controller that handles business logic
+import '../controllers/tracker_controller.dart';
 
+// ===== BASE EDITOR MODAL ARCHITECTURE =====
+// This section defines the common structure for all tracking modals
+
+/// Abstract base class for all tracking editor modals
+/// This provides a consistent interface and shared functionality across different tracking types
+///
+/// Why use an abstract class here?
+/// - Enforces a consistent interface for all editor modals
+/// - Provides shared UI structure (buttons, layout, etc.)
+/// - Reduces code duplication across different tracking types
+/// - Makes it easier to add new tracking types in the future
 abstract class TrackingEditorModal<T> extends StatefulWidget {
   const TrackingEditorModal({super.key, required this.ref, this.existing});
+
+  /// Reference to Riverpod's dependency injection system
   final WidgetRef ref;
+
+  /// Existing item being edited, if any (null if creating a new item)
   final T? existing;
+
   @override
   TrackingEditorModalState createState();
 }
 
-// Update the base TrackingEditorModal build method
+/// Abstract base state class that all editor modals must implement
+/// This enforces a consistent structure while allowing customization
 abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     extends State<T> {
-  Widget buildForm();
-  void onSave();
-  void onDelete();
+  /// Abstract methods that each modal must implement
+  /// These define the core functionality that varies between tracking types
+  Widget buildForm(); // Creates the form fields specific to each tracking type
+  void onSave(); // Handles saving data to the backend
+  void onDelete(); // Handles deleting existing items
 
-  // Base editor modal build method
+  /// Builds the complete modal dialog with consistent structure
+  /// This method provides the same layout, buttons, and behavior for all modals
   @override
   Widget build(BuildContext context) {
     final localizations = AppLocalizations.of(context)!;
@@ -46,8 +81,9 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
         borderRadius: BorderRadius.circular(16),
       ),
       child: Container(
-        width: double.maxFinite, // Ensure dialog uses available width
+        width: double.maxFinite, // Use all available width
         constraints: BoxConstraints(
+          // Responsive sizing based on screen size
           maxWidth: MediaQuery.of(context).size.width * 0.9,
           maxHeight: MediaQuery.of(context).size.height * 0.8,
         ),
@@ -57,7 +93,7 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Fix title text overflow
+              // Modal title
               Flexible(
                 child: Text(
                   getTitle(),
@@ -68,17 +104,20 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                 ),
               ),
               const SizedBox(height: 20),
+              // This is where each modal provides its specific form fields
               buildForm(),
               const SizedBox(height: 24),
-              // Fix button row overflow
+              // Consistent button layout across all modals
               Wrap(
                 alignment: WrapAlignment.end,
                 spacing: 8,
                 runSpacing: 8,
                 children: [
+                  // Delete button (only shown when editing existing items)
                   if (widget.existing != null)
                     TextButton(
                       onPressed: () {
+                        // Show confirmation dialog before deleting
                         showDialog(
                           context: context,
                           builder: (alertDialogContext) => AlertDialog(
@@ -86,11 +125,13 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                             content: Text(localizations
                                 .deleteConfirmationMessage(getDeleteLabel())),
                             actions: [
+                              // Cancel button to close the dialog
                               TextButton(
                                 child: Text(localizations.cancel),
                                 onPressed: () =>
                                     Navigator.of(alertDialogContext).pop(),
                               ),
+                              // Confirm delete button
                               TextButton(
                                 child: Text(
                                   localizations.delete,
@@ -111,10 +152,13 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
                         style: TextStyle(color: theme.colorScheme.error),
                       ),
                     ),
+
+// Cancel button to close the modal without saving
                   TextButton(
                     onPressed: () => Navigator.of(context).pop(),
                     child: Text(localizations.cancel),
                   ),
+                  // Save button to trigger the save operation
                   ElevatedButton(
                     onPressed: onSave,
                     child: Text(localizations.save),
@@ -128,12 +172,20 @@ abstract class TrackingEditorModalState<T extends TrackingEditorModal>
     );
   }
 
+  /// Default implementations that can be overridden by specific modals
+
+  /// Returns the label for the delete button
   String getDeleteLabel() => AppLocalizations.of(context)!.thisItem('item');
+
+  /// Returns the title for the modal dialog
   String getTitle() => AppLocalizations.of(context)!.item('item');
 }
 
-// —— Symptom Editor —— //
+// ===== SYMPTOM TRACKING MODAL =====
+// Allows users to record and manage health symptoms
 
+/// Modal for adding/editing symptom entries
+/// Symptoms track health issues with severity levels and categories
 class SymptomEditorModal extends TrackingEditorModal {
   final SymptomModel? existing;
   const SymptomEditorModal({
@@ -147,25 +199,32 @@ class SymptomEditorModal extends TrackingEditorModal {
 
 class SymptomEditorModalState
     extends TrackingEditorModalState<SymptomEditorModal> {
-  late TextEditingController _nameC;
-  final _customCatC = TextEditingController();
-  String _category = 'Physical';
-  bool _isCustomCategory = false;
-  int _severity = 0;
-  late TextEditingController _notesC;
+  // ===== FORM CONTROLLERS =====
+  // These manage the input fields and their current values
+  late TextEditingController _nameC; // Symptom name
+  final _customCatC = TextEditingController(); // Custom category input
+  late TextEditingController _notesC; // Additional notes
+
+  // ===== STATE VARIABLES =====
+  String _category = 'Physical'; // Selected category
+  bool _isCustomCategory = false; // Whether user selected custom category
+  int _severity = 0; // Severity level (0-10)
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize controllers with existing data or empty values
     _nameC = TextEditingController(text: widget.existing?.name ?? '');
     _notesC = TextEditingController(text: widget.existing?.notes ?? '');
 
-    // Handle category initialization
+    // Handle category initialization for editing existing symptoms
     if (widget.existing != null) {
       final predefinedCategories = ['Physical', 'Psychological'];
       if (predefinedCategories.contains(widget.existing!.category)) {
         _category = widget.existing!.category;
       } else {
+        // If it's a custom category, switch to custom mode
         _isCustomCategory = true;
         _customCatC.text = widget.existing!.category;
         _category = 'Custom';
@@ -197,17 +256,20 @@ class SymptomEditorModalState
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ===== SYMPTOM NAME INPUT =====
         TextField(
           controller: _nameC,
           decoration: InputDecoration(labelText: localizations.name),
         ),
         const SizedBox(height: 12),
-        // Fix: Replace overflowing Row with responsive Column layout
+        // ===== CATEGORY SELECTION =====
+        // Users can choose from predefined categories or create custom ones
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('${localizations.category}:'),
             const SizedBox(height: 8),
+            // Show custom category input if user selected "Custom"
             if (_isCustomCategory)
               TextFormField(
                 controller: _customCatC,
@@ -216,6 +278,7 @@ class SymptomEditorModalState
                 onChanged: (value) => setState(() => _category = value),
               )
             else
+              // Show dropdown for predefined categories
               SizedBox(
                 width: double.infinity,
                 child: DropdownButtonFormField<String>(
@@ -226,6 +289,7 @@ class SymptomEditorModalState
                       .map((e) => DropdownMenuItem(value: e, child: Text(e)))
                       .toList(),
                   onChanged: (v) => setState(() {
+                    // Handle category changes and switch to custom mode if needed
                     if (v == localizations.custom) {
                       _isCustomCategory = true;
                       _customCatC.text = _category == 'Custom' ? '' : _category;
@@ -243,7 +307,8 @@ class SymptomEditorModalState
           ],
         ),
         const SizedBox(height: 12),
-        // Fix: Make severity row responsive
+        // ===== SEVERITY SLIDER =====
+        // Visual slider for selecting symptom severity (0-10)
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -261,6 +326,7 @@ class SymptomEditorModalState
                     onChanged: (v) => setState(() => _severity = v.round()),
                   ),
                 ),
+                // Display current severity value
                 Container(
                   width: 40,
                   alignment: Alignment.center,
@@ -271,20 +337,24 @@ class SymptomEditorModalState
           ],
         ),
         const SizedBox(height: 12),
+        // ===== NOTES INPUT =====
+        // Multi-line text field for additional symptom details
         TextField(
           controller: _notesC,
           decoration: InputDecoration(
             labelText: localizations.notes,
             hintText: localizations.symptomNotesHint,
           ),
-          maxLines: null,
+          maxLines: null, // Allow multiple lines
         ),
       ],
     );
   }
 
+  /// Saves the symptom data to the backend
   @override
   void onSave() async {
+    // Validate required fields
     if (_nameC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(AppLocalizations.of(context)!.nameRequired)),
@@ -295,9 +365,11 @@ class SymptomEditorModalState
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
 
+    // Determine which category value to save
     final categoryToSave = _isCustomCategory ? _customCatC.text : _category;
 
     if (widget.existing == null) {
+      // Create a new symptom entry
       await ctrl.addSymptom(
         _nameC.text.trim(),
         categoryToSave,
@@ -305,6 +377,7 @@ class SymptomEditorModalState
         _notesC.text.trim(),
       );
     } else {
+      // Update an existing symptom entry
       await ctrl.updateSymptom(
         widget.existing!.id,
         _nameC.text.trim(),
@@ -315,15 +388,28 @@ class SymptomEditorModalState
     }
   }
 
+  /// Deletes the existing symptom entry from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteSymptom(widget.existing!.id, widget.ref);
   }
-}
-// —— Habit Editor —— //
 
+  /// Returns the label for the delete modal
+  @override
+  String getDeleteLabel() =>
+      widget.existing?.name ?? AppLocalizations.of(context)!.thisSymptom;
+
+  /// Returns the title for the modal dialog
+  @override
+  String getTitle() => AppLocalizations.of(context)!.symptom;
+}
+
+// ===== HABIT TRACKING MODAL =====
+// Allows users to create and manage recurring habits
+/// Modal for adding/editing habit entries
+/// Habits track recurring activities with customizable frequencies
 class HabitEditorModal extends TrackingEditorModal {
   final HabitModel? existing;
   const HabitEditorModal({
@@ -337,11 +423,18 @@ class HabitEditorModal extends TrackingEditorModal {
 }
 
 class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
-  late TextEditingController _titleC, _descC;
-  late String _freqLabel;
-  List<int> _selectedDays = [];
-  bool _markAsCompleted = false;
-  List<String>? _freqOpts;
+  // ===== FORM CONTROLLERS =====
+  late TextEditingController _titleC,
+      _descC; // Controllers for title and description inputs
+  late String
+      _freqLabel; // Current frequency label (e.g., Daily, Weekly, Monthly)
+  List<int> _selectedDays = []; // Selected days for weekly/monthly habits
+  bool _markAsCompleted = false; // Whether to mark the habit as completed today
+  List<String>? _freqOpts; // List of frequency options
+// Mapping between internal and display values
+  String? _selectedDay;
+
+  // List of weekdays for weekly habits
   final List<String> _weekdays = [
     'Monday',
     'Tuesday',
@@ -351,7 +444,6 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
     'Saturday',
     'Sunday',
   ];
-  String? _selectedDay;
 
   // Map to translate between internal and UI values
   Map<String, String> _freqMapToDisplay = {};
@@ -360,6 +452,8 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
   @override
   void initState() {
     super.initState();
+
+// Initialize controllers with existing data or empty values
     _titleC = TextEditingController(text: widget.existing?.title ?? '');
     _descC = TextEditingController(text: widget.existing?.description ?? '');
     _freqLabel = widget.existing != null
@@ -367,6 +461,7 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
         : 'Daily';
     _selectedDays = widget.existing?.customDays ?? [];
 
+// If editing an existing habit, check if it was completed today
     if (widget.existing?.lastCompleted != null) {
       final today = DateTime.now();
       _markAsCompleted = widget.existing!.lastCompleted!.year == today.year &&
@@ -376,6 +471,7 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
   }
 
   /// Maps frequency integer to a human-readable label.
+  /// This is used to convert internal frequency values to UI-friendly labels.
   String _mapFrequencyToLabel(int frequency) {
     if (frequency == 1) return 'Daily';
     if (frequency == 7) return 'Weekly';
@@ -384,6 +480,7 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
   }
 
   /// Maps a human-readable label to a frequency integer.
+  /// This is used to convert UI-friendly labels back to internal frequency values.
   int _mapLabelToFrequency(String label) {
     if (label == 'Daily' || label == _freqMapToInternal['Daily']) return 1;
     if (label == 'Weekly' || label == _freqMapToInternal['Weekly']) return 7;
@@ -391,12 +488,11 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
     return 1; // Default to Daily
   }
 
-  // Fix 1: Missing closing bracket in buildForm method around line 410
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
 
-    // Setup mapping between internal and UI values
+    // Setup mapping between internal and UI values for localization
     _freqMapToDisplay = {
       'Daily': localizations.daily,
       'Weekly': localizations.weekly,
@@ -419,16 +515,19 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
     final localizedFreq = _freqMapToDisplay[_freqLabel] ?? localizations.daily;
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      // ===== HABIT TITLE =====
       TextField(
         controller: _titleC,
         decoration: InputDecoration(labelText: localizations.title),
       ),
+// ===== HABIT DESCRIPTION =====
       const SizedBox(height: 12),
       TextField(
         controller: _descC,
         decoration: InputDecoration(labelText: localizations.description),
       ),
       const SizedBox(height: 12),
+      // ===== HABIT FREQUENCY SELECTION =====
       DropdownButtonFormField<String>(
         value: localizedFreq,
         decoration: InputDecoration(labelText: localizations.frequency),
@@ -447,6 +546,9 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
           _selectedDays.clear(); // Reset selected days when frequency changes
         }),
       ),
+
+      // ===== WEEKLY/MONTHLY SELECTIONS =====
+      // Show day selection options based on frequency
       if (_freqLabel == 'Weekly') ...[
         const SizedBox(height: 16),
         Wrap(
@@ -499,6 +601,9 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
         ),
       ],
       const SizedBox(height: 12),
+
+// ===== SELECTED DAYS DISPLAY =====
+// Show selected days as chips
       Wrap(
         spacing: 8,
         children: _selectedDays
@@ -515,20 +620,21 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
                 ))
             .toList(),
       ),
-      // Fix 2: Add the missing code for existing habits
+      // ===== COMPLETION TOGGLE FOR EXISTING HABITS =====
+      // Allow users to mark the habit as completed for today
       if (widget.existing != null) ...[
         const SizedBox(height: 12),
         CheckboxListTile(
           title: Text(localizations.markAsCompleted),
           value: _markAsCompleted,
           onChanged: (value) {
-            // Only update the UI state immediately
+            // Update the UI state immediately
             setState(() => _markAsCompleted = value ?? false);
 
             // Capture controller reference before async operation
             final ctrl = widget.ref.read(trackerControllerProvider);
 
-            // Then trigger the save operation asynchronously
+            // Schedule the backend update after the current frame
             WidgetsBinding.instance.addPostFrameCallback((_) async {
               try {
                 await ctrl.updateHabit(
@@ -553,10 +659,12 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
     ]);
   }
 
+  /// Saves the habit data to the backend
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
 
+    // Validate required fields
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.titleRequired)),
@@ -564,6 +672,7 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
       return;
     }
 
+    // Validate that weekly/monthly habits have selected days
     if ((_freqLabel == 'Weekly' || _freqLabel == 'Monthly') &&
         _selectedDays.isEmpty) {
       String message = _freqLabel == 'Weekly'
@@ -604,20 +713,36 @@ class HabitEditorModalState extends TrackingEditorModalState<HabitEditorModal> {
     }
   }
 
+  /// Deletes the existing habit entry from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteHabit(widget.existing!.id);
   }
+
+  /// Returns the label for the delete modal
+  /// This is used to show the item being deleted in the confirmation dialog
+  @override
+  String getDeleteLabel() =>
+      widget.existing?.title ?? AppLocalizations.of(context)!.thisHabit;
+
+  /// Returns the title for the modal dialog
+  /// This is used as the modal header
+  @override
+  String getTitle() => AppLocalizations.of(context)!.habit;
 }
 
-// —— Task Editor —— //
+// ===== TASK MANAGEMENT MODAL =====
+// Comprehensive task creation and editing with AI-powered features
 
+/// Modal for adding/editing task entries
+/// Tasks support subtasks, time estimation, priorities, and AI-powered task breakdown
 class TaskEditorModal extends TrackingEditorModal {
   final TaskModel? existing;
-  final String? initialStatus;
-  final String? initialValue;
+  final String? initialStatus; // Predefined status to set on creation
+  final String? initialValue; // Initial value for the task title or description
+
   const TaskEditorModal({
     super.key,
     required super.ref,
@@ -632,20 +757,26 @@ class TaskEditorModal extends TrackingEditorModal {
 }
 
 class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
+// ===== FORM CONTROLLERS =====
   late TextEditingController _titleC, _descC;
+
+  // ===== STATE VARIABLES =====
   String _status = 'Pending';
   DateTime? _dueDate;
   DateTime? _completedAt;
   String? _estimatedTime;
   late int _priority;
-  final List<SubtaskModel> _subtasks = [];
-  bool _isLoadingSubtasks = false;
   DateTime? _startTime;
   DateTime? _endTime;
+
+  // ===== SUBTASK MANAGEMENT =====
+  final List<SubtaskModel> _subtasks = [];
+  bool _isLoadingSubtasks = false;
 
   @override
   void initState() {
     super.initState();
+    // Initialize controllers with existing data or empty values
     _titleC = TextEditingController(text: widget.existing?.title ?? '');
     _descC = TextEditingController(text: widget.existing?.description ?? '');
     _status = widget.existing?.status ?? 'Pending';
@@ -653,6 +784,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     _completedAt = widget.existing?.completedAt;
     _estimatedTime = widget.existing?.estimatedTime;
     _priority = widget.existing?.priority ?? 1;
+
+    // Override status if provided
     if (widget.initialStatus != null) {
       _status = widget.initialStatus!;
     }
@@ -660,7 +793,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     _endTime = widget.existing?.endTime;
   }
 
-  // Helper method to get localized version of the status
+  /// Helper method to get localized version of the status
+  /// This is used to display the status in the UI
   String _getLocalizedStatus(String status, AppLocalizations localizations) {
     switch (status) {
       case 'Pending':
@@ -674,7 +808,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
-  // Helper method to convert localized status back to internal format
+  /// Helper method to convert localized status back to internal format
+  /// This is used when saving the task to ensure we use the correct internal representation
   String _getInternalStatus(
       String localizedStatus, AppLocalizations localizations) {
     if (localizedStatus == localizations.pending) return 'Pending';
@@ -683,6 +818,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     return 'Pending';
   }
 
+  /// Shows the date picker and updates the specified date field
   Future<void> _pickDate(BuildContext context, bool isDueDate) async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -707,6 +843,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
+  /// Shows the time picker and updates the specified time field
   Future<void> _pickTime(BuildContext context, bool isStartTime) async {
     final now = TimeOfDay.now();
     final initialTime = isStartTime
@@ -733,9 +870,14 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
+  /// Generates subtasks using AI-powered task breakdown
+  /// This method creates subtasks based on the task title and description
+  /// This function is called when the user clicks the "Generate Subtasks" button
   Future<void> _generateSubtasks() async {
     final localizations = AppLocalizations.of(context)!;
     debugPrint('Generating subtasks...');
+
+    // Validate required fields before generating subtasks
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.titleRequiredForSubtasks)),
@@ -792,7 +934,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         final maxOrder = existingSubtasks
             .map((subtask) => subtask.order)
             .where((order) => order != null)
-            .fold<int>(0, (max, order) => order! > max ? order : max);
+            .fold<int>(0, (max, order) => order > max ? order : max);
         nextOrder = maxOrder + 1;
       }
 
@@ -843,9 +985,6 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           }
         }
 
-        // Refresh the subtask list for the parent task
-        // widget.ref.refresh(subtaskStateNotifierProvider(taskId));
-
         // Update the parent task with the calculated total time
         if (totalMinutes > 0) {
           _estimatedTime = totalMinutes.toString();
@@ -864,7 +1003,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           );
         }
 
-        // Close the modal
+        // Close the modal after generating subtasks
         Navigator.pop(context);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -903,18 +1042,21 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // ===== TASK TITLE =====
             TextField(
               controller: _titleC,
               decoration: InputDecoration(labelText: '${localizations.title}*'),
               autofocus: true,
             ),
             const SizedBox(height: 12),
+            // ===== TASK DESCRIPTION =====
             TextField(
               controller: _descC,
               decoration: InputDecoration(labelText: localizations.description),
               maxLines: 3,
             ),
             const SizedBox(height: 12),
+            // ===== STATUS DROPDOWN =====
             DropdownButtonFormField<String>(
               value: localizedStatus,
               decoration: InputDecoration(labelText: localizations.status),
@@ -942,6 +1084,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               },
             ),
             const SizedBox(height: 12),
+            // ===== DUE DATE =====
             Row(
               children: [
                 Expanded(
@@ -963,20 +1106,19 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             const SizedBox(height: 8),
-            // Replace the existing completion status Row with this Column
+            // ===== COMPLETION DATE =====
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // First show the completion status text
+                // Show the completion status text
                 Text(
                   _completedAt == null
                       ? localizations.notCompleted
                       : '${localizations.completed}: ${DateFormat.yMd().format(_completedAt!)}',
                 ),
-                const SizedBox(
-                    height: 8), // Add spacing between text and buttons
+                const SizedBox(height: 8),
 
-                // Then show the buttons underneath
+                // Show the buttons underneath
                 Row(
                   children: [
                     if (_completedAt != null)
@@ -990,10 +1132,10 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
                               _status = 'In Progress';
                             }
                           }),
-                          child: Text(localizations.clearCompletion),
                           style: TextButton.styleFrom(
                             foregroundColor: Colors.red,
                           ),
+                          child: Text(localizations.clearCompletion),
                         ),
                       ),
                     Expanded(
@@ -1007,6 +1149,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             const SizedBox(height: 12),
+
+            // ===== PRIORITY SLIDER =====
             Row(
               children: [
                 Text('${localizations.priority}:'),
@@ -1026,6 +1170,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             const SizedBox(height: 12),
+
+            // ===== START/END TIME PICKERS =====
             Row(
               children: [
                 Expanded(
@@ -1068,26 +1214,38 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ],
             ),
             const SizedBox(height: 12),
-
+            // ===== TIME ESTIMATION SECTION =====
             Row(
               children: [
                 Expanded(
                   child: EstimatorWidget(
                     title: _titleC.text,
                     description: _descC.text,
-                    onEstimateUpdated: (time, unit) {
+                    ref: widget.ref,
+                    onEstimated: (estimatedValue) {
                       setState(() {
-                        // Store the original values without conversion
-                        _estimatedTime = time;
+                        _estimatedTime = estimatedValue;
                       });
                     },
-                    initialValue: _estimatedTime?.toString(),
                   ),
                 ),
               ],
             ),
 
-            // Add this to show the estimation with units
+            // Display current time estimate
+            if (_estimatedTime != null && _estimatedTime!.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: Text(
+                  '${localizations.estimatedTimeLabel}: $_estimatedTime',
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+
+            // Display current time estimate
             if (_estimatedTime != null && _estimatedTime!.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 8.0),
@@ -1096,7 +1254,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
               ),
             const SizedBox(height: 16),
 
-            // Second row - Subtasks
+            // ===== SUBTASKS GENERATION SECTION =====
             Row(
               children: [
                 Expanded(
@@ -1132,10 +1290,12 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     );
   }
 
+  /// Saves the task data to the backend
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
 
+    // Validate required fields
     if (_titleC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.titleRequired)),
@@ -1146,7 +1306,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     // Capture all needed references before async operations
     final ctrl = widget.ref.read(trackerControllerProvider);
 
-    // Fix completion logic: Ensure status and completedAt are synchronized
+    // Ensure status and completedAt are synchronized
     DateTime? finalCompletedAt = _completedAt;
     String finalStatus = _status;
 
@@ -1165,6 +1325,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
       Navigator.of(context).pop();
 
       if (widget.existing == null) {
+        // Adding a new task
         await ctrl.addTask(
           title: _titleC.text.trim(),
           description: _descC.text.trim(),
@@ -1178,6 +1339,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
           endTime: _endTime,
         );
       } else {
+        // Updating an existing task
         await ctrl.updateTask(
           widget.existing!.id,
           _titleC.text.trim(),
@@ -1193,8 +1355,8 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         );
 
         // Schedule task if it has a start time
-        if (_startTime != null && context.mounted) {
-          await _scheduleTaskWithTimes(context);
+        if (_startTime != null) {
+          await _scheduleTaskWithTimes();
         }
       }
     } catch (e) {
@@ -1207,13 +1369,16 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     }
   }
 
+  /// Returns the label for the delete modal
   @override
   String getDeleteLabel() =>
       widget.existing?.title ?? AppLocalizations.of(context)!.thisTask;
 
+  /// Returns the title for the modal dialog
   @override
   String getTitle() => AppLocalizations.of(context)!.task;
 
+  /// Deletes the existing task entry from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();
@@ -1221,7 +1386,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
     await ctrl.deleteTask(widget.existing!.id);
   }
 
-  Future<void> _scheduleTaskWithTimes(BuildContext context) async {
+  Future<void> _scheduleTaskWithTimes() async {
     if (_startTime != null) {
       final TimeOfDay startTimeOfDay = TimeOfDay(
         hour: _startTime!.hour,
@@ -1237,7 +1402,7 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
         );
       }
 
-      // Use the new method signature with optional end time and await it
+      // Schedule the task using the controller
       await widget.ref
           .read(timeBlockControllerProvider.notifier)
           .scheduleTask(widget.existing!, startTimeOfDay, endTimeOfDay);
@@ -1245,18 +1410,24 @@ class TaskEditorModalState extends TrackingEditorModalState<TaskEditorModal> {
   }
 }
 
-// —— Subtask Editor —— //
+// ===== SUBTASK MANAGEMENT MODAL =====
+// Detailed editing for individual subtasks
+
+/// Modal for editing subtask details
+/// Subtasks are components of larger tasks with their own status and time tracking
 class SubtaskEditorModal extends TrackingEditorModal<SubtaskModel> {
   // Specify SubtaskModel as the generic type
-  final TaskModel parentTask;
-  final SubtaskModel subtask; // This is the 'existing' item
+  final TaskModel parentTask; // This is the parent task for the subtask
+  final SubtaskModel subtask; // This is the subtask being edited
 
   const SubtaskEditorModal({
     super.key,
     required super.ref,
     required this.parentTask,
     required this.subtask,
-  }) : super(existing: subtask); // Pass the subtask to 'existing'
+  }) : super(
+            existing:
+                subtask); // Pass the subtask to 'existing' (to the base class)
 
   @override
   SubtaskEditorModalState createState() => SubtaskEditorModalState();
@@ -1264,23 +1435,30 @@ class SubtaskEditorModal extends TrackingEditorModal<SubtaskModel> {
 
 class SubtaskEditorModalState
     extends TrackingEditorModalState<SubtaskEditorModal> {
+  // ===== FORM CONTROLLERS =====
   late TextEditingController _titleC;
   late TextEditingController _descC;
-  late bool _completed;
-  late String _status; // Add status field
-  DateTime? _startTime;
-  DateTime? _endTime;
-  String _rawTimeUnit = '';
-  String _rawTimeValue = '';
+
+  // ===== STATE VARIABLES =====
+  late bool _completed; // Completion status
+  late String _status; // Current status of the subtask
+  DateTime? _startTime; // Start time for the subtask
+  DateTime? _endTime; // End time for the subtask
+  String _rawTimeUnit = ''; // Raw time unit for estimation
+  String _rawTimeValue = ''; // Raw time value for estimation
 
   @override
   void initState() {
     super.initState();
+
+    // Initialize form fields with existing subtask data
     _titleC = TextEditingController(text: widget.subtask.title);
     _descC = TextEditingController();
     _completed = widget.subtask.completed;
-    _status = widget.subtask.status ?? 'todo'; // Initialize status
+    _status = widget.subtask.status; // Initialize status
     _rawTimeValue = widget.subtask.rawTimeValue ?? '';
+    _startTime = widget.subtask.startTime;
+    _endTime = widget.subtask.endTime;
   }
 
   // Helper method to get localized version of the status
@@ -1322,9 +1500,12 @@ class SubtaskEditorModalState
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // ===== CONTEXT INFORMATION =====
         Text(localizations.subtaskFor(widget.parentTask.title),
             style: const TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 16),
+
+        // ===== SUBTASK TITLE =====
         TextField(
           controller: _titleC,
           decoration: InputDecoration(labelText: '${localizations.title}*'),
@@ -1333,7 +1514,7 @@ class SubtaskEditorModalState
         ),
         const SizedBox(height: 12),
 
-        // Add status dropdown with simplified logic
+        // ===== SUBTASK STATUS DROPDOWN =====
         DropdownButtonFormField<String>(
           value: localizedStatus,
           decoration: InputDecoration(labelText: localizations.status),
@@ -1349,20 +1530,20 @@ class SubtaskEditorModalState
                 // Convert back to internal status representation
                 _status = _getInternalStatus(value, localizations);
 
-                // Simplified sync logic: only sync completion when status is done
+                // Only sync completion when status is done
+                // For 'in_progress', leave completion state as is
                 if (_status == 'done') {
                   _completed = true;
                 } else if (_status == 'todo') {
                   _completed = false;
                 }
-                // For 'in_progress', leave completion state as is
               });
             }
           },
         ),
 
         const SizedBox(height: 12),
-        const SizedBox(height: 12),
+        // ===== START TIME SECTION =====
         Row(
           children: [
             Expanded(
@@ -1384,6 +1565,7 @@ class SubtaskEditorModalState
           ],
         ),
         const SizedBox(height: 12),
+        // ===== END TIME SECTION =====
         Row(
           children: [
             Expanded(
@@ -1405,28 +1587,39 @@ class SubtaskEditorModalState
           ],
         ),
         const SizedBox(height: 12),
-        // EstimatorWidget with updated callback - no conversion
+        // ===== TIME ESTIMATOR SECTION =====
         Row(
           children: [
             Expanded(
               child: EstimatorWidget(
                 title: _titleC.text,
                 description: _descC.text,
-                onEstimateUpdated: (time, unit) {
+                ref: widget.ref,
+                onEstimated: (estimatedValue) {
                   setState(() {
-                    // Store the raw values from API without conversion
-                    _rawTimeValue = time;
-                    _rawTimeUnit = unit;
+                    _rawTimeValue = estimatedValue;
                   });
                 },
-                initialValue: _rawTimeValue.isNotEmpty ? _rawTimeValue : null,
               ),
             ),
           ],
         ),
 
+        // Display current time estimate
+        if (_rawTimeValue.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8.0),
+            child: Text(
+              '${localizations.estimatedTimeLabel}: $_rawTimeValue',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
         const SizedBox(height: 12),
 
+        // ===== COMPLETED CHECKBOX =====
         CheckboxListTile(
           title: Text(localizations.completed),
           value: _completed,
@@ -1434,18 +1627,19 @@ class SubtaskEditorModalState
             _completed = value ?? false;
 
             // Simplified sync logic for checkbox
+            // If status is 'in_progress', leave it as is when unchecking
             if (_completed) {
               _status = 'done';
             } else if (_status == 'done') {
               _status = 'todo';
             }
-            // If status is 'in_progress', leave it as is when unchecking
           }),
         ),
       ],
     );
   }
 
+  /// Saves the subtask data to the backend
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
@@ -1464,6 +1658,7 @@ class SubtaskEditorModalState
       // Pop the modal first
       Navigator.of(context).pop();
 
+      // Update the subtask with the provided data
       await ctrl.updateSubtask(
         widget.subtask.taskId,
         widget.subtask,
@@ -1479,11 +1674,13 @@ class SubtaskEditorModalState
       final allSubtasks =
           await subtaskService.getSubtasksForTask(widget.subtask.taskId);
 
+      // If all subtasks have time estimates, calculate the total for the parent task
       if (allSubtasks.isNotEmpty &&
           allSubtasks.every((st) => st.rawTimeValue?.isNotEmpty == true)) {
         int totalSeconds = 0;
         final regex = RegExp(r'^(\d+(?:\.\d+)?)\s*(\w+)$');
 
+        // Sum up all subtasks' time estimates
         for (final st in allSubtasks) {
           final raw = st.rawTimeValue!.trim();
           final match = regex.firstMatch(raw);
@@ -1500,6 +1697,7 @@ class SubtaskEditorModalState
           }
         }
 
+        // Convert total seconds to a human-readable format
         String sumEstimate;
         if (totalSeconds >= 3600) {
           final hours = totalSeconds / 3600;
@@ -1513,6 +1711,7 @@ class SubtaskEditorModalState
           sumEstimate = '$totalSeconds ${localizations.seconds}';
         }
 
+        // Update the parent task with the new total estimate
         final parentTaskData =
             await taskService.getTaskById(widget.subtask.taskId);
 
@@ -1542,20 +1741,23 @@ class SubtaskEditorModalState
     }
   }
 
+  /// Deletes the subtask from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();
     final ctrl = widget.ref.read(trackerControllerProvider);
     await ctrl.deleteSubtask(widget.subtask.id, widget.subtask.taskId);
-    // widget.ref.refresh(subtaskStateNotifierProvider(widget.subtask.taskId));
   }
 
+  /// Returns the label for the delete modal
   @override
   String getDeleteLabel() => widget.subtask.title;
 
+  /// Returns the title for the modal dialog
   @override
   String getTitle() => AppLocalizations.of(context)!.subtask;
 
+  /// Shows the date picker and updates the specified date field
   Future<void> _pickTime(BuildContext context, bool isStartTime) async {
     final now = TimeOfDay.now();
     final initialTime = isStartTime
@@ -1583,8 +1785,11 @@ class SubtaskEditorModalState
   }
 }
 
-// —— Mood Editor —— //
+// ===== MOOD TRACKING MODAL =====
+// Simple numerical mood tracking with notes
 
+/// Modal for adding/editing mood level entries
+/// Mood tracking uses a 1-10 scale with optional notes
 class MoodLevelEditorModal extends TrackingEditorModal {
   final MoodModel? existing;
   const MoodLevelEditorModal({
@@ -1598,11 +1803,13 @@ class MoodLevelEditorModal extends TrackingEditorModal {
 
 class MoodLevelEditorModalState
     extends TrackingEditorModalState<MoodLevelEditorModal> {
+  // ===== STATE VARIABLES =====
   int? _value;
   late TextEditingController _notesC;
 
   @override
   void initState() {
+    // Initialize state variables with existing mood data or defaults
     super.initState();
     _value = widget.existing?.moodLevel;
     _notesC = TextEditingController(text: widget.existing?.notes ?? '');
@@ -1613,6 +1820,8 @@ class MoodLevelEditorModalState
     final localizations = AppLocalizations.of(context)!;
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      // ===== MOOD LEVEL SELECTION =====
+      // Display mood levels as a grid of selectable boxes
       Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -1644,14 +1853,14 @@ class MoodLevelEditorModalState
                         : Colors.grey[200]),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Center(
-                  child: Text('$v',
-                      key: ValueKey('moodValue_$v'))), // Add Key here
+              child: Center(child: Text('$v', key: ValueKey('moodValue_$v'))),
             ),
           );
         }),
       ),
       const SizedBox(height: 12),
+
+      // ===== NOTES TEXT FIELD =====
       TextField(
         controller: _notesC,
         maxLines: 3,
@@ -1664,12 +1873,14 @@ class MoodLevelEditorModalState
     ]);
   }
 
+  /// Saves the mood level entry to the backend
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
     debugPrint(
         "[MoodLevelEditorModal.onSave] Entered onSave. Value: $_value. Existing: ${widget.existing != null}");
 
+    // Validate that a mood level has been selected
     if (_value == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1718,6 +1929,7 @@ class MoodLevelEditorModalState
     debugPrint("[MoodLevelEditorModal.onSave] Exiting onSave method.");
   }
 
+  /// Returns the label for the delete modal
   @override
   String getDeleteLabel() {
     final localizations = AppLocalizations.of(context)!;
@@ -1726,16 +1938,16 @@ class MoodLevelEditorModalState
         : localizations.thisMoodEntry;
   }
 
+  /// Returns the title for the modal dialog
   @override
   String getTitle() {
     final localizations = AppLocalizations.of(context)!;
     return localizations.mood;
   }
 
+  /// Deletes the existing mood entry from the backend
   @override
   void onDelete() async {
-    // This onDelete is called from the base TrackingEditorModal's delete button.
-    // It should handle its own try-catch for the delete operation and pop.
     final localizations = AppLocalizations.of(context)!;
     final ctrl = widget.ref.read(trackerControllerProvider);
     try {
@@ -1758,8 +1970,9 @@ class MoodLevelEditorModalState
   }
 }
 
-// —— Energy Editor —— //
-
+// ===== ENERGY LEVEL TRACKING MODAL =====
+/// Modal for adding/editing energy level entries
+/// Energy tracking uses a 1-10 scale with optional notes
 class EnergyLevelEditorModal extends TrackingEditorModal {
   final EnergyModel? existing;
   const EnergyLevelEditorModal({
@@ -1773,12 +1986,14 @@ class EnergyLevelEditorModal extends TrackingEditorModal {
 
 class EnergyLevelEditorModalState
     extends TrackingEditorModalState<EnergyLevelEditorModal> {
+  // ===== STATE VARIABLES =====
   int? _value;
   late TextEditingController _notesC;
 
   @override
   void initState() {
     super.initState();
+    // Initialize state variables with existing energy data or defaults
     _value = widget.existing?.energyLevel;
     _notesC = TextEditingController(text: widget.existing?.notes ?? '');
   }
@@ -1788,6 +2003,8 @@ class EnergyLevelEditorModalState
     final localizations = AppLocalizations.of(context)!;
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      // ===== ENERGY LEVEL SELECTION =====
+      // Display energy levels as a grid of selectable boxes
       Wrap(
         spacing: 10,
         runSpacing: 10,
@@ -1825,6 +2042,8 @@ class EnergyLevelEditorModalState
         }),
       ),
       const SizedBox(height: 12),
+      // ===== NOTES TEXT FIELD =====
+      // Text field for optional notes about the energy level
       TextField(
         controller: _notesC,
         maxLines: 3,
@@ -1837,8 +2056,10 @@ class EnergyLevelEditorModalState
     ]);
   }
 
+  /// Saves the energy level entry to the backend
   @override
   void onSave() async {
+    // Validate that a mood level has been selected
     if (_value == null) {
       final localizations = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1873,14 +2094,17 @@ class EnergyLevelEditorModalState
     }
   }
 
+  /// Returns the label for the delete modal
   @override
   String getDeleteLabel() => widget.existing?.notes?.isNotEmpty == true
       ? widget.existing!.notes!
       : AppLocalizations.of(context)!.thisEnergyEntry;
 
+  /// Returns the title for the modal dialog
   @override
   String getTitle() => AppLocalizations.of(context)!.energy;
 
+  /// Deletes the existing energy entry from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();
@@ -1889,7 +2113,10 @@ class EnergyLevelEditorModalState
   }
 }
 
-// —— Medication Editor —— //
+// ===== MEDICATION TRACKING MODAL =====
+/// Modal for adding/editing medication entries
+/// Medication tracking includes name, dose, unit, frequency, and taken status
+/// This modal allows users to track their medication intake
 class MedicationEditorModal extends TrackingEditorModal {
   final MedicationModel? existing;
   const MedicationEditorModal({
@@ -1904,6 +2131,7 @@ class MedicationEditorModal extends TrackingEditorModal {
 
 class MedicationEditorModalState
     extends TrackingEditorModalState<MedicationEditorModal> {
+  // ===== FORM CONTROLLERS =====
   final _nameC = TextEditingController();
   final _doseC = TextEditingController();
   String _unit = 'mg';
@@ -1921,6 +2149,7 @@ class MedicationEditorModalState
   @override
   void initState() {
     super.initState();
+    // Initialize form fields with existing medication data if available
     if (widget.existing != null) {
       _nameC.text = widget.existing!.name;
       _doseC.text = widget.existing!.dose.toString();
@@ -1966,6 +2195,7 @@ class MedicationEditorModalState
     }
   }
 
+  // Helper method to map localized frequency label to internal representation
   String _mapLabelToFrequency(String label) {
     final localizations = AppLocalizations.of(context)!;
 
@@ -1975,7 +2205,7 @@ class MedicationEditorModalState
     return 'daily';
   }
 
-  // Fix: Add this helper method to map internal frequency to localized string
+  // Maps internal frequency to localized string
   String _getLocalizedFrequency() {
     final localizations = AppLocalizations.of(context)!;
 
@@ -1994,7 +2224,9 @@ class MedicationEditorModalState
   @override
   Widget buildForm() {
     final localizations = AppLocalizations.of(context)!;
+    // Define the predefined units and their localized versions
     final predefinedUnits = ['ml', 'mg', 'g', 'tablets', 'custom'];
+    // Helper function to get the localized unit string
     String getLocalizedUnit(String unit, AppLocalizations loc) {
       switch (unit) {
         case 'ml':
@@ -2012,10 +2244,10 @@ class MedicationEditorModalState
       }
     }
 
-    // Fix: Get the correctly localized frequency value
+    // Get the correctly localized frequency value
     final localizedFreq = _getLocalizedFrequency();
 
-    // Fix: Define the available frequency options
+    // Define the available frequency options
     final freqOptions = [
       localizations.daily,
       localizations.weekly,
@@ -2023,17 +2255,17 @@ class MedicationEditorModalState
     ];
 
     return Column(mainAxisSize: MainAxisSize.min, children: [
+      // ===== MEDICATION NAME =====
       TextFormField(
         controller: _nameC,
-        decoration: InputDecoration(
-            labelText: localizations.name), // Fix: Use expected test label
+        decoration: InputDecoration(labelText: localizations.name),
       ),
       const SizedBox(height: 16),
 
-      // Fix: Replace the overflowing Row with responsive layout
+      // ===== DOSE AND UNIT =====
       LayoutBuilder(
         builder: (context, constraints) {
-          // Use Column layout for very narrow screens to prevent overflow
+          // If there is a custom unit, show a text field for it. If not, show a dropdown for predefined units.
           if (constraints.maxWidth < 300) {
             return Column(
               children: [
@@ -2053,6 +2285,7 @@ class MedicationEditorModalState
                     }),
                   )
                 else
+                  // Use DropdownButtonFormField for unit selection
                   DropdownButtonFormField<String>(
                     value: _unit,
                     decoration: InputDecoration(labelText: localizations.unit),
@@ -2075,7 +2308,6 @@ class MedicationEditorModalState
               ],
             );
           } else {
-            // Use Row layout for wider screens but with Expanded widgets
             return Row(
               children: [
                 Expanded(
@@ -2128,7 +2360,7 @@ class MedicationEditorModalState
       ),
       const SizedBox(height: 16),
 
-      // Fix: Use proper dropdown form field for frequency
+      // ===== FREQUENCY SELECTION =====
       DropdownButtonFormField<String>(
         value: localizedFreq,
         decoration: InputDecoration(labelText: localizations.frequency),
@@ -2136,7 +2368,7 @@ class MedicationEditorModalState
             .map((e) => DropdownMenuItem(value: e, child: Text(e)))
             .toList(),
         onChanged: (v) => setState(() {
-          // Fix: Map the localized value back to internal representation
+          // Map the localized value back to internal representation
           if (v == localizations.daily) {
             _freqLabel = 'Daily';
           } else if (v == localizations.weekly) {
@@ -2211,7 +2443,7 @@ class MedicationEditorModalState
 
       const SizedBox(height: 16),
 
-      // Fix: Make times per day section responsive
+      // If thetimes per day selection is custom, show a text field. Otherwise, show a dropdown.
       LayoutBuilder(
         builder: (context, constraints) {
           if (constraints.maxWidth < 300) {
@@ -2234,6 +2466,7 @@ class MedicationEditorModalState
                     },
                   )
                 else
+                  // Generate a dropdown for times per day
                   DropdownButtonFormField<dynamic>(
                     value:
                         _timesPerDay > 5 ? localizations.custom : _timesPerDay,
@@ -2311,6 +2544,7 @@ class MedicationEditorModalState
         },
       ),
 
+      //Generates the checkbox or progress indicator based on existing medication
       if (widget.existing != null) ...[
         const SizedBox(height: 16),
         if (_timesPerDay <= 1)
@@ -2368,10 +2602,12 @@ class MedicationEditorModalState
     ]);
   }
 
+  /// Saves the medication entry to the backend
   @override
   void onSave() async {
     final localizations = AppLocalizations.of(context)!;
 
+    // Validate required fields
     if (_nameC.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.nameRequired)),
@@ -2459,13 +2695,16 @@ class MedicationEditorModalState
     }
   }
 
+  /// Returns the label for the delete modal
   @override
   String getDeleteLabel() =>
       widget.existing?.name ?? AppLocalizations.of(context)!.thisMedication;
 
+  /// Returns the title for the modal dialog
   @override
   String getTitle() => AppLocalizations.of(context)!.medication;
 
+  /// Deletes the existing medication entry from the backend
   @override
   void onDelete() async {
     Navigator.of(context).pop();

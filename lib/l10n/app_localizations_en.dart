@@ -2393,4 +2393,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String failedToUpdate(String error) {
     return 'Failed to update: $error';
   }
+
+  @override
+  String get estimating => 'Estimating...';
+
+  @override
+  String get estimateTime => 'Estimate Time';
+
+  @override
+  String get estimated => 'estimated';
+
+  @override
+  String get use => 'Use';
+
+  @override
+  String get estimationFailed => 'Failed to estimate time';
 }

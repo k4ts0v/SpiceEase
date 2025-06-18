@@ -1,5 +1,16 @@
+// ===== CORE FLUTTER/DART IMPORTS =====
+// Material Design theming system and color management
 import 'package:flutter/material.dart';
 
+/// Generates a consistent app theme based on the provided accent color and brightness
+/// This function creates a [ThemeData] object that applies Material 3 design principles
+/// and adapts to both light and dark modes. It includes:
+/// - Color scheme generation from the accent color
+/// - Text styles for various UI elements
+/// - App bar, chip, card, and button themes
+/// @param accentColor The primary color used for accents throughout the app
+/// @param brightness The brightness mode (light or dark) for the theme
+/// Returns a [ThemeData] object configured with the specified colors and styles.
 ThemeData generateAppTheme(
     {required Color accentColor, required Brightness brightness}) {
   final isDark = brightness == Brightness.dark;

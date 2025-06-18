@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:spiceease/data/providers/energy_provider.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
-///Provides an instance of [EstimatorService] to the app.
+/// Provides an instance of [EstimatorService] to the app.
 final estimatorServiceProvider = Provider((ref) => EstimatorService(ref));
 
 /// A service responsible for estimating task durations based on task details,
@@ -19,7 +19,12 @@ class EstimatorService {
   /// Optionally accepts a `Dio` instance for HTTP requests.
   /// If no `Dio` instance is provided, a new one is created.
   /// This allows for easier testing and mocking of HTTP requests.
-  EstimatorService(this.ref, {Dio? dio}) : _dio = dio ?? Dio();
+  EstimatorService(this.ref, {Dio? dio}) : _dio = dio ?? Dio() {
+    // Configure Dio with timeout settings
+    _dio.options.connectTimeout = const Duration(seconds: 10);
+    _dio.options.receiveTimeout = const Duration(seconds: 10);
+    _dio.options.sendTimeout = const Duration(seconds: 10);
+  }
 
   /// Determines the "spiciness" level based on the user's energy level.
   /// Spiciness is a value between 1 and 5, where higher values indicate higher energy.
@@ -48,27 +53,99 @@ class EstimatorService {
     String description,
     String? condition,
   ) async {
-    final energyService = ref.read(energyServiceProvider);
-    final lastEntry = await energyService.getLastEnergyEntry();
-    final int spiciness = _spicinessFromEnergy(lastEntry?.energyLevel ?? 0);
-    const String gt = "goblin" "." "tools" "/";
-    const String ep = "api/estimator";
+    try {
+      print('Starting task estimation for: $title');
 
-    // API endpoint and request body
-    final body = {
-      "text": "$title $description $condition",
-      "spiciness": spiciness,
-      "Ancestors": [],
+      final energyService = ref.read(energyServiceProvider);
+      final lastEntry = await energyService.getLastEnergyEntry();
+      final int spiciness = _spicinessFromEnergy(
+          lastEntry?.energyLevel ?? 5); // Default to medium energy
+
+      print('Spiciness level: $spiciness');
+
+      // Construct API endpoint properly
+      const String baseUrl = "https://goblin.tools";
+      const String endpoint = "/api/estimator";
+
+      // Prepare request body
+      final body = {
+        "text":
+            "$title ${description.isNotEmpty ? description : ''} ${condition ?? ''}"
+                .trim(),
+        "spiciness": spiciness,
+        "Ancestors": [],
+      };
+
+      print('Request body: $body');
+      print('Making request to: $baseUrl$endpoint');
+
+      // Make the POST request to the API with proper error handling
+      final response = await _dio.post(
+        "$baseUrl$endpoint",
+        data: body,
+        options: Options(
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+          },
+        ),
+      );
+
+      print('Estimation API response: ${response.data}');
+      return response.data;
+    } on DioException catch (e) {
+      print('DioException during estimation: ${e.type} - ${e.message}');
+
+      // Handle different types of network errors
+      switch (e.type) {
+        case DioExceptionType.receiveTimeout:
+        case DioExceptionType.sendTimeout:
+          throw Exception(
+              'Network timeout. Please check your internet connection.');
+
+        case DioExceptionType.connectionError:
+          throw Exception(
+              'Connection failed. Please check your internet connection.');
+
+        case DioExceptionType.badResponse:
+          final statusCode = e.response?.statusCode;
+          throw Exception(
+              'Server error (${statusCode ?? 'unknown'}). Please try again later.');
+
+        default:
+          throw Exception(
+              'Failed to estimate task duration. Please try again.');
+      }
+    } catch (e) {
+      print('Unexpected error during estimation: $e');
+      throw Exception('An unexpected error occurred. Please try again.');
+    }
+  }
+
+  /// Provides a fallback estimation when API is unavailable
+  /// Returns a basic estimate based on task complexity and energy level
+  Map<String, dynamic> getFallbackEstimation(
+      String title, String description, BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    // Simple heuristic based on title and description length
+    final totalLength = title.length + description.length;
+    int estimateMinutes;
+
+    if (totalLength < 20) {
+      estimateMinutes = 15; // Simple task
+    } else if (totalLength < 50) {
+      estimateMinutes = 30; // Medium task
+    } else if (totalLength < 100) {
+      estimateMinutes = 60; // Complex task
+    } else {
+      estimateMinutes = 120; // Very complex task
+    }
+
+    return {
+      "estimate": estimateMinutes.toString(),
+      "unit": l10n.minutes,
     };
-
-    // Make the POST request to the API.
-    final response = await _dio.post(
-      "https://$gt$ep",
-      data: body,
-      options: Options(headers: {"Content-Type": "application/json"}),
-    );
-
-    return response.data;
   }
 
   /// Parses the API response to extract a numeric estimate and its unit.
@@ -88,9 +165,11 @@ class EstimatorService {
     final unitsToMinutes = _getUnitConversions();
 
     try {
-      // Special case: “0 seconds” → just return 5 seconds
+      print('Parsing estimation response: $response');
+
+      // Special case: "0 seconds" → just return 5 minutes as default
       if (_hasZeroSeconds(response, unitMappings['second']!)) {
-        return {"estimate": "5", "unit": "seconds"};
+        return {"estimate": "5", "unit": l10n.minutes};
       }
 
       // Handle ranges like "10 to 30 minutes"
@@ -154,10 +233,10 @@ class EstimatorService {
         return _formatAverage(avgMin, unitMappings, unitsToMinutes);
       }
 
-      // Fallback: Extract the first number
+      // Fallback: Extract the first number and assume minutes
       final onlyNum = RegExp(r'(\d+)').firstMatch(response);
       if (onlyNum != null) {
-        return {"estimate": onlyNum.group(1)!, "unit": ""};
+        return {"estimate": onlyNum.group(1)!, "unit": l10n.minutes};
       }
     } catch (e) {
       print("Error parsing estimation: $e");
@@ -166,8 +245,8 @@ class EstimatorService {
   }
 
   /// Picks the best display unit for the computed average (in minutes).
-  /// For example, 35.0 remains “35 minutes” instead of “0.58 hours,”
-    Map<String, dynamic> _formatAverage(
+  /// For example, 35.0 remains "35 minutes" instead of "0.58 hours,"
+  Map<String, dynamic> _formatAverage(
     double avgMin,
     Map<String, List<String>> unitMappings,
     Map<String, double> unitsToMinutes,
@@ -260,7 +339,7 @@ class EstimatorService {
     return seconds.any((x) => t.contains("0 $x"));
   }
 
-  /// Finds the “base unit” of any recognized label in [unitMappings].
+  /// Finds the "base unit" of any recognized label in [unitMappings].
   String _findBaseUnit(String raw, Map<String, List<String>> unitMappings) {
     return unitMappings.entries
         .firstWhere(

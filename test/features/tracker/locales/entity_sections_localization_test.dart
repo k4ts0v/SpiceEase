@@ -45,7 +45,7 @@ import 'package:spiceease/data/services/habit_service.dart';
 import 'package:spiceease/data/services/medication_service.dart';
 import 'package:spiceease/data/services/symptom_service.dart';
 import 'package:spiceease/data/services/task_service.dart';
-import 'package:spiceease/features/tracker/presentation/tracker_controller.dart';
+import 'package:spiceease/features/tracker/presentation/controllers/tracker_controller.dart';
 import 'package:spiceease/features/tracker/presentation/widgets/entity_sections.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -145,8 +145,9 @@ class MockTrackerController extends Mock implements TrackerController {
   @override
   Future<void> updateMedication(
       {required String id,
-      required int newCount,
-      required DateTime forDate}) async {}
+      required bool isCompleted,
+      required DateTime forDate,
+      bool skipRefresh = false}) async {}
 
   @override
   Future<void> updateHabit(
@@ -155,8 +156,9 @@ class MockTrackerController extends Mock implements TrackerController {
     String description,
     int frequency,
     List<int>? customDays,
-    bool isCompleted,
-  ) async {}
+    bool isCompleted, {
+    bool skipRefresh = false,
+  }) async {}
 }
 
 // --- CORRECTED Mock StateNotifiers ---

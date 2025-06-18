@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:spiceease/l10n/app_localizations.dart';
 
 /// A simple splash screen that shows the app logo and loading indicator
+///
+/// Features:
+/// - Displays app logo with fallback icon if asset is missing
+/// - Shows app title with theme-appropriate styling
+/// - Loading indicator with customizable message
+/// - Responsive design that adapts to different screen sizes
+/// - Internationalization support for loading messages
 class SplashScreen extends StatelessWidget {
+  /// Optional custom loading message to display
+  /// Falls back to localized "Loading..." text if not provided
   final String? message;
-  
+
   const SplashScreen({super.key, this.message});
 
   @override
@@ -14,43 +24,51 @@ class SplashScreen extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // App Logo
-            Image.asset(
-              'assets/icons/spiceease_logo.png',
+            // ===== APP LOGO WITH FALLBACK (EXACT SAME AS AUTH SCREEN) =====
+            SizedBox(
               width: 150,
               height: 150,
+              child: Image.asset(
+                'assets/icons/spiceease_logo.png',
+                width: 150,
+                height: 150,
+                // Use the exact same errorBuilder as auth screen
+                errorBuilder: (context, error, stackTrace) {
+                  return Icon(
+                    Icons.restaurant_menu,
+                    size: 75,
+                    color: Theme.of(context).colorScheme.primary,
+                  );
+                },
+              ),
             ),
             const SizedBox(height: 20),
-            
-            // App Title
+
+            // ===== APP TITLE =====
             Text(
               "SpiceEase",
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
-              ),
+                    fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
             ),
             const SizedBox(height: 8),
-            
-            // Subtitle
-            Text(
-              "Track your health journey",
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
+
+            // ===== LOADING INDICATOR =====
+            CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary,
             ),
-            const SizedBox(height: 40),
-            
-            // Loading indicator
-            const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            
-            // Loading message
+
+            // ===== LOADING MESSAGE =====
             Text(
-              message ?? 'Loading...',
+              message ?? AppLocalizations.of(context)!.loading,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.8),
-              ),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withOpacity(0.8),
+                  ),
             ),
           ],
         ),

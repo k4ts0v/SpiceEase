@@ -1461,7 +1461,7 @@ class KanbanPage extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surfaceVariant,
+              color: theme.colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(5),
               boxShadow: [
                 BoxShadow(

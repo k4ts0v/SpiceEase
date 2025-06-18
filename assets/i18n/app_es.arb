@@ -890,5 +890,10 @@
         "type": "String"
       }
     }
-  }
+  },
+  "estimating": "Estimando...",
+  "estimateTime": "Estimar tiempo",
+  "estimated": "estimado",
+  "use": "Usa",
+  "estimationFailed": "No se pudo estimar el tiempo."
 }

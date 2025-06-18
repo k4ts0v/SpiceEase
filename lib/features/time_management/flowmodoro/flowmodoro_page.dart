@@ -1,13 +1,30 @@
+// ===== CORE DART/FLUTTER IMPORTS =====
+// Standard library and framework imports for async operations, UI components, and state management
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
+// ===== APPLICATION IMPORTS =====
+// Data models for tasks and subtasks
 import 'package:spiceease/data/models/subtask_model.dart';
 import 'package:spiceease/data/models/task_model.dart';
+
+// State providers for date selection and localization
 import 'package:spiceease/data/providers/selected_date_provider.dart';
 import 'package:spiceease/features/time_management/flowmodoro/flowmodoro_controller.dart';
 import 'package:spiceease/l10n/app_localizations.dart';
 
+// ===== FLOWMODORO PAGE =====
+/// Main page for the Flowmodoro technique implementation
+///
+/// Flowmodoro is a productivity technique that combines focused work sessions
+/// with break periods, similar to Pomodoro but with customizable timings.
+/// This page allows users to:
+/// - Select tasks or subtasks to work on
+/// - Configure focus/break durations and cycle counts
+/// - Run timed sessions with visual progress indicators
+/// - Track completed sessions and mark tasks as done
 class FlowmodoroPage extends ConsumerStatefulWidget {
   const FlowmodoroPage({super.key});
 
@@ -15,24 +32,59 @@ class FlowmodoroPage extends ConsumerStatefulWidget {
   FlowmodoroPageState createState() => FlowmodoroPageState();
 }
 
+/// State class managing all Flowmodoro session logic and UI state
+/// Handles timer operations, configuration, and user interactions
 class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
+  // ===== TASK SELECTION STATE =====
+  /// Currently selected task for the Flowmodoro session
+  /// Can be either a TaskModel or a "dummy" TaskModel created from a SubtaskModel
   TaskModel? _selectedTask;
-  bool _selectedIsSubtask = false; // Added to track if we selected a subtask
+
+  /// Tracks whether the selected item is actually a subtask
+  /// Used to determine completion behavior and data handling
+  bool _selectedIsSubtask = false;
+
+  // ===== TIMER CONFIGURATION STATE =====
+  /// Duration of each focus session in minutes
+  /// User-configurable, default 25 minutes (traditional Pomodoro length)
   int _focusMinutes = 25;
+
+  /// Duration of each break session in minutes
+  /// User-configurable, default 5 minutes
   int _breakMinutes = 5;
+
+  /// Number of focus/break cycles to complete in a full session
+  /// User-configurable, default 4 cycles
   int _cycleCount = 4;
+
+  // ===== TIMER EXECUTION STATE =====
+  /// Whether a Flowmodoro session is currently running
   bool _isRunning = false;
+
+  /// Whether currently in a break period (true) or focus period (false)
   bool _isBreak = false;
+
+  /// Current cycle number (1-based counting)
   int _currentCycle = 1;
+
+  /// Remaining seconds in the current timer period
   int _remainingSeconds = 0;
+
+  /// Timer instance for countdown functionality
   Timer? _timer;
 
   @override
   void dispose() {
+    // ===== CLEANUP =====
+    // Cancel any active timer to prevent memory leaks
     _timer?.cancel();
     super.dispose();
   }
 
+  // ===== TASK SELECTION METHODS =====
+
+  /// Selects a regular task for Flowmodoro session
+  /// Resets timer state and prepares for configuration
   void _selectTask(TaskModel task) {
     setState(() {
       _selectedIsSubtask = false;
@@ -41,11 +93,14 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     });
   }
 
-  /// Treat a subtask as if it were a task, letting it run Flowmodoro.
-  /// We create a "dummy" TaskModel using the subtask information.
+  /// Selects a subtask for Flowmodoro session
+  /// Creates a "dummy" TaskModel using subtask data and parent task priority
+  /// This allows subtasks to be treated as regular tasks for timing purposes
   void _selectSubtask(SubtaskModel subtask) {
     final controller = ref.read(flowmodoroControllerProvider);
-    // Fetch parent to get its priority (or default if not found).
+
+    // ===== PARENT TASK LOOKUP =====
+    // Find the parent task to inherit its priority and user ID
     final parent = controller.availableTasks.firstWhere(
       (t) => t.id == subtask.taskId,
       orElse: () => TaskModel(
@@ -53,7 +108,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
         userId: '',
         title: '',
         description: '',
-        priority: 3,
+        priority: 3, // Default medium priority if parent not found
         status: '',
         hasSubtasks: false,
         createdAt: DateTime.now(),
@@ -61,14 +116,16 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
       ),
     );
 
+    // ===== CREATE DUMMY TASK MODEL =====
+    // Convert subtask to TaskModel format for consistent handling
     setState(() {
       _selectedIsSubtask = true;
       _selectedTask = TaskModel(
-        id: subtask.id, // Use the subtask ID
+        id: subtask.id, // Use the subtask ID for completion tracking
         userId: parent.userId,
         title: subtask.title,
-        description: subtask.title,
-        priority: parent.priority, // Use parent's priority or default
+        description: subtask.title, // Use title as description for subtasks
+        priority: parent.priority, // Inherit parent's priority
         status: 'To-do',
         hasSubtasks: false,
         createdAt: subtask.createdAt,
@@ -78,23 +135,30 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     });
   }
 
+  // ===== TIMER MANAGEMENT METHODS =====
+
+  /// Starts the Flowmodoro timer for the current period (focus or break)
+  /// Handles countdown logic and automatic transitions between periods
   Future<void> _startFlowmodoro() async {
     setState(() {
       _isRunning = true;
       _remainingSeconds = _isBreak ? _breakMinutes * 60 : _focusMinutes * 60;
     });
 
+    // ===== COUNTDOWN TIMER LOGIC =====
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (_remainingSeconds > 0) {
+          // ===== DECREMENT TIMER =====
           _remainingSeconds--;
         } else {
+          // ===== TIMER COMPLETED =====
           _timer?.cancel();
 
-          // If focus just ended
           if (!_isBreak) {
+            // ===== FOCUS SESSION ENDED =====
             if (_currentCycle < _cycleCount) {
-              // Show the popup and wait for it to close before starting break
+              // More cycles remaining - transition to break
               _showTransitionPopup(isBreakFinished: false).then((_) {
                 setState(() {
                   _isBreak = true;
@@ -103,12 +167,12 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                 _startFlowmodoro();
               });
             } else {
-              // All cycles finished
+              // ===== ALL CYCLES COMPLETED =====
               _isRunning = false;
               _showCompletionDialog();
             }
           } else {
-            // Break just ended
+            // ===== BREAK SESSION ENDED =====
             _showTransitionPopup(isBreakFinished: true).then((_) {
               setState(() {
                 _isBreak = false;
@@ -117,9 +181,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
               });
 
               if (_currentCycle <= _cycleCount) {
+                // Continue to next focus session
                 _startFlowmodoro();
               } else {
-                // All cycles finished
+                // ===== ALL CYCLES COMPLETED =====
                 _isRunning = false;
                 _showCompletionDialog();
               }
@@ -130,6 +195,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     });
   }
 
+  /// Shows transition popup between focus and break periods
+  /// Provides clear visual feedback and user acknowledgment before proceeding
   Future<void> _showTransitionPopup({required bool isBreakFinished}) async {
     final localizations = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -183,6 +250,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  /// Resets the Flowmodoro session to initial state
+  /// Cancels any running timer and restores default values
   void _resetFlowmodoro() {
     _timer?.cancel();
     setState(() {
@@ -193,11 +262,16 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     });
   }
 
+  // ===== SESSION COMPLETION METHODS =====
+
+  /// Shows completion dialog when all Flowmodoro cycles are finished
+  /// Automatically saves session data and offers task completion option
   void _showCompletionDialog() {
     final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
 
-    // Always save the flowmodoro data when completing all cycles
+    // ===== AUTO-SAVE SESSION DATA =====
+    // Always save the completed Flowmodoro session for tracking
     _saveFlowmodoroData();
 
     showDialog(
@@ -215,6 +289,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ),
           backgroundColor: theme.colorScheme.surface,
           actions: [
+            // ===== OPTION: CONTINUE WITHOUT COMPLETING TASK =====
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
@@ -222,10 +297,11 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
               },
               child: Text(localizations.notYet),
             ),
+            // ===== OPTION: MARK TASK AS COMPLETE =====
             ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _completeTaskOnly(); // Only complete the task, don't save flowmodoro again
+                _completeTaskOnly(); // Session already saved, just complete task
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
@@ -239,7 +315,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
-  /// Save flowmodoro data without completing the task
+  /// Saves completed Flowmodoro session data to the database
+  /// Records timing configuration and completion for analytics/tracking
   Future<void> _saveFlowmodoroData() async {
     if (_selectedTask == null) return;
 
@@ -253,30 +330,36 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
-  /// Complete the task without saving flowmodoro data (already saved)
+  /// Completes the selected task without saving Flowmodoro data again
+  /// Handles both regular tasks and subtasks with appropriate completion methods
   void _completeTaskOnly() async {
     if (_selectedTask == null) return;
 
     final localizations = AppLocalizations.of(context)!;
     final controller = ref.read(flowmodoroControllerProvider.notifier);
 
+    // ===== TASK VS SUBTASK COMPLETION =====
     final success = _selectedIsSubtask
         ? await controller.completeSubtask(_selectedTask!.id)
         : await controller.completeTask(_selectedTask!.id);
 
     if (success) {
+      // ===== SUCCESS: RESET UI STATE =====
       setState(() {
         _selectedIsSubtask = false;
         _selectedTask = null;
         _resetFlowmodoro();
       });
 
+      // ===== REFRESH TASK LIST =====
       await controller.loadTasks(context);
 
+      // ===== SUCCESS FEEDBACK =====
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(localizations.taskMarkedAsCompleted)),
       );
     } else {
+      // ===== ERROR FEEDBACK =====
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -287,21 +370,28 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     }
   }
 
+  // ===== UTILITY METHODS =====
 
+  /// Formats seconds into MM:SS display format
+  /// Used for timer display and countdown visualization
   String _formatTime(int seconds) {
     final minutes = seconds ~/ 60;
     final remainingSeconds = seconds % 60;
     return '${minutes.toString().padLeft(2, '0')}:${remainingSeconds.toString().padLeft(2, '0')}';
   }
 
+  // ===== MAIN BUILD METHOD =====
+
   @override
   Widget build(BuildContext context) {
+    // ===== STATE AND THEME SETUP =====
     final selectedDate = ref.watch(selectedDateProvider);
     final controller = ref.watch(flowmodoroControllerProvider);
     final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
     final brightness = theme.brightness;
 
+    // ===== AUTO-LOAD TASKS =====
     // Load tasks when date changes or on first build
     if (controller.currentSelectedDate != selectedDate) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -309,8 +399,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
       });
     }
 
-
     return Scaffold(
+      // ===== APP BAR =====
       appBar: AppBar(
         title: Text(
           localizations.flowmodoro,
@@ -325,6 +415,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           color: brightness == Brightness.light ? Colors.black87 : Colors.white,
         ),
         actions: [
+          // ===== REFRESH BUTTON =====
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => controller.loadTasks(context),
@@ -334,13 +425,17 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
         ],
       ),
       backgroundColor: theme.colorScheme.surface,
+
+      // ===== MAIN BODY =====
       body: controller.isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? // ===== LOADING STATE =====
+          const Center(child: CircularProgressIndicator())
           : SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Date display - FIX FOR LINE 369 OVERFLOW
+                  // ===== DATE DISPLAY SECTION =====
+                  // Shows current selected date with timer icon
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
                     child: Row(
@@ -372,14 +467,19 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                       ],
                     ),
                   ),
-                  // Main Flowmodoro area
+
+                  // ===== MAIN CONTENT AREA =====
+                  // Shows either task selection or active Flowmodoro session
                   Expanded(
                     child: _selectedTask == null
                         ? _buildNoTaskSelectedView(context)
                         : _buildFlowmodoroView(context),
                   ),
-                  // Task selection area
+
+                  // ===== TASK SELECTION AREA =====
+                  // Only shown when no task is selected
                   if (_selectedTask == null) ...[
+                    // ===== SECTION HEADER =====
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
                       child: Row(
@@ -412,7 +512,9 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                         ],
                       ),
                     ),
-                    // Flexible container that adapts to content
+
+                    // ===== TASK CARDS CONTAINER =====
+                    // Horizontal scrollable list of available tasks and subtasks
                     Container(
                       margin: const EdgeInsets.fromLTRB(12, 0, 12, 16),
                       decoration: BoxDecoration(
@@ -428,7 +530,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                       ),
                       child: (controller.availableTasks.isEmpty &&
                               controller.availableSubtasks.isEmpty)
-                          ? Padding(
+                          ? // ===== EMPTY STATE =====
+                          Padding(
                               padding: const EdgeInsets.all(32.0),
                               child: Text(
                                 localizations.noTasksAvailable,
@@ -439,7 +542,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                                 ),
                               ),
                             )
-                          : SingleChildScrollView(
+                          : // ===== TASK/SUBTASK CARDS =====
+                          SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               padding: const EdgeInsets.all(8),
                               child: IntrinsicHeight(
@@ -447,11 +551,11 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    // Show tasks
+                                    // ===== TASK CARDS =====
                                     for (final task
                                         in controller.availableTasks)
                                       _buildTaskCard(context, task, controller),
-                                    // Show subtasks
+                                    // ===== SUBTASK CARDS =====
                                     for (final sub
                                         in controller.availableSubtasks)
                                       _buildSubtaskCard(
@@ -468,6 +572,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== SUBTASK CARD BUILDER =====
+
+  /// Builds a card widget for subtask selection
+  /// Shows subtask information with parent task context and priority styling
   Widget _buildSubtaskCard(
     BuildContext context,
     SubtaskModel subtask,
@@ -476,12 +584,14 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     final theme = Theme.of(context);
     final brightness = theme.brightness;
 
-    // Retrieve the parent task's title and priority
+    // ===== PARENT TASK INFORMATION LOOKUP =====
+    // Retrieve parent task details for context and styling
     final parentTitle = controller.getParentTaskTitle(subtask.taskId) ?? '';
     final parentPriority = controller.getParentTaskPriority(subtask.taskId) ??
-        3; // Default to medium priority
+        3; // Default medium priority
 
-    // Use parent's priority for styling
+    // ===== COLOR CALCULATION =====
+    // Use parent task's priority for consistent styling
     final subtaskPriorityColor = _getTaskPriorityColor(parentPriority);
     final pastelColor = _getPastelColor(parentPriority, brightness);
 
@@ -507,7 +617,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// "Subtask of" row
+              // ===== PARENT TASK CONTEXT =====
+              // Shows which task this subtask belongs to
               if (parentTitle.isNotEmpty) ...[
                 Row(
                   children: [
@@ -534,10 +645,12 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                 const SizedBox(height: 6),
               ],
 
-              /// Title row
+              // ===== SUBTASK TITLE SECTION =====
+              // Main title with priority color bar
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ===== PRIORITY COLOR BAR =====
                   Container(
                     width: 4,
                     height: 28,
@@ -547,6 +660,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // ===== TITLE TEXT =====
                   Expanded(
                     child: Text(
                       subtask.title,
@@ -564,14 +678,16 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
               ),
               const SizedBox(height: 8),
 
-              /// Spacer to push bottom content down
+              // ===== SPACER =====
+              // Push bottom content to the bottom of the card
               const Spacer(),
 
-              /// Bottom section with time and priority
+              // ===== BOTTOM INFORMATION SECTION =====
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  /// Estimated time (if available)
+                  // ===== TIME ESTIMATE =====
+                  // Show estimated time if available
                   if (subtask.rawTimeValue != null) ...[
                     Row(
                       children: [
@@ -594,7 +710,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                     const SizedBox(height: 4),
                   ],
 
-                  /// Priority row
+                  // ===== PRIORITY INFORMATION =====
+                  // Show parent task's priority level
                   Row(children: [
                     Icon(
                       Icons.flag_outlined,
@@ -624,6 +741,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== NO TASK SELECTED VIEW =====
+
+  /// Builds the central view shown when no task is selected
+  /// Provides explanation of Flowmodoro technique and encourages task selection
   Widget _buildNoTaskSelectedView(BuildContext context) {
     final theme = Theme.of(context);
 
@@ -631,12 +752,15 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // ===== ICON =====
           Icon(
             Icons.timelapse_outlined,
             size: 64,
             color: theme.colorScheme.onSurface.withAlpha(102),
           ),
           const SizedBox(height: 16),
+
+          // ===== MAIN MESSAGE =====
           Text(
             AppLocalizations.of(context)!.selectATaskToStart,
             style: TextStyle(
@@ -646,6 +770,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
             ),
           ),
           const SizedBox(height: 8),
+
+          // ===== EXPLANATION =====
           Text(
             AppLocalizations.of(context)!.flowmodoroExplanation,
             textAlign: TextAlign.center,
@@ -659,6 +785,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== FLOWMODORO SESSION VIEW =====
+
+  /// Builds the main view when a task is selected
+  /// Shows task details and either configuration or active timer interface
   Widget _buildFlowmodoroView(BuildContext context) {
     final theme = Theme.of(context);
     final isConfiguring = !_isRunning;
@@ -668,7 +798,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Selected task card
+          // ===== SELECTED TASK CARD =====
+          // Shows details of the currently selected task/subtask
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -685,6 +816,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ===== TASK HEADER =====
                 Row(
                   children: [
                     Icon(
@@ -706,6 +838,9 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                     ),
                   ],
                 ),
+
+                // ===== TASK DESCRIPTION =====
+                // Show description if available and not empty
                 if (_selectedTask!.description.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
@@ -724,7 +859,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
           const SizedBox(height: 24),
 
-          // Timer display or configuration
+          // ===== TIMER/CONFIGURATION AREA =====
+          // Shows either configuration controls or active timer display
           Expanded(
             child: Container(
               padding: const EdgeInsets.all(20),
@@ -749,6 +885,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== CONFIGURATION VIEW =====
+
+  /// Builds the configuration interface for setting up Flowmodoro parameters
+  /// Allows users to adjust focus time, break time, and cycle count
   Widget _buildConfigurationView(BuildContext context) {
     final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
@@ -756,6 +896,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        // ===== HEADER =====
         Text(
           localizations.configureFlowmodoro,
           style: TextStyle(
@@ -767,7 +908,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
         ),
         const SizedBox(height: 24),
 
-        // Focus time
+        // ===== FOCUS TIME CONFIGURATION =====
         _buildTimeConfigRow(
           context,
           localizations.focusTime,
@@ -779,7 +920,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
         const SizedBox(height: 16),
 
-        // Break time
+        // ===== BREAK TIME CONFIGURATION =====
         _buildTimeConfigRow(
           context,
           localizations.breakTime,
@@ -791,7 +932,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
         const SizedBox(height: 16),
 
-        // Cycle count
+        // ===== CYCLE COUNT CONFIGURATION =====
         _buildTimeConfigRow(
           context,
           localizations.cyclesToComplete,
@@ -804,7 +945,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
         const Spacer(),
 
-        // Start button
+        // ===== START BUTTON =====
         ElevatedButton.icon(
           onPressed: _startFlowmodoro,
           icon: const Icon(Icons.play_arrow),
@@ -818,7 +959,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
         const SizedBox(height: 12),
 
-        // Cancel button
+        // ===== CANCEL BUTTON =====
         TextButton(
           onPressed: () => setState(() => _selectedTask = null),
           child: Text(localizations.cancel),
@@ -827,6 +968,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== TIME CONFIGURATION ROW =====
+
+  /// Builds a configuration row with increment/decrement controls
+  /// Used for adjusting focus time, break time, and cycle count
   Widget _buildTimeConfigRow(
     BuildContext context,
     String label,
@@ -840,6 +985,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
 
     return Row(
       children: [
+        // ===== LABEL =====
         Expanded(
           flex: 2,
           child: Text(
@@ -852,6 +998,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
             overflow: TextOverflow.ellipsis,
           ),
         ),
+
+        // ===== DECREMENT BUTTON =====
         IconButton(
           icon: Icon(
             Icons.remove_circle_outline,
@@ -859,6 +1007,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ),
           onPressed: value > minValue ? () => onChanged(value - 1) : null,
         ),
+
+        // ===== VALUE DISPLAY =====
         Container(
           width: 50,
           alignment: Alignment.center,
@@ -871,6 +1021,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
             ),
           ),
         ),
+
+        // ===== INCREMENT BUTTON =====
         IconButton(
           icon: Icon(
             Icons.add_circle_outline,
@@ -878,6 +1030,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ),
           onPressed: value < maxValue ? () => onChanged(value + 1) : null,
         ),
+
+        // ===== UNIT LABEL =====
         Expanded(
           flex: 1,
           child: Text(
@@ -894,18 +1048,27 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== ACTIVE TIMER VIEW =====
+
+  /// Builds the active timer interface during Flowmodoro sessions
+  /// Shows circular progress, remaining time, and session controls
   Widget _buildTimerView(BuildContext context) {
     final theme = Theme.of(context);
     final localizations = AppLocalizations.of(context)!;
 
+    // ===== PROGRESS CALCULATION =====
     final progressValue = _remainingSeconds /
         (_isBreak ? _breakMinutes * 60 : _focusMinutes * 60);
+
+    // ===== COLOR CODING =====
+    // Different colors for focus (primary) vs break (green) periods
     final timerColor =
         _isBreak ? Colors.greenAccent[700]! : theme.colorScheme.primary;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // ===== SESSION TYPE INDICATOR =====
         Text(
           _isBreak ? localizations.breakTime : localizations.focusTime,
           style: TextStyle(
@@ -915,6 +1078,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ),
         ),
         const SizedBox(height: 8),
+
+        // ===== CYCLE PROGRESS =====
         Text(
           '$_currentCycle / $_cycleCount ${localizations.cycles}',
           style: TextStyle(
@@ -923,9 +1088,12 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ),
         ),
         const SizedBox(height: 40),
+
+        // ===== CIRCULAR TIMER DISPLAY =====
         Stack(
           alignment: Alignment.center,
           children: [
+            // ===== PROGRESS CIRCLE =====
             SizedBox(
               width: 200,
               height: 200,
@@ -936,8 +1104,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                 valueColor: AlwaysStoppedAnimation<Color>(timerColor),
               ),
             ),
+            // ===== TIMER TEXT OVERLAY =====
             Column(
               children: [
+                // ===== REMAINING TIME =====
                 Text(
                   _formatTime(_remainingSeconds),
                   style: TextStyle(
@@ -946,6 +1116,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                     color: timerColor,
                   ),
                 ),
+                // ===== MODE INDICATOR =====
                 Text(
                   _isBreak ? localizations.relax : localizations.focus,
                   style: TextStyle(
@@ -958,6 +1129,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           ],
         ),
         const SizedBox(height: 40),
+
+        // ===== STOP BUTTON =====
         ElevatedButton.icon(
           onPressed: _resetFlowmodoro,
           icon: const Icon(Icons.stop),
@@ -972,6 +1145,10 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== TASK CARD BUILDER =====
+
+  /// Builds a card widget for regular task selection
+  /// Shows task information with priority-based styling
   Widget _buildTaskCard(
     BuildContext context,
     TaskModel task,
@@ -1004,10 +1181,11 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              /// Title section
+              // ===== TITLE SECTION =====
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ===== PRIORITY COLOR BAR =====
                   Container(
                     width: 4,
                     height: 40,
@@ -1017,6 +1195,7 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                     ),
                   ),
                   const SizedBox(width: 8),
+                  // ===== TITLE TEXT =====
                   Expanded(
                     child: Text(
                       task.title,
@@ -1034,7 +1213,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
               ),
               const SizedBox(height: 8),
 
-              /// Description section
+              // ===== DESCRIPTION SECTION =====
+              // Show description if available and not empty
               if (task.description.isNotEmpty) ...[
                 Text(
                   task.description,
@@ -1049,10 +1229,11 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
                 const SizedBox(height: 8),
               ],
 
-              /// Spacer to push priority to bottom
+              // ===== SPACER =====
+              // Push priority section to bottom of card
               const Spacer(),
 
-              /// Priority row
+              // ===== PRIORITY SECTION =====
               Row(
                 children: [
                   Icon(
@@ -1081,43 +1262,57 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     );
   }
 
+  // ===== COLOR UTILITY METHODS =====
+
+  /// Returns accent colors for borders, icons, and text based on priority
+  /// Provides consistent color coding across the interface
   Color _getTaskPriorityColor(int priority) {
     switch (priority) {
       case 1:
-        return const Color(0xFF2196F3); // Blue
+        return const Color(0xFF2196F3); // Blue - Lowest priority
       case 2:
-        return const Color(0xFF4CAF50); // Green
+        return const Color(0xFF4CAF50); // Green - Low priority
       case 3:
-        return const Color(0xFFFFC107); // Yellow
+        return const Color(0xFFFFC107); // Yellow - Medium priority
       case 4:
-        return const Color(0xFFFF9800); // Orange
+        return const Color(0xFFFF9800); // Orange - High priority
       case 5:
-        return const Color(0xFFF44336); // Red
+        return const Color(0xFFF44336); // Red - Highest priority
       default:
-        return const Color(0xFF9E9E9E); // Grey
+        return const Color(0xFF9E9E9E); // Grey - Default/unknown
     }
   }
 
+  /// Returns pastel background colors based on priority and theme brightness
+  /// Used for card backgrounds with appropriate opacity for readability
   Color _getPastelColor(int priority, Brightness brightness) {
-    // For dark mode, use darker pastel colors
+    // ===== DARK MODE COLORS =====
+    // Use darker pastel colors that work well with dark backgrounds
     if (brightness == Brightness.dark) {
       switch (priority) {
         case 1:
-          return const Color(0xFF0D47A1).withValues(alpha: 0.3); // Dark blue pastel
+          return const Color(0xFF0D47A1)
+              .withValues(alpha: 0.3); // Dark blue pastel
         case 2:
-          return const Color(0xFF1B5E20).withValues(alpha: 0.3); // Dark green pastel
+          return const Color(0xFF1B5E20)
+              .withValues(alpha: 0.3); // Dark green pastel
         case 3:
-          return const Color(0xFFF57F17).withValues(alpha: 0.3); // Dark yellow pastel
+          return const Color(0xFFF57F17)
+              .withValues(alpha: 0.3); // Dark yellow pastel
         case 4:
-          return const Color(0xFFE65100).withValues(alpha: 0.3); // Dark orange pastel
+          return const Color(0xFFE65100)
+              .withValues(alpha: 0.3); // Dark orange pastel
         case 5:
-          return const Color(0xFFB71C1C).withValues(alpha: 0.3); // Dark red pastel
+          return const Color(0xFFB71C1C)
+              .withValues(alpha: 0.3); // Dark red pastel
         default:
-          return const Color(0xFF424242).withValues(alpha: 0.3); // Dark grey pastel
+          return const Color(0xFF424242)
+              .withValues(alpha: 0.3); // Dark grey pastel
       }
     }
 
-    // Original colors for light mode
+    // ===== LIGHT MODE COLORS =====
+    // Light, subtle pastel colors for light mode backgrounds
     switch (priority) {
       case 1:
         return const Color(0xFFE3F2FD); // Pastel blue
@@ -1134,6 +1329,8 @@ class FlowmodoroPageState extends ConsumerState<FlowmodoroPage> {
     }
   }
 
+  /// Converts numeric priority values to localized text labels
+  /// Used throughout the UI for consistent priority display
   String _getPriorityLabel(BuildContext context, int priority) {
     final localizations = AppLocalizations.of(context)!;
 

@@ -177,20 +177,6 @@ class MockTaskService extends _i1.Mock implements _i5.TaskService {
       ) as _i6.Future<String>);
 
   @override
-  _i6.Future<List<_i2.TaskModel>> getTasksByStatus(
-    String? status, {
-    bool? sortByPriority = false,
-  }) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #getTasksByStatus,
-          [status],
-          {#sortByPriority: sortByPriority},
-        ),
-        returnValue: _i6.Future<List<_i2.TaskModel>>.value(<_i2.TaskModel>[]),
-      ) as _i6.Future<List<_i2.TaskModel>>);
-
-  @override
   _i6.Future<void> toggleTaskCompletion(
     String? taskId,
     DateTime? selectedDate,

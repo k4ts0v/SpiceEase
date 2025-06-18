@@ -878,5 +878,10 @@
         "type": "String"
       }
     }
-  }
+  },
+  "estimating": "Estimating...",
+  "estimateTime": "Estimate Time",
+  "estimated": "estimated",
+  "use": "Use",
+  "estimationFailed": "Failed to estimate time"
 }

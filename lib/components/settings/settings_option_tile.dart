@@ -47,10 +47,11 @@ class SettingsOptionTile extends StatelessWidget {
           color: theme.colorScheme.onSurface.withOpacity(0.6),
         ),
       ),
-      trailing: trailing ?? Icon(
-        Icons.chevron_right,
-        color: theme.colorScheme.onSurface.withOpacity(0.4),
-      ),
+      trailing: trailing ??
+          Icon(
+            Icons.chevron_right,
+            color: theme.colorScheme.onSurface.withOpacity(0.4),
+          ),
       onTap: onTap,
     );
   }

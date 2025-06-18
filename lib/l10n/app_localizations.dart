@@ -4726,6 +4726,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to update: {error}'**
   String failedToUpdate(String error);
+
+  /// No description provided for @estimating.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimating...'**
+  String get estimating;
+
+  /// No description provided for @estimateTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Estimate Time'**
+  String get estimateTime;
+
+  /// No description provided for @estimated.
+  ///
+  /// In en, this message translates to:
+  /// **'estimated'**
+  String get estimated;
+
+  /// No description provided for @use.
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get use;
+
+  /// No description provided for @estimationFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to estimate time'**
+  String get estimationFailed;
 }
 
 class _AppLocalizationsDelegate extends LocalizationsDelegate<AppLocalizations> {

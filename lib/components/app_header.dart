@@ -4,9 +4,9 @@ class AppHeader extends StatelessWidget {
   final String sectionName;
 
   const AppHeader({
-    Key? key,
+    super.key,
     required this.sectionName,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +20,7 @@ class AppHeader extends StatelessWidget {
         color: theme.colorScheme.surface,
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.shadow.withOpacity(0.1),
+            color: theme.colorScheme.shadow.withValues(alpha: 0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),

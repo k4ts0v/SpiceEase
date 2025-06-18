@@ -11,7 +11,7 @@ import 'package:mockito/src/dummies.dart' as _i6;
 import 'package:spiceease/data/models/medication_model.dart' as _i7;
 import 'package:spiceease/data/models/subtask_model.dart' as _i5;
 import 'package:spiceease/data/models/task_model.dart' as _i8;
-import 'package:spiceease/features/tracker/presentation/tracker_controller.dart'
+import 'package:spiceease/features/tracker/presentation/controllers/tracker_controller.dart'
     as _i3;
 
 // ignore_for_file: type=lint
@@ -270,9 +270,10 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
 
   @override
   _i4.Future<void> updateMedication({
-    required String? id,
-    required int? newCount,
-    required DateTime? forDate,
+    required String id,
+    required DateTime forDate,
+    required bool isCompleted,
+    bool skipRefresh = false,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -280,8 +281,9 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
           [],
           {
             #id: id,
-            #newCount: newCount,
             #forDate: forDate,
+            #isCompleted: isCompleted,
+            #skipRefresh: skipRefresh,
           },
         ),
         returnValue: _i4.Future<void>.value(),
@@ -334,18 +336,19 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
 
   @override
   _i4.Future<void> updateTask(
-    String? id,
-    String? title,
-    String? description,
-    String? status,
+    String id,
+    String title,
+    String description,
+    String status,
     DateTime? dueDate,
     DateTime? completedAt,
     String? estimatedTime,
-    int? priority,
+    int priority,
     List<_i5.SubtaskModel>? subtasks,
     DateTime? startTime,
-    DateTime? endTime,
-  ) =>
+    DateTime? endTime, {
+    bool skipRefresh = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateTask,
@@ -362,6 +365,9 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
             startTime,
             endTime,
           ],
+          {
+            #skipRefresh: skipRefresh,
+          },
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
@@ -379,15 +385,16 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
 
   @override
   _i4.Future<void> updateSubtask(
-    String? taskId,
-    _i5.SubtaskModel? subtask,
-    String? title,
-    bool? completed,
-    String? status,
-    String? rawTimeValue,
+    String taskId,
+    _i5.SubtaskModel subtask,
+    String title,
+    bool completed,
+    String status,
+    String rawTimeValue,
     DateTime? startTime,
-    DateTime? endtime,
-  ) =>
+    DateTime? endtime, {
+    bool skipRefresh = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateSubtask,
@@ -401,6 +408,9 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
             startTime,
             endtime,
           ],
+          {
+            #skipRefresh: skipRefresh,
+          },
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
@@ -468,13 +478,14 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
 
   @override
   _i4.Future<void> updateHabit(
-    String? id,
-    String? title,
-    String? description,
-    int? frequency,
+    String id,
+    String title,
+    String description,
+    int frequency,
     List<int>? customDays,
-    bool? markAsCompleted,
-  ) =>
+    bool markAsCompleted, {
+    bool skipRefresh = false,
+  }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateHabit,
@@ -486,6 +497,9 @@ class MockTrackerController extends _i1.Mock implements _i3.TrackerController {
             customDays,
             markAsCompleted,
           ],
+          {
+            #skipRefresh: skipRefresh,
+          },
         ),
         returnValue: _i4.Future<void>.value(),
         returnValueForMissingStub: _i4.Future<void>.value(),
